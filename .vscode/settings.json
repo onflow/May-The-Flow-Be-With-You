@@ -1,3 +1,3 @@
 {
-  "cadence.customConfigPath": "./on-chain-loaderboard/flow.json"
+  "cadence.customConfigPath": "./on-chain-leaderboard/flow.json"
 }

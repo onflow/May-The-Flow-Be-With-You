@@ -5,6 +5,12 @@
 			"aliases": {
 				"testing": "0000000000000007"
 			}
+		},
+		"Leaderboard": {
+			"source": "cadence/contracts/Leaderboard.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
 		}
 	},
 	"dependencies": {

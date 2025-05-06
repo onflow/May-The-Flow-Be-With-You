@@ -8,7 +8,7 @@ contract Leaderboard {
         leaderboard: Address,
         participant: String,
         period: UInt64,
-        score: UInt64
+        scoreAdded: UFix64
     )
 
     // Admin entitlement
@@ -32,19 +32,29 @@ contract Leaderboard {
         fun getItemKeys(): [String] {
             return self.items.keys
         }
+
+        access(all) view
+        fun getItemValue(_ key: String): UInt64? {
+            return self.items[key]
+        }
+
+        access(all)
+        fun forEachItem(_ f: fun (String): Bool): Void {
+            self.items.forEachKey(f)
+        }
     }
 
     access(all) struct ScoreRecord {
         access(all) let participant: String
-        access(all) var score: UInt64
+        access(all) var score: UFix64
 
-        view init(_ participant: String, _ score: UInt64?) {
+        view init(_ participant: String, _ score: UFix64?) {
             self.participant = participant
-            self.score = score ?? 0
+            self.score = score ?? 0.0
         }
 
         access(contract)
-        fun addScore(_ score: UInt64) {
+        fun addScore(_ score: UFix64) {
             self.score = self.score + score
         }
     }
@@ -205,17 +215,17 @@ contract Leaderboard {
         access(all) let admin: Address
         access(all) let period: UInt
         access(all) let participant: String
-        access(all) var score: UInt64
+        access(all) var score: UFix64
 
         view init(_ admin: Address, _ period: UInt, _ participant: String) {
             self.admin = admin
             self.period = period
             self.participant = participant
-            self.score = 0
+            self.score = 0.0
         }
 
         access(contract)
-        fun addScore(_ score: UInt64) {
+        fun addScore(_ score: UFix64) {
             self.score = self.score + score
         }
     }
@@ -239,26 +249,63 @@ contract Leaderboard {
             
             assert(periodRef.isActive(), message: "Period is not active")
 
-            // TODO: Calculate score
+            // get checklist config
+            let checklistRef = adminRef.borrowChecklist(periodRef.useChecklist)
+                ?? panic("Checklist not found")
+
+            var totalWeight: UFix64 = 0.0
+            checklistRef.forEachItem(fun (key: String): Bool {
+                if let value = checklistRef.getItemValue(key) {
+                    totalWeight = totalWeight + UFix64(value)
+                }
+                return true
+            })
+            var completedWeight: UFix64 = 0.0
+            for item in completed {
+                if let value = checklistRef.getItemValue(item) {
+                    completedWeight = completedWeight + UFix64(value)
+                }
+            }
+            // Max score for each submission is 10
+            let score = completedWeight / totalWeight * 10.0
+            // TODO:add score to user score
+
+            // Inform the admin that the score has been updated
+            periodRef.onParticipantScoreUpdated(self.id)
         }
 
+        // access(all)
+        // fun borrowAndEnsureUserScore(_ admin: Address, _ period: UInt, _ participant: String): &UserScore {
+        //     var scores = self.borrowUserScoreSet(admin)
+        //     if scores == nil {
+        //         self.scores[admin] = []
+        //         scores = self.borrowUserScoreSet(admin)
+        //     }
+
+        //     if let set = scores {
+                
+        //     }
+            
+        //     return &self.scores[admin].append(UserScore(admin, period, participant))
+        // }
+
         access(all) view
-        fun getTotalScore(_ admin: Address): UInt64 {
+        fun getTotalScore(_ admin: Address): UFix64 {
             if let scoreRecord = self.borrowUserScore(admin, 0) {
                 return scoreRecord.score
             }
-            return 0
+            return 0.0
         }
 
         access(all) view
-        fun getPeriodScore(_ admin: Address, _ period: UInt64): UInt64 {
+        fun getPeriodScore(_ admin: Address, _ period: UInt64): UFix64 {
             pre {
                 period > 0: "Period must be greater than 0"
             }
             if let scoreRecord = self.borrowUserScore(admin, period) {
                 return scoreRecord.score
             }
-            return 0
+            return 0.0
         }
 
         access(all) view

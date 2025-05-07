@@ -2,18 +2,55 @@
 
 access(all)
 contract Leaderboard {
+    // Entitlements
+    access(all) entitlement Admin
+    access(all) entitlement UserWrite
 
     // Event emitted when a checklist is submitted
     access(all) event ChecklistSubmitted(
-        leaderboard: Address,
-        participant: String,
+        admin: Address,
+        userOwner: Address,
+        participantId: String,
         period: UInt64,
-        scoreAdded: UFix64
+        scoreAdded: UFix64,
+        scoreTotal: UFix64
     )
 
-    // Admin entitlement
-    access(all) entitlement Admin
-    access(all) entitlement UserWrite
+    // Event emitted when a period is started
+    access(all) event PeriodStarted(
+        admin: Address,
+        periodId: UInt64,
+        useChecklist: String,
+        startAt: UFix64,
+        endAt: UFix64,
+        leaderboardLimit: Int
+    )
+
+    // Event emitted when checklist is added to leaderboard
+    access(all) event ChecklistAdded(
+        admin: Address,
+        checklistName: String,
+        checklistItems: {String: UInt64}
+    )
+
+    // Event emitted when a participant enters the leaderboard
+    access(all) event LeaderboardEntered(
+        admin: Address,
+        participantId: String,
+        periodId: UInt64,
+        rank: Int,
+        score: UFix64
+    )
+
+    // Event emitted when a participant leaves the leaderboard
+    access(all) event LeaderboardLeft(
+        admin: Address,
+        participantId: String,
+        periodId: UInt64,
+        score: UFix64
+    )
+
+    // -------- Structs and resources --------
 
     // Checklist configuration for a period
     access(all) struct ChecklistConfig {
@@ -38,6 +75,17 @@ contract Leaderboard {
             return self.items[key]
         }
 
+        access(all) view
+        fun getTotalWeight(): UFix64 {
+            var totalWeight: UFix64 = 0.0
+            for key in self.items.keys {
+                if let value = self.getItemValue(key) {
+                    totalWeight = totalWeight + UFix64(value)
+                }
+            }
+            return totalWeight
+        }
+
         access(all)
         fun forEachItem(_ f: fun (String): Bool): Void {
             self.items.forEachKey(f)
@@ -54,26 +102,107 @@ contract Leaderboard {
         }
 
         access(contract)
-        fun addScore(_ score: UFix64) {
-            self.score = self.score + score
+        fun updateScore(_ score: UFix64) {
+            self.score = score
+        }
+    }
+
+    access(all) struct LeaderboardRecord {
+        access(all) let list: [ScoreRecord]
+        access(all) let limit: Int
+
+        view init(_ list: [ScoreRecord], _ limit: Int) {
+            self.list = list
+            self.limit = limit
+        }
+
+        access(contract)
+        fun onParticipantScoreUpdated(_ userScoreRef: &UserScore) {
+            let periodId = userScoreRef.period
+            let adminAddress = userScoreRef.admin
+            let uid = adminAddress.toString().concat("_").concat(userScoreRef.participant)
+
+            log("onParticipantScoreUpdated - Start - ".concat(uid))
+            // remove the address from the top 100
+            let listRef = &self.list as &[ScoreRecord]
+            var foundIdx = -1
+            for i, item in listRef {
+                if item.participant == userScoreRef.participant {
+                    foundIdx = i
+                    break
+                }
+            }
+            let score = userScoreRef.score
+            let theUpdatedScoreRecord = foundIdx != -1
+                ? listRef.remove(at: foundIdx)
+                : ScoreRecord(userScoreRef.participant, 0.0)
+            // update the latest score
+            theUpdatedScoreRecord.updateScore(score)
+
+            // now address is not in the top, we need to check score and insert it
+            var highScoreIdx = 0
+            var lowScoreIdx = listRef.length - 1
+            // use binary search to find the position
+            while lowScoreIdx >= highScoreIdx {
+                let midIdx = (lowScoreIdx + highScoreIdx) / 2
+                let midScore = listRef[midIdx].score
+                // find the position
+                if score > midScore {
+                    lowScoreIdx = midIdx - 1
+                } else if score < midScore {
+                    highScoreIdx = midIdx + 1
+                } else {
+                    break
+                }
+            }
+
+            // insert the record
+            if highScoreIdx < self.limit {
+                listRef.insert(at: highScoreIdx, theUpdatedScoreRecord)
+
+                emit LeaderboardEntered(
+                    admin: adminAddress,
+                    participantId: theUpdatedScoreRecord.participant,
+                    periodId: periodId,
+                    rank: highScoreIdx,
+                    score: theUpdatedScoreRecord.score
+                )
+            }
+
+            log("onParticipantScoreUpdated - End - ".concat(uid)
+                .concat(" score: ").concat(score.toString())
+                .concat(" rank: ").concat(highScoreIdx.toString()))
+
+            // remove the last one if the length is greater than 100
+            if listRef.length > self.limit {
+                let removed = listRef.removeLast()
+
+                emit LeaderboardLeft(
+                    admin: adminAddress,
+                    participantId: removed.participant,
+                    periodId: periodId,
+                    score: removed.score
+                )
+            }
         }
     }
 
     access(all) struct PeriodStatus {
         access(all) let admin: Address
-        access(all) let id: UInt
+        access(all) let id: UInt64
         access(all) let useChecklist: String
         access(all) let startAt: UFix64 
         access(all) let endAt: UFix64
         access(all) let participants: [String]
-        access(all) let leaderboard: [ScoreRecord]
+        access(all) let leaderboard: LeaderboardRecord
 
         view init(
             _ admin: Address,
-            _ id: UInt,
+            _ id: UInt64,
             _ useChecklist: String,
             _ startAt: UFix64,
             _ endAt: UFix64,
+            _ leaderboardLimit: Int
         ) {
             self.admin = admin
             self.id = id
@@ -81,7 +210,7 @@ contract Leaderboard {
             self.startAt = startAt
             self.endAt = endAt
             self.participants = []
-            self.leaderboard = []
+            self.leaderboard = LeaderboardRecord([], leaderboardLimit)
         }
 
         access(all) view
@@ -105,31 +234,20 @@ contract Leaderboard {
             }
             self.participants.append(participant)
         }
-
-        access(contract)
-        fun onParticipantScoreUpdated(_ participant: String) {
-            pre {
-                self.isActive(): "Period is not active"
-            }
-            if !self.participants.contains(participant) {
-                return
-            }
-            // TODO: update total score
-        }
     }
 
     // Admin resource, holds all global configuration
     access(all) resource LeaderboardAdmin {
         access(all) let checklists: {String: ChecklistConfig}
-        access(all) var currentPeriod: UInt
+        access(all) var currentPeriod: UInt64
         access(all) var periods: [PeriodStatus]
-        access(all) var leaderboard: [ScoreRecord]
+        access(all) let leaderboard: LeaderboardRecord
 
         init() {
             self.checklists = {}
             self.periods = []
             self.currentPeriod = 0
-            self.leaderboard = []
+            self.leaderboard = LeaderboardRecord([], 100)
         }
 
         access(Admin)
@@ -138,22 +256,42 @@ contract Leaderboard {
                 name != "": "Name cannot be empty which is the default checklist"
             }
             self.checklists[name] = ChecklistConfig(items)
+
+            let adminAddress = self.owner?.address ?? panic("Owner not found")
+            emit ChecklistAdded(
+                admin: adminAddress,
+                checklistName: name,
+                checklistItems: items
+            )
         }
 
         access(Admin)
-        fun startNewPeriod(_ useChecklist: String, _ startAt: UFix64, _ endAt: UFix64) {
+        fun startNewPeriod(_ useChecklist: String, _ startAt: UFix64, _ endAt: UFix64, _ leaderboardLimit: Int) {
             pre {
                 self.currentPeriod == 0 || (self.currentPeriod > 0 && self.borrowCurrentPeriod()?.isActive() == false): "Current period is still active"
                 self.borrowChecklist(useChecklist) != nil: "Checklist not found"
             }
             self.currentPeriod = self.currentPeriod + 1
+
+            let adminAddress = self.owner?.address ?? panic("Owner not found")
+
             self.periods.append(PeriodStatus(
-                self.owner?.address ?? panic("Owner not found"),
-                UInt(self.currentPeriod),
+                adminAddress,
+                UInt64(self.currentPeriod),
                 useChecklist,
                 startAt,
                 endAt,
+                leaderboardLimit
             ))
+
+            emit PeriodStarted(
+                admin: adminAddress,
+                periodId: UInt64(self.currentPeriod),
+                useChecklist: useChecklist,
+                startAt: startAt,
+                endAt: endAt,
+                leaderboardLimit: leaderboardLimit
+            )
         }
 
         access(all) view
@@ -165,7 +303,7 @@ contract Leaderboard {
         }
 
         access(all) view
-        fun getChecklistForPeriod(): {String: UInt64} {
+        fun getChecklistForCurrentPeriod(): {String: UInt64} {
             if let period = self.borrowCurrentPeriod() {
                 if let config = self.borrowChecklist(period.useChecklist) {
                     return config.getItems()
@@ -183,7 +321,7 @@ contract Leaderboard {
         }
 
         access(all) view
-        fun borrowPeriod(_ id: UInt): &PeriodStatus? {
+        fun borrowPeriod(_ id: UInt64): &PeriodStatus? {
             if id > self.currentPeriod {
                 return nil
             }
@@ -191,18 +329,40 @@ contract Leaderboard {
         }
 
         access(all)
-        fun generateLeaderboardByPeriod(_ id: UInt): [ScoreRecord] {
+        fun getLeaderboardByPeriod(_ id: UInt64): [ScoreRecord] {
             if id == 0 {
-                return self.leaderboard
+                return self.leaderboard.list
             }
             if let period = self.borrowPeriod(id) {
                 let result: [ScoreRecord] = []
-                for i, scoreRecord in period.leaderboard {
+                for i, scoreRecord in period.leaderboard.list {
                     result.append(ScoreRecord(scoreRecord.participant, scoreRecord.score))
                 }
                 return result
             }
             return []
+        }
+
+        access(contract)
+        fun onParticipantScoreUpdated(_ owner: Address, _ participant: String) {
+            let userScoreProfileRef = Leaderboard.borrowUserScoringProfile(owner, participant)
+                ?? panic("User score profile not found")
+            
+            let adminAddress = self.owner?.address ?? panic("Owner not found")
+            // update in global leaderboard
+            let totalScoreRef = userScoreProfileRef.borrowUserScore(adminAddress, 0)
+                ?? panic("Total score not found")
+            self.leaderboard.onParticipantScoreUpdated(totalScoreRef)
+
+            // update in period leaderboard
+            let periodScoreRef = userScoreProfileRef.borrowUserScore(adminAddress, self.currentPeriod)
+                ?? panic("Period score not found")
+            let periodRef = self.borrowPeriod(self.currentPeriod)
+                ?? panic("Period not found")
+            periodRef.leaderboard.onParticipantScoreUpdated(periodScoreRef)
+
+            // add participant to period
+            periodRef.addParticipant(participant)
         }
 
         access(self) view
@@ -211,13 +371,17 @@ contract Leaderboard {
         }
     }
 
+    access(contract)
+    fun updateLeaderboard(list: auth(Mutate) &[ScoreRecord], limit: Int, newUpdatedScore: &UserScore) {
+    }
+
     access(all) struct UserScore {
         access(all) let admin: Address
-        access(all) let period: UInt
+        access(all) let period: UInt64
         access(all) let participant: String
         access(all) var score: UFix64
 
-        view init(_ admin: Address, _ period: UInt, _ participant: String) {
+        view init(_ admin: Address, _ period: UInt64, _ participant: String) {
             self.admin = admin
             self.period = period
             self.participant = participant
@@ -233,7 +397,7 @@ contract Leaderboard {
     // User scoring profile resource
     access(all) resource UserScoringProfile {
         access(all) let id: String
-        access(all) let scores: {Address: [UserScore]}
+        access(all) let scores: {Address: {UInt64: UserScore}}
 
         init(_ id: String) {
             self.id = id
@@ -253,13 +417,7 @@ contract Leaderboard {
             let checklistRef = adminRef.borrowChecklist(periodRef.useChecklist)
                 ?? panic("Checklist not found")
 
-            var totalWeight: UFix64 = 0.0
-            checklistRef.forEachItem(fun (key: String): Bool {
-                if let value = checklistRef.getItemValue(key) {
-                    totalWeight = totalWeight + UFix64(value)
-                }
-                return true
-            })
+            let totalWeight: UFix64 = checklistRef.getTotalWeight()
             var completedWeight: UFix64 = 0.0
             for item in completed {
                 if let value = checklistRef.getItemValue(item) {
@@ -268,26 +426,28 @@ contract Leaderboard {
             }
             // Max score for each submission is 10
             let score = completedWeight / totalWeight * 10.0
-            // TODO:add score to user score
+            // Add score to user's period score
+            let scoreRecordRef = self.borrowAndEnsureUserScore(admin, periodRef.id, self.id)
+            scoreRecordRef.addScore(score)
+
+            // Add score to user's total score
+            let totalScoreRef = self.borrowAndEnsureUserScore(admin, 0, self.id)
+            totalScoreRef.addScore(score)
 
             // Inform the admin that the score has been updated
-            periodRef.onParticipantScoreUpdated(self.id)
+            let owner = self.owner?.address ?? panic("Owner not found")
+            adminRef.onParticipantScoreUpdated(owner, self.id)
+
+            // Emit event
+            emit ChecklistSubmitted(
+                admin: admin,
+                userOwner: owner,
+                participantId: self.id,
+                period: periodRef.id,
+                scoreAdded: score,
+                scoreTotal: scoreRecordRef.score
+            )
         }
-
-        // access(all)
-        // fun borrowAndEnsureUserScore(_ admin: Address, _ period: UInt, _ participant: String): &UserScore {
-        //     var scores = self.borrowUserScoreSet(admin)
-        //     if scores == nil {
-        //         self.scores[admin] = []
-        //         scores = self.borrowUserScoreSet(admin)
-        //     }
-
-        //     if let set = scores {
-                
-        //     }
-            
-        //     return &self.scores[admin].append(UserScore(admin, period, participant))
-        // }
 
         access(all) view
         fun getTotalScore(_ admin: Address): UFix64 {
@@ -311,13 +471,33 @@ contract Leaderboard {
         access(all) view
         fun borrowUserScore(_ admin: Address, _ period: UInt64): &UserScore? {
             if let scores = self.borrowUserScoreSet(admin) {
-                return scores[period]
+                if let score = scores[period] {
+                    return score
+                }
             }
             return nil
         }
 
-        access(all) view
-        fun borrowUserScoreSet(_ admin: Address): &[UserScore]? {
+        access(self)
+        fun borrowAndEnsureUserScore(_ admin: Address, _ period: UInt64, _ participant: String): &UserScore {
+            var scores = self.borrowUserScoreSet(admin)
+            if scores == nil {
+                self.scores[admin] = {}
+                scores = self.borrowUserScoreSet(admin)
+            }
+
+            let set = scores ?? panic("User score set not found")
+            var score = set[period]
+            if score == nil {
+                set[period] = UserScore(admin, period, participant)
+                score = self.borrowUserScore(admin, period)
+            }
+
+            return score ?? panic("User score not found")
+        }
+
+        access(self) view
+        fun borrowUserScoreSet(_ admin: Address): auth(Mutate) &{UInt64: UserScore}? {
             return &self.scores[admin]
         }
     }

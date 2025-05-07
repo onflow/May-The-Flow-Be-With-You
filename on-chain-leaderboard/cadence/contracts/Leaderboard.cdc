@@ -16,6 +16,12 @@ contract Leaderboard {
         scoreTotal: UFix64
     )
 
+    access(all) event PeriodAliasSet(
+        admin: Address,
+        periodName: String,
+        periodId: UInt64
+    )
+
     // Event emitted when a period is started
     access(all) event PeriodStarted(
         admin: Address,
@@ -240,12 +246,14 @@ contract Leaderboard {
     access(all) resource LeaderboardAdmin {
         access(all) let checklists: {String: ChecklistConfig}
         access(all) var currentPeriod: UInt64
-        access(all) var periods: [PeriodStatus]
+        access(all) let periods: [PeriodStatus]
+        access(all) let periodAlias: {String: UInt64}
         access(all) let leaderboard: LeaderboardRecord
 
         init() {
             self.checklists = {}
             self.periods = []
+            self.periodAlias = {}
             self.currentPeriod = 0
             self.leaderboard = LeaderboardRecord([], 100)
         }
@@ -262,6 +270,18 @@ contract Leaderboard {
                 admin: adminAddress,
                 checklistName: name,
                 checklistItems: items
+            )
+        }
+
+        access(Admin)
+        fun setPeriodAlias(_ name: String, _ id: UInt64) {
+            self.periodAlias[name] = id
+
+            let adminAddress = self.owner?.address ?? panic("Owner not found")
+            emit PeriodAliasSet(
+                admin: adminAddress,
+                periodName: name,
+                periodId: id
             )
         }
 
@@ -326,6 +346,14 @@ contract Leaderboard {
                 return nil
             }
             return &self.periods[id - 1] as &PeriodStatus
+        }
+
+        access(all) view
+        fun borrowPeriodByName(_ name: String): &PeriodStatus? {
+            if let id = self.periodAlias[name] {
+                return self.borrowPeriod(id)
+            }
+            return nil
         }
 
         access(all)

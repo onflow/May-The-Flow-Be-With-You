@@ -121,16 +121,20 @@ const App: React.FC = () => {
       // Execute the spin wheel script
       const result = await fcl.query({
         cadence: `
-          import WheelOfFortune from "../contracts/WheelOfFortune.cdc"
+          import WheelOfFortune from 0xf6dda46f6473a998
           
           pub fun main(): String {
-              let wheel = getAccount(0x586b8d7260d25ea5).contracts.borrow<&WheelOfFortune>(name: "WheelOfFortune")
+              let wheel = getAccount(0xf6dda46f6473a998).contracts.borrow<&WheelOfFortune>(name: "WheelOfFortune")
                   ?? panic("WheelOfFortune contract not found")
               return wheel.spinWheel()
           }
         `,
         args: (arg: any, t: any) => []
       });
+
+      if (!result) {
+        throw new Error("No result returned from contract");
+      }
 
       // Calculate random rotation between 1800 and 3600 degrees
       const newRotation = rotation + 1800 + Math.random() * 1800;
@@ -150,9 +154,20 @@ const App: React.FC = () => {
 
   const handleConnect = async () => {
     try {
+      // First unauthenticate to clear any existing connection
+      await fcl.unauthenticate();
+      // Then authenticate with the new wallet
       await fcl.authenticate();
     } catch (error) {
       console.error('Error connecting wallet:', error);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await fcl.unauthenticate();
+    } catch (error) {
+      console.error('Error disconnecting wallet:', error);
     }
   };
 
@@ -168,6 +183,12 @@ const App: React.FC = () => {
           {(user && (user.addr || user.address)) && (
             <div style={{ marginBottom: '1rem', color: '#ffd700', fontWeight: 'bold' }}>
               Connected: {user.addr || user.address}
+              <Button 
+                onClick={handleDisconnect}
+                style={{ marginLeft: '1rem', padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+              >
+                Disconnect
+              </Button>
             </div>
           )}
           <WheelContainer>

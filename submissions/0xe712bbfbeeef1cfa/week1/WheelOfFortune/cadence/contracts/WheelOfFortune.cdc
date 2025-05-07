@@ -44,6 +44,8 @@ access(all) contract WheelOfFortune {
         for segment in self.segments {
             currentWeight = currentWeight + segment.weight
             if randomNumber <= currentWeight {
+                // Emit the event
+                emit WheelSpun(player: self.account.address, prize: segment.prize, timestamp: getCurrentBlock().timestamp)
                 return segment.prize
             }
         }
@@ -55,14 +57,7 @@ access(all) contract WheelOfFortune {
     // Helper function to get a random number
     access(self) fun getRandomNumber(): UInt32 {
         // Use Flow's built-in randomness
-        let randomNumber = self.getRandomUInt32()
-        return randomNumber
-    }
-    
-    // Function to get a random UInt32
-    access(self) fun getRandomUInt32(): UInt32 {
-        // This is a placeholder - in a real implementation, 
-        // you would use Flow's actual random number generation
-        return 0
+        let randomNumber = UInt32(getCurrentBlock().timestamp)
+        return randomNumber % 100
     }
 } 

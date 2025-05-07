@@ -357,11 +357,11 @@ contract Leaderboard {
         }
 
         access(all)
-        fun getLeaderboardByPeriod(_ id: UInt64): [ScoreRecord] {
-            if id == 0 {
+        fun getLeaderboardByPeriodAlias(_ alias: String?): [ScoreRecord] {
+            if alias == nil {
                 return self.leaderboard.list
             }
-            if let period = self.borrowPeriod(id) {
+            if let period = self.borrowPeriodByName(alias!) {
                 let result: [ScoreRecord] = []
                 for i, scoreRecord in period.leaderboard.list {
                     result.append(ScoreRecord(scoreRecord.participant, scoreRecord.score))

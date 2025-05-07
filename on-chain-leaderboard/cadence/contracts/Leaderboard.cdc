@@ -407,6 +407,7 @@ contract Leaderboard {
         access(all) let admin: Address
         access(all) let period: UInt64
         access(all) let participant: String
+        access(all) let submittedTopics: [String]
         access(all) var score: UFix64
 
         view init(_ admin: Address, _ period: UInt64, _ participant: String) {
@@ -414,11 +415,21 @@ contract Leaderboard {
             self.period = period
             self.participant = participant
             self.score = 0.0
+            self.submittedTopics = []
         }
 
         access(contract)
-        fun addScore(_ score: UFix64) {
+        fun addScore(_ topic: String, _ score: UFix64) {
+            pre {
+                !self.isTopicSubmitted(topic): "Topic already submitted"
+            }
+            self.submittedTopics.append(topic)
             self.score = self.score + score
+        }
+
+        access(all) view
+        fun isTopicSubmitted(_ topic: String): Bool {
+            return self.submittedTopics.contains(topic)
         }
     }
 
@@ -433,13 +444,21 @@ contract Leaderboard {
         }
 
         access(UserWrite)
-        fun submitChecklist(_ admin: Address, completed: [String]) {
+        fun submitChecklist(_ admin: Address, topic: String, completed: [String]) {
             let adminRef = Leaderboard.borrowLeaderboardAdmin(admin)
                 ?? panic("Admin not found for address: ".concat(admin.toString()))
             let periodRef = adminRef.borrowCurrentPeriod()
                 ?? panic("Current period not found")
             
             assert(periodRef.isActive(), message: "Period is not active")
+
+            // Check if the topic is valid
+            let scoreRecordRef = self.borrowAndEnsureUserScore(admin, periodRef.id, self.id)
+            assert(!scoreRecordRef.isTopicSubmitted(topic), message: "Topic already submitted")
+
+            let totalScoreRef = self.borrowAndEnsureUserScore(admin, 0, self.id)
+            let topicInGlobal = periodRef.id.toString().concat("_").concat(topic)
+            assert(!totalScoreRef.isTopicSubmitted(topicInGlobal), message: "Topic already submitted in global leaderboard")
 
             // get checklist config
             let checklistRef = adminRef.borrowChecklist(periodRef.useChecklist)
@@ -454,13 +473,10 @@ contract Leaderboard {
             }
             // Max score for each submission is 10
             let score = completedWeight / totalWeight * 10.0
-            // Add score to user's period score
-            let scoreRecordRef = self.borrowAndEnsureUserScore(admin, periodRef.id, self.id)
-            scoreRecordRef.addScore(score)
-
-            // Add score to user's total score
-            let totalScoreRef = self.borrowAndEnsureUserScore(admin, 0, self.id)
-            totalScoreRef.addScore(score)
+            // Add score to user profile
+            scoreRecordRef.addScore(topic, score)
+            // Add score to global leaderboard
+            totalScoreRef.addScore(topicInGlobal, score)
 
             // Inform the admin that the score has been updated
             let owner = self.owner?.address ?? panic("Owner not found")
@@ -475,6 +491,20 @@ contract Leaderboard {
                 scoreAdded: score,
                 scoreTotal: scoreRecordRef.score
             )
+        }
+
+        access(all) view
+        fun isTopicSubmitted(_ admin: Address, _ periodAlias: String, _ topic: String): Bool? {
+            if let adminRef = Leaderboard.borrowLeaderboardAdmin(admin) {
+                if let periodRef = adminRef.borrowPeriodByName(periodAlias) {
+                    if let scoreRecordRef = self.borrowUserScore(admin, periodRef.id) {
+                        return scoreRecordRef.isTopicSubmitted(topic)
+                    } else {
+                        return false
+                    }
+                }
+            }
+            return nil
         }
 
         access(all) view

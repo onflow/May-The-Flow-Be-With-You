@@ -371,6 +371,11 @@ contract Leaderboard {
             return []
         }
 
+        access(all) view
+        fun borrowChecklist(_ name: String): &ChecklistConfig? {
+            return &self.checklists[name]
+        }
+
         access(contract)
         fun onParticipantScoreUpdated(_ owner: Address, _ participant: String) {
             let userScoreProfileRef = Leaderboard.borrowUserScoringProfile(owner, participant)
@@ -391,11 +396,6 @@ contract Leaderboard {
 
             // add participant to period
             periodRef.addParticipant(participant)
-        }
-
-        access(contract) view
-        fun borrowChecklist(_ name: String): &ChecklistConfig? {
-            return &self.checklists[name]
         }
     }
 

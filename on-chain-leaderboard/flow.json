@@ -3,7 +3,10 @@
 		"Leaderboard": {
 			"source": "cadence/contracts/Leaderboard.cdc",
 			"aliases": {
-				"testing": "0000000000000007"
+				"emulator": "f8d6e0586b0a20c7",
+				"testing": "0000000000000007",
+				"mainnet": "",
+				"testnet": "4fae0a028f1057ae"
 			}
 		}
 	},

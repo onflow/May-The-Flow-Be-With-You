@@ -33,6 +33,8 @@ Useful Links:
 
 ### Week 4: To be announced (May 25-31)
 
+Note: Think about the weekly themes as suggestions, you are welcome to continue working on your original week's idea into later weeks and aren't strictly required to follow the new week's theme.
+
 ## How to Participate
 
 1. **Create Your Profile**
@@ -65,6 +67,7 @@ Useful Links:
         * src/ (Source code)
     * week2/
     * week3/
+    * week4/
 
 ## Submission Guidelines
 - Each submission should demonstrate meaningful progress
@@ -79,7 +82,7 @@ Share your progress on Twitter with the hashtag #MayTheFlowBeWithYou and tag @fl
 - You must deploy on Flow and put your Flow EVM (i.e. metamask) or Cadence (i.e. Flow Wallet) wallet address to recieve rewards.
 - All code must be original and public
 - All submissions must be made through this repository
-- Each wallet address can win multiple times
+- Each wallet address can win multiple times (althogugh not in the same week)
 - Weekly prizes are distributed within several days of winners being announced
 - Flow's Community Team has final say on all prize decisions
 

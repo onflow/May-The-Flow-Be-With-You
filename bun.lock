@@ -2,7 +2,19 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
+      "name": "may-the-flow-be-with-you",
+      "devDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "@types/bun": "latest",
+        "only-allow": "^1.2.1",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "on-chain-leaderboard": {
       "name": "on-chain-leaderboard",
+      "version": "0.1.0",
       "dependencies": {
         "@onflow/fcl": "^1.16.1",
         "elliptic": "^6.6.1",
@@ -10,13 +22,13 @@
         "sha3": "^2.1.4",
       },
       "devDependencies": {
-        "@biomejs/biome": "^1.9.4",
-        "@types/bun": "latest",
         "@types/elliptic": "^6.4.18",
         "@types/node-fetch": "^2.6.12",
-        "only-allow": "^1.2.1",
       },
       "peerDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "@types/bun": "latest",
+        "only-allow": "^1.2.1",
         "typescript": "^5",
       },
     },
@@ -497,6 +509,8 @@
     "object-hash": ["object-hash@3.0.0", "", {}, "sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw=="],
 
     "ofetch": ["ofetch@1.4.1", "", { "dependencies": { "destr": "^2.0.3", "node-fetch-native": "^1.6.4", "ufo": "^1.5.4" } }, "sha512-QZj2DfGplQAr2oj9KzceK9Hwz6Whxazmn85yYeVuS3u9XTMOGMRx0kO95MQ+vLsj/S/NwBDMMLU5hpxvI6Tklw=="],
+
+    "on-chain-leaderboard": ["on-chain-leaderboard@workspace:on-chain-leaderboard"],
 
     "on-exit-leak-free": ["on-exit-leak-free@0.2.0", "", {}, "sha512-dqaz3u44QbRXQooZLTUKU41ZrzYrcvLISVgbrzbyCMxpmSLJvZ3ZamIJIZ29P6OhZIkNIQKosdeM6t1LYbA9hg=="],
 

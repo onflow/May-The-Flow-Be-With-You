@@ -1,5 +1,5 @@
 {
-  "name": "on-chain-leaderboard",
+  "name": "@flow-ecosystem/on-chain-leaderboard",
   "version": "0.1.0",
   "private": true,
   "mode": "modules",

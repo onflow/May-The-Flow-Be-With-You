@@ -1,15 +1,8 @@
-import type { FlowWallet } from "./flow";
-import type { IFlowScriptExecutor, ParticipantScoreRecord, TopicResult } from "./types";
-import { addresses, networkName } from "./config";
+import type { IFlowScriptExecutor, ParticipantScoreRecord, TopicResult } from "../utils/types";
+import { addresses, networkName } from "../utils/config";
 
-// Scripts
 import scriptCheckSubmissionStatus from "../../cadence/scripts/check-submission-status.cdc?raw";
 import scriptGetLeaderboard from "../../cadence/scripts/get-leaderboard.cdc?raw";
-// Transactions
-import trxSubmitTopic from "../../cadence/transactions/submit-a-topic.cdc?raw";
-import trxSyncLeaderboardDefault from "../../cadence/transactions/sync-leaderboard-default.cdc?raw";
-
-// Scripts actions
 
 export async function getLeaderboard(
     flowExecutor: IFlowScriptExecutor,
@@ -51,28 +44,4 @@ export async function getSubmissionStatus(
         [] as any[],
     );
     return result;
-}
-
-// Transactions actions
-
-export async function syncLeaderboardPeriod(flowWallet: FlowWallet): Promise<string> {
-    const txid = await flowWallet.sendTransaction(trxSyncLeaderboardDefault, (_arg, _t) => []);
-    return txid;
-}
-
-export async function submitTopic(
-    flowWallet: FlowWallet,
-    userId: string,
-    periodAlias: string,
-    topic: string,
-    completed: string[],
-): Promise<string> {
-    const txid = await flowWallet.sendTransaction(trxSubmitTopic, (arg, t) => [
-        arg(addresses.LeaderboardService[networkName], t.Address),
-        arg(userId, t.String),
-        arg(periodAlias, t.String),
-        arg(topic, t.String),
-        arg(completed, t.Array(t.String)),
-    ]);
-    return txid;
 }

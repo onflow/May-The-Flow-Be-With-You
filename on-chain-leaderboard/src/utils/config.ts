@@ -15,10 +15,10 @@ export const networkName: Network = (process.env.NETWORK as Network) || "testnet
 
 export { flowJSON };
 
-export const contracts: Record<string, Record<Network, string>> = {
-    Leaderboard: {
-        emulator: `0x${flowJSON.contracts.Leaderboard.aliases.emulator}`,
-        mainnet: `0x${flowJSON.contracts.Leaderboard.aliases.mainnet}`,
-        testnet: `0x${flowJSON.contracts.Leaderboard.aliases.testnet}`,
+export const addresses = {
+    LeaderboardService: {
+        emulator: "0xf8d6e0586b0a20c7",
+        mainnet: "0x",
+        testnet: "0xe647591c05619dba",
     },
 };

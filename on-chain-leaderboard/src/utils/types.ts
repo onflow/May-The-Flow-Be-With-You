@@ -34,3 +34,15 @@ export interface FlowBlockchainContext extends Context {
     connector: FlowConnector;
     wallet?: FlowWallet;
 }
+
+export interface TopicResult {
+    admin: string;
+    periodAlias: string;
+    topic: string;
+    isSubmitted: boolean;
+}
+
+export interface ParticipantScoreRecord {
+    participant: string;
+    score: number;
+}

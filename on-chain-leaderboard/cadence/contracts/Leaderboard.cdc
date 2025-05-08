@@ -130,7 +130,7 @@ contract Leaderboard {
 
             log("onParticipantScoreUpdated - Start - ".concat(uid))
             // remove the address from the top 100
-            let listRef = &self.list as &[ScoreRecord]
+            let listRef = &self.list as auth(Mutate) &[ScoreRecord]
             var foundIdx = -1
             for i, item in listRef {
                 if item.participant == userScoreRef.participant {
@@ -393,7 +393,7 @@ contract Leaderboard {
             periodRef.addParticipant(participant)
         }
 
-        access(self) view
+        access(contract) view
         fun borrowChecklist(_ name: String): &ChecklistConfig? {
             return &self.checklists[name]
         }

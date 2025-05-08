@@ -1,11 +1,5 @@
 {
 	"contracts": {
-		"Counter": {
-			"source": "cadence/contracts/Counter.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
 		"Leaderboard": {
 			"source": "cadence/contracts/Leaderboard.cdc",
 			"aliases": {
@@ -118,6 +112,25 @@
 				"type": "file",
 				"location": "emulator-account.pkey"
 			}
+		},
+		"testnet-deployer": {
+			"address": "4fae0a028f1057ae",
+			"key": {
+				"type": "file",
+				"location": "testnet-deployer.pkey"
+			}
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"Leaderboard"
+			]
+		},
+		"testnet": {
+			"testnet-deployer": [
+				"Leaderboard"
+			]
 		}
 	}
 }

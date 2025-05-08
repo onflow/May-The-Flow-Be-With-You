@@ -35,6 +35,8 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
     access(all) var totalSupply: UInt64
     // Track of total number of EggWisdom phrases
     access(all) var totalPhrases: UInt64
+    /// The RandomConsumer.Consumer resource used to request & fulfill randomness
+    access(self) let consumer: @RandomConsumer.Consumer
     // -----------------------------------------------------------------------
     // EggWisdom contract Events
     // ----------------------------------------------------------------------- 
@@ -43,7 +45,9 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
 	access(all) event Deposit(id: UInt64, to: Address?)
     access(all) event newPhraseAdded(id: UInt64, phrase: String)
     access(all) event PhraseMinted(id: UInt64, phrase: String, minter: Address)
-
+    access(all) event ShellDeposit(id: UInt64, to: Address?)
+    access(all) event ShellWithdraw(id: UInt64, from: Address?)
+    access(all) event WisdomEggPetted(id: UInt64, phrase: String, petter: Address)
     // -----------------------------------------------------------------------
     // EggWisdom account paths
     // -----------------------------------------------------------------------
@@ -118,7 +122,7 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
 	access(all) resource NFT: NonFungibleToken.NFT {
         access(all) let id: UInt64
         access(all) let serial: UInt64
-        access(all) var metadata: PhraseStruct?
+        access(all) let metadata: PhraseStruct?
         access(all) let isWisdom: Bool
 
         // Get this NFT traits
@@ -132,39 +136,47 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
                 traits["background"] = phaseStruct.background
                 traits["namesOnScreen"] = phaseStruct.namesOnScreen
                 traits["catsOnScreen"] = phaseStruct.catsOnScreen
+                return traits
+            } else {
+                let traits: {String: AnyStruct} = {"id": self.id}
+                traits["phrase"] = self.metadata?.phrase
+                traits["serial"] = self.serial
+                traits["background"] = self.metadata?.background
+                traits["namesOnScreen"] = self.metadata?.namesOnScreen
+                traits["catsOnScreen"] = self.metadata?.catsOnScreen
+                return traits
             }
-            let traits: {String: AnyStruct} = {"id": self.id}
-            traits["phrase"] = self.metadata?.phrase
-            traits["serial"] = self.serial
-            traits["background"] = self.metadata?.background
-            traits["namesOnScreen"] = self.metadata?.namesOnScreen
-            traits["catsOnScreen"] = self.metadata?.catsOnScreen
-
-            return traits
         }
         // Pet the Egg Wisdom to change its phrase
-        access(all) fun petEgg(petter: Address, payment: @{FungibleToken.Vault}) {
+        access(all) fun petEgg() {
             pre {
-                payment.balance == 0.1: "Payment is not 0.1 Flow"
+                self.isWisdom == true: "This is not a Wisdom Egg"
             }
             // import storage
             let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
+            // Produce a random number
+            let phraseID <- EggWisdom.consumer.requestRandomness()
+            // fulfill the request with a PRG to generate multiple random numbers from
+            let prg = EggWisdom.consumer.fulfillWithPRG(request: <-phraseID)
+            let prgRef = &prg as &Xorshift128plus.PRG
+
+            let phrases = EggWisdom.phrases.keys
+            // Determine the Phrase randomly 
+            let randomIDIndex = RandomConsumer.getNumberInRange(prg: prgRef, min: 0, max: phrases.length as! UInt64)
             // Get random Wisdom Egg metadata
-            let phaseStruct = storage.getPhrase(phraseID: 1)!
+            let phaseStruct = storage.getPhrase(phraseID: randomIDIndex)!
             // Update Wisdom Egg metadata
             EggWisdom.wisdomEgg = phaseStruct
-            // Get contract's Vault
-            let WisdomTreasury = getAccount(EggWisdom.account.address).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
-            // Deposit the Flow into the account
-            WisdomTreasury.deposit(from: <- payment)
+            // Emit event
+            emit WisdomEggPetted(id: self.id, phrase: phaseStruct.phrase, petter: self.owner?.address!)
         }
 
 
-        init(metadataStruct: PhraseStruct?, serial: UInt64?) {
+        init(metadataStruct: PhraseStruct?, serial: UInt64) {
             // Increment the global Cards IDs
             EggWisdom.totalSupply = EggWisdom.totalSupply + 1
             self.id = EggWisdom.totalSupply
-            self.serial = 0
+            self.serial = serial
             self.metadata = metadataStruct
             if self.metadata == nil {
                 self.isWisdom = true
@@ -356,6 +368,65 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         }
     }
     // -----------------------------------------------------------------------
+    // Wisdom Shell Storage Resource
+    // -----------------------------------------------------------------------
+    access(all) resource WisdomShellStorage {
+        // List of shells 
+		access(all) var shells: @[Shell]    
+		// Deposit takes a Shell and adds it to the storage list
+		access(all) fun deposit(Shell: @Shell) {
+            let id = Shell.uuid
+            self.shells.append(<- Shell)
+
+            // Emit event
+			emit ShellDeposit(id: id, to: self.owner?.address) 
+		}
+		// Withdraw removes the oldest Shell from the list and moves it to the caller(to reveal)
+		access(all) fun withdraw(): @Shell {
+			let Shell <- self.shells.removeFirst()
+            let id = Shell.uuid
+			
+            emit ShellWithdraw(id: id, from: self.owner?.address)
+            return <- Shell
+		}
+        // Get number of shells in storage
+        access(all) fun getBalance(): Int {
+            return self.shells.length
+        }
+        init() {
+            self.shells <- []
+        }
+    }
+    // -----------------------------------------------------------------------
+    // Wisdom Shell Resource
+    // -----------------------------------------------------------------------
+    /// The Shell resource is used to store the associated phrase request. By listing the
+    /// RandomConsumer.RequestWrapper conformance, this resource inherits all the default implementations of the
+    /// interface. This is why the Shell resource has access to the getRequestBlock() and popRequest() functions
+    /// without explicitly defining them.
+    ///
+    access(all) resource Shell : RandomConsumer.RequestWrapper {
+        /// The associated randomness request which contains the block height at which the request was made
+        /// and whether the request has been fulfilled.
+        access(all) var request: @RandomConsumer.Request?
+
+        init(request: @RandomConsumer.Request) {
+            self.request <- request
+        }
+    }
+    // -----------------------------------------------------------------------
+    // EggWisdom private functions
+    // -----------------------------------------------------------------------
+    /// Returns a random number between 0 and 1 using the RandomConsumer.Consumer resource contained in the contract.
+    /// For the purposes of this contract, a simple modulo operation could have been used though this is not the case
+    /// for all ranges. Using the Consumer.fulfillRandomInRange function ensures that we can get a random number
+    /// within any range without a risk of bias.
+    ///
+    access(self) 
+    fun _randomNumber(request: @RandomConsumer.Request, max: Int): UInt64 {
+        return self.consumer.fulfillRandomInRange(request: <-request, min: 0, max: UInt64(max))
+    }
+    // -----------------------------------------------------------------------
     // EggWisdom Generic or Standard public "transaction" functions
     // -----------------------------------------------------------------------
 
@@ -370,7 +441,7 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         pre {
             payment.balance == 5.0: "Payment is not 5 Flow"
         } 
-        let nft <- create NFT(metadataStruct: nil, serial: nil)
+        let nft <- create NFT(metadataStruct: nil, serial: 0)
 
         // emit PhraseMinted(id: nft.id, phrase: nft.metadata?.phrase!, minter: recipient)
 		if let recipientCollection = getAccount(recipient)
@@ -394,15 +465,15 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
 
     // Mint Phrase NFT
     access(all)
-    fun mintPhrase(phraseName: String, recipient: Address, payment: @{FungibleToken.Vault}) {
+    fun mintPhrase(recipient: Address, payment: @{FungibleToken.Vault}) {
         pre {
-            EggWisdom.phrases[phraseName] != nil: "There's no phrase like: ".concat(phraseName)
             payment.balance == 1.0: "Payment is not 1 Flow"
         }
         // import storage
         let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
         // copy phrase metadata
-        let phraseStruct = storage.getPhrase(phraseID: 0314141414)
+        let phraseID = 67
+        let phraseStruct = storage.getPhrase(phraseID: 6)
         let nft <- create NFT(metadataStruct: phraseStruct, serial: 0)
 
         emit PhraseMinted(id: nft.id, phrase: nft.metadata?.phrase!, minter: recipient)
@@ -501,7 +572,8 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         self.totalSupply = 0
         self.totalPhrases = 0
         self.wisdomEgg = nil
-
+        // Create a RandomConsumer.Consumer resource
+        self.consumer <-RandomConsumer.createConsumer()
 
         let identifier = "EggWisdom_".concat(self.account.address.toString())
         // Set the named paths

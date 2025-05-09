@@ -16,3 +16,4 @@ This is a Ghibli-style headshot generator that utilizes Flow on-chain randomness
 - You will need to prepare some API keys: Open AI, Vercel Blob Read Write Token, Firebase
 - Client dir contains a NextJS simple dapp frontend
 - Backend dir contains all the serverless functions on Vercel
+- Solidity and Cadence contracts are stored in Backend dir

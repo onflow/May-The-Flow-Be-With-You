@@ -11,8 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NETWORK: ${{ secrets.NETWORK }}
-      FLOW_ADDRESS: ${{ secrets.FLOW_ADDRESS }}
-      FLOW_PRIVATE_KEY: ${{ secrets.FLOW_PRIVATE_KEY }}
+      MAINNET_FLOW_ADDRESS: ${{ secrets.MAINNET_FLOW_ADDRESS }}
+      MAINNET_FLOW_PRIVATE_KEY: ${{ secrets.MAINNET_FLOW_PRIVATE_KEY }}
+      TESTNET_FLOW_ADDRESS: ${{ secrets.TESTNET_FLOW_ADDRESS }}
+      TESTNET_FLOW_PRIVATE_KEY: ${{ secrets.TESTNET_FLOW_PRIVATE_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

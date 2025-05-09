@@ -45,8 +45,8 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
 	access(all) event Deposit(id: UInt64, to: Address?)
     access(all) event newPhraseAdded(id: UInt64, phrase: String)
     access(all) event PhraseMinted(id: UInt64, phrase: String, minter: Address)
-    access(all) event ShellDeposit(id: UInt64, to: Address?)
-    access(all) event ShellWithdraw(id: UInt64, from: Address?)
+    access(all) event EggDeposit(id: UInt64, to: Address?)
+    access(all) event EggWithdraw(id: UInt64, from: Address?)
     access(all) event WisdomEggPetted(id: UInt64, phrase: String, petter: Address)
     // -----------------------------------------------------------------------
     // EggWisdom account paths
@@ -56,6 +56,8 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
 	access(all) let CollectionPrivatePath: PrivatePath
 	access(all) let AdministratorStoragePath: StoragePath
 	access(all) let PhraseStoragePath: StoragePath
+    access(all) let EggStoragePath: StoragePath
+    access(all) let EggStoragePublicPath: PublicPath
     // -----------------------------------------------------------------------
     // EggWisdom contract-level Composite Type definitions
     // -----------------------------------------------------------------------
@@ -87,6 +89,14 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             }
             return self.metadatas[phraseID]!
         }
+        // Replace a phrase
+        access(all)
+        fun replacePhrase(phraseID: UInt64, newPhrase: PhraseStruct) {
+            pre {
+                self.metadatas[phraseID] != nil: "There's no phrase like: ".concat(phraseID.toString())
+            }
+            self.metadatas[phraseID] = newPhrase
+        }
     }
 
     // Struct used to copy a Project's NFT metadata
@@ -100,10 +110,11 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         access(all) let namesOnScreen: [String]
         access(all) let catsOnScreen: [String]
         access(all) let background: String
+        access(all) let uploader: Address
 
-        init(_ phrase: String,_ base64Img: String, _ namesOnScreen: [String],_ catsOnScreen: [String],_ background: String) {
+        init(_ phrase: String,_ base64Img: String, _ namesOnScreen: [String],_ catsOnScreen: [String],_ background: String, _ uploader: Address) {
             pre {
-                EggWisdom.phrases[phrase] == nil: "There's already a phrase like: ".concat(phrase)
+                // EggWisdom.phrases[phrase] == nil: "There's already a phrase like: ".concat(phrase)
             }
             // Increment the global Metadatas IDs
             EggWisdom.totalPhrases = EggWisdom.totalPhrases + 1
@@ -113,6 +124,7 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             self.namesOnScreen = namesOnScreen
             self.catsOnScreen = catsOnScreen
             self.background = background
+            self.uploader = uploader
             // Add phrase to the contract's mapping
             EggWisdom.phrases[phrase] = 1
         }
@@ -124,7 +136,6 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         access(all) let serial: UInt64
         access(all) let metadata: PhraseStruct?
         access(all) let isWisdom: Bool
-
         // Get this NFT traits
         // if its WisdomEgg, metadata will be changable
         access(all) fun getTraits(): {String: AnyStruct} {
@@ -159,10 +170,8 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             // fulfill the request with a PRG to generate multiple random numbers from
             let prg = EggWisdom.consumer.fulfillWithPRG(request: <-phraseID)
             let prgRef = &prg as &Xorshift128plus.PRG
-
-            let phrases = EggWisdom.phrases.keys
             // Determine the Phrase randomly 
-            let randomIDIndex = RandomConsumer.getNumberInRange(prg: prgRef, min: 0, max: phrases.length as! UInt64)
+            let randomIDIndex = RandomConsumer.getNumberInRange(prg: prgRef, min: 0, max: EggWisdom.totalPhrases)
             // Get random Wisdom Egg metadata
             let phaseStruct = storage.getPhrase(phraseID: randomIDIndex)!
             // Update Wisdom Egg metadata
@@ -172,15 +181,16 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         }
 
 
-        init(metadataStruct: PhraseStruct?, serial: UInt64) {
+        init(metadataStruct: PhraseStruct?) {
             // Increment the global Cards IDs
             EggWisdom.totalSupply = EggWisdom.totalSupply + 1
             self.id = EggWisdom.totalSupply
-            self.serial = serial
             self.metadata = metadataStruct
             if self.metadata == nil {
+                self.serial = 0
                 self.isWisdom = true
             } else {
+                self.serial = EggWisdom.totalSupply
                 self.isWisdom = false
             }
         }
@@ -253,7 +263,7 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         		case Type<MetadataViews.Royalties>():
           			return MetadataViews.Royalties([
             			MetadataViews.Royalty(
-              				receiver: getAccount(EggWisdom.account.address).capabilities.get<&FlowToken.Vault>(/public/flowTokenReceiver),
+              				receiver: getAccount(self.metadata?.uploader!).capabilities.get<&FlowToken.Vault>(/public/flowTokenReceiver),
               				cut: 0.5, // 5% royalty on secondary sales
               				description: "The deployer gets 5% of every secondary sale."
             			)
@@ -267,10 +277,20 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
 			return nil
         }
     }
+    // to allow others to deposit VenezuelaNFT_20s into their Collection. It also allows for reading
+    // the IDs of VenezuelaNFT_20s in the Collection.
+    /// Defines the methods that are particular to this NFT contract collection
+    ///
+    access(all) resource interface EggWisdomCollectionPublic {
+        access(all) fun deposit(token: @{NonFungibleToken.NFT})
+        access(all) fun getIDs(): [UInt64]
+    //    access(all) fun getCardType(): Type
+    }
+
     // Collection is a resource that every user who owns NFTs 
     // will store in their account to manage their NFTS
     //
-	access(all) resource Collection: NonFungibleToken.Collection {
+	access(all) resource Collection: NonFungibleToken.Collection, EggWisdomCollectionPublic {
         // *** Collection Variables *** //
 		access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
         // *** Collection Constructor *** //
@@ -360,52 +380,56 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
                 EggWisdom.phrases[phrase] == nil: "There's already a phrase like: ".concat(phrase)
             }
             // Create metadata struct
-            let newMetadata = PhraseStruct(phrase, base64Img, namesOnScreen, catsOnScreen, background)
+            let newMetadata = PhraseStruct(phrase, base64Img, namesOnScreen, catsOnScreen, background, EggWisdom.account.address)
             // import storage
             let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
             // save new metadata inside the storage
             storage.addMetadata(newPhrase: phrase, newMetadata: newMetadata)
-        }
+        } 
     }
     // -----------------------------------------------------------------------
-    // Wisdom Shell Storage Resource
+    // Wisdom Egg Storage Resource
     // -----------------------------------------------------------------------
-    access(all) resource WisdomShellStorage {
-        // List of shells 
-		access(all) var shells: @[Shell]    
-		// Deposit takes a Shell and adds it to the storage list
-		access(all) fun deposit(Shell: @Shell) {
-            let id = Shell.uuid
-            self.shells.append(<- Shell)
+    access(all) resource EggStorage: EggStoragePublic {
+        // List of Eggs 
+		access(all) var Eggs: @[Egg]    
+		// Deposit takes a Egg and adds it to the storage list
+		access(all) fun deposit(Egg: @Egg) {
+            let id = Egg.uuid
+            self.Eggs.append(<- Egg)
 
             // Emit event
-			emit ShellDeposit(id: id, to: self.owner?.address) 
+			emit EggDeposit(id: id, to: self.owner?.address) 
 		}
-		// Withdraw removes the oldest Shell from the list and moves it to the caller(to reveal)
-		access(all) fun withdraw(): @Shell {
-			let Shell <- self.shells.removeFirst()
-            let id = Shell.uuid
+		// Withdraw removes the oldest Egg from the list and moves it to the caller(to reveal)
+		access(all) fun withdraw(): @Egg {
+			let Egg <- self.Eggs.removeFirst()
+            let id = Egg.uuid
 			
-            emit ShellWithdraw(id: id, from: self.owner?.address)
-            return <- Shell
+            emit EggWithdraw(id: id, from: self.owner?.address)
+            return <- Egg
 		}
-        // Get number of shells in storage
+        // Get number of Eggs in storage
         access(all) fun getBalance(): Int {
-            return self.shells.length
+            return self.Eggs.length
         }
         init() {
-            self.shells <- []
+            self.Eggs <- []
         }
     }
+    access(all) resource interface EggStoragePublic {  
+        access(all) fun deposit(Egg: @Egg)
+        access(all) fun getBalance(): Int
+    }
     // -----------------------------------------------------------------------
-    // Wisdom Shell Resource
+    // Wisdom Egg Resource
     // -----------------------------------------------------------------------
-    /// The Shell resource is used to store the associated phrase request. By listing the
+    /// The Egg resource is used to store the associated phrase request. By listing the
     /// RandomConsumer.RequestWrapper conformance, this resource inherits all the default implementations of the
-    /// interface. This is why the Shell resource has access to the getRequestBlock() and popRequest() functions
+    /// interface. This is why the Egg resource has access to the getRequestBlock() and popRequest() functions
     /// without explicitly defining them.
     ///
-    access(all) resource Shell : RandomConsumer.RequestWrapper {
+    access(all) resource Egg : RandomConsumer.RequestWrapper {
         /// The associated randomness request which contains the block height at which the request was made
         /// and whether the request has been fulfilled.
         access(all) var request: @RandomConsumer.Request?
@@ -426,6 +450,7 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
     fun _randomNumber(request: @RandomConsumer.Request, max: Int): UInt64 {
         return self.consumer.fulfillRandomInRange(request: <-request, min: 0, max: UInt64(max))
     }
+
     // -----------------------------------------------------------------------
     // EggWisdom Generic or Standard public "transaction" functions
     // -----------------------------------------------------------------------
@@ -435,13 +460,42 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
     access(all) fun createEmptyCollection(nftType: Type): @{NonFungibleToken.Collection} {
         return <- create Collection()
     }
+    // create empty egg wisdom storage
+    access(all) fun createEmptyEggStorage(): @EggStorage {
+        return <- create EggStorage()
+    }
+    // Create a new phrase struct
+    access(all) 
+    fun createPhrase(
+            phrase: String,
+            base64Img: String,
+            namesOnScreen: [String],
+            catsOnScreen: [String],
+            background: String,
+            uploader: Address,
+            payment: @{FungibleToken.Vault}
+            ) {
+            pre {
+                payment.balance == 1.0: "Payment is not 10 Flow"
+            }
+            // Create metadata struct
+            let newMetadata = PhraseStruct(phrase, base64Img, namesOnScreen, catsOnScreen, background, uploader)
+            // import storage
+            let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
+            // save new metadata inside the storage
+            storage.addMetadata(newPhrase: phrase, newMetadata: newMetadata)
+            // Get contract's Vault
+            let WisdomTreasury = getAccount(EggWisdom.account.address).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
+            // Deposit the Flow into the account
+            WisdomTreasury.deposit(from: <- payment)
+    }
     // Mint EggWisdom NFT
     access(all)
     fun mintWisdomEgg(recipient: Address, payment: @{FungibleToken.Vault}) {
         pre {
             payment.balance == 5.0: "Payment is not 5 Flow"
         } 
-        let nft <- create NFT(metadataStruct: nil, serial: 0)
+        let nft <- create NFT(metadataStruct: nil)
 
         // emit PhraseMinted(id: nft.id, phrase: nft.metadata?.phrase!, minter: recipient)
 		if let recipientCollection = getAccount(recipient)
@@ -463,36 +517,59 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         WisdomTreasury.deposit(from: <- payment)
     }
 
-    // Mint Phrase NFT
+    // Mint Egg 
     access(all)
-    fun mintPhrase(recipient: Address, payment: @{FungibleToken.Vault}) {
+    fun mintEgg(recipient: Address, payment: @{FungibleToken.Vault}): @Egg {
         pre {
             payment.balance == 1.0: "Payment is not 1 Flow"
         }
         // import storage
         let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
-        // copy phrase metadata
-        let phraseID = 67
-        let phraseStruct = storage.getPhrase(phraseID: 6)
-        let nft <- create NFT(metadataStruct: phraseStruct, serial: 0)
-
-        emit PhraseMinted(id: nft.id, phrase: nft.metadata?.phrase!, minter: recipient)
-		if let recipientCollection = getAccount(recipient)
-			.capabilities.borrow<&{NonFungibleToken.Receiver}>(EggWisdom.CollectionPublicPath) 
-			{
-				recipientCollection.deposit(token: <- nft)
-		} else {
-			destroy nft
-/* 				if let storage = &Piece.nftStorage[recipient] as &{UInt64: NFT}? {
-					storage[nft.id] <-! nft
-				} else {
-					Piece.nftStorage[recipient] <-! {nft.id: <- nft}
-				} */
-		}
+        // Produce a random number
+        let request <- EggWisdom.consumer.requestRandomness()
+        // Create a Egg resource
+        let Egg <- create Egg(request: <-request)
         // Get contract's Vault
 		let WisdomTreasury = getAccount(EggWisdom.account.address).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
         // Deposit the Flow into the account
         WisdomTreasury.deposit(from: <- payment)
+        // Return the Egg
+        return <- Egg
+    }
+    /* --- Reveal --- */
+    //
+    /// Here the caller provides the Receipt given to them at commitment. The contract then "reveals pack" with
+    /// _randomNumber(), providing the Receipt's contained Request.
+    ///
+    access(all)
+    fun revealPhrase(receipt: @Egg, minter: Address) {
+        pre {
+            receipt.request != nil: "Cannot reveal the egg! The provided receipt has already been revealed."
+            receipt.getRequestBlock()! <= getCurrentBlock().height: "Cannot reveal the egg! The provided receipt was committed for block height ".concat(receipt.getRequestBlock()!.toString()).concat(" but the current block height is ").concat(getCurrentBlock().height.toString())
+        }
+        // Get reference to recipt
+        let commitBlock = receipt.getRequestBlock()!
+        let receiptID = receipt.uuid
+        let recipient = getAccount(minter)
+        // Get reference to recipient's account
+        let receiverRef: &{EggWisdom.EggWisdomCollectionPublic} = recipient.capabilities.borrow<&{EggWisdom.EggWisdomCollectionPublic}>(EggWisdom.CollectionPublicPath)
+            ?? panic("Cannot borrow a reference to the recipient's Egg Wisdom collection")
+        // Get the random number
+        // fulfill the request with a PRG to generate multiple random numbers from
+        let prg = self.consumer.fulfillWithPRG(request: <-receipt.popRequest())
+        let prgRef = &prg as &Xorshift128plus.PRG
+        // Get a phrase picked at random among the possible phrases
+        let phraseSlot = RandomConsumer.getNumberInRange(prg: prgRef, min: 0, max: UInt64(self.totalPhrases))
+        // Burn the receipt
+        Burner.burn(<-receipt) 
+        // import storage
+        let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
+        // Get random Wisdom Egg metadata
+        let phaseStruct = storage.getPhrase(phraseID: phraseSlot)!
+        // Create a new NFT
+        let nft <- create NFT(metadataStruct: phaseStruct)
+        // Deposit the NFT into the recipient's collection
+        receiverRef.deposit(token: <- nft)
     }
     // -----------------------------------------------------------------------
     // EggWisdom Generic or Standard public "script" functions
@@ -582,6 +659,8 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
 		self.CollectionPrivatePath = PrivatePath(identifier: identifier)!
 		self.AdministratorStoragePath = StoragePath(identifier: identifier.concat("Administrator"))!
 		self.PhraseStoragePath = StoragePath(identifier: identifier.concat("PhraseStorage"))!
+		self.EggStoragePath = StoragePath(identifier: identifier.concat("EggStorage"))!
+		self.EggStoragePublicPath = PublicPath(identifier: identifier.concat("EggStoragePublic"))!
 
 		// Create a Administrator resource and save it to EggWisdom account storage
 		let administrator <- create Admin()
@@ -595,5 +674,11 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         // create a public capability for the collection
 	    let collectionCap = self.account.capabilities.storage.issue<&EggWisdom.Collection>(self.CollectionStoragePath)
 		self.account.capabilities.publish(collectionCap, at: self.CollectionPublicPath)
+        // create a EggStorage resource and save it to storage
+        let EggStorage <- create EggStorage()
+        self.account.storage.save(<- EggStorage, to: self.EggStoragePath)
+        // create a public capability for the Egg storage
+        let EggStorageCap = self.account.capabilities.storage.issue<&{EggWisdom.EggStoragePublic}>(self.EggStoragePath)
+		self.account.capabilities.publish(EggStorageCap, at: self.EggStoragePublicPath)
     }
 }

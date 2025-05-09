@@ -10,7 +10,7 @@ transaction(
     catsOnScreen: [String],
     background: String) {
 
-    let Admin: &EggWisdom.Admin
+    let Admin: &EggWisdom.Admin 
 
     prepare(admin: auth(BorrowValue) &Account) {
         self.Admin = admin.storage.borrow<&EggWisdom.Admin>(from: EggWisdom.AdministratorStoragePath)!

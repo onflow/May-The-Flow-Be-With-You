@@ -22,9 +22,9 @@ func main() {
 
 	color.Green("")
 
-	// Create a new Artist struct
-	o.Tx("admin/create_phrase",
-		WithSigner("account"),
+	// Create a new phrase struct
+	o.Tx("create_phrase",
+		WithSigner("bob"),
 		WithArg("phrase", "ALL THE ZEN"),
 		WithArg("base64Img", "THIS IS BASE64CODE"),
 		WithArg("namesOnScreen", `["Axlocity", "KittyCatRightMeow"]`),

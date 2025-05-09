@@ -21,6 +21,7 @@ Welcome to the "May the Flow be with You" campaign - a month-long vibe coding ch
 Create unpredictable, emergent experiences using on-chain randomness. Think: generative art, dynamic NFTs, chance-based mechanics, and randomized gameplay elements.
 - Twitter Space: May 7 (Wed) @ 4:00 PM PST - "Randomness: Building with Unpredictability"
 - Winners announced: May 12
+- End of Week 1 will be May 10th, 11:59pm PST
 
 Useful Links:
 - How to [setup cursor with developer docs](https://developers.flow.com/tutorials/ai-plus-flow/cursor ) for optimal vibe coding

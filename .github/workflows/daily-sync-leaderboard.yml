@@ -1,0 +1,30 @@
+name: Daily Sync Leaderboard
+
+on:
+  schedule:
+    - cron: '0 */4 * * *' # Runs every 4 hours
+  workflow_dispatch:
+
+jobs:
+  sync-leaderboard:
+    runs-on: ubuntu-latest
+    env:
+      NETWORK: ${{ secrets.NETWORK }}
+      FLOW_ADDRESS: ${{ secrets.FLOW_ADDRESS }}
+      FLOW_PRIVATE_KEY: ${{ secrets.FLOW_PRIVATE_KEY }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: |
+          cd on-chain-leaderboard
+          bun install
+
+      - name: Run syncLeaderboardPeriod
+        run: |
+          cd on-chain-leaderboard
+          bun run src/commands/sync-leaderboard-period.ts

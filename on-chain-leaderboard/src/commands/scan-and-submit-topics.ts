@@ -11,7 +11,6 @@ import {
     type Network,
     type TopicInfo,
 } from "../utils";
-import fsSync from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SUBMISSIONS_DIR = path.resolve(__dirname, "../../../submissions");

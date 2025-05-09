@@ -1,11 +1,5 @@
 import { syncLeaderboardPeriod } from "../actions/transactions";
-import {
-    addresses,
-    buildBlockchainContext,
-    networks,
-    waitForTransaction,
-    type Network,
-} from "../utils";
+import { buildBlockchainContext, networks, waitForTransaction, type Network } from "../utils";
 
 async function main() {
     const network = process.env.NETWORK as Network;

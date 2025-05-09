@@ -21,10 +21,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd on-chain-leaderboard
           bun install
 
       - name: Run syncLeaderboardPeriod
         run: |
-          cd on-chain-leaderboard
-          bun run src/commands/sync-leaderboard-period.ts
+          bun run on-chain-leaderboard/src/commands/sync-leaderboard-period.ts

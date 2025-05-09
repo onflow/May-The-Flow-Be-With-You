@@ -115,6 +115,13 @@
 				"location": "emulator-account.pkey"
 			}
 		},
+		"mainnet-service": {
+			"address": "b56e8d0d805eebf8",
+			"key": {
+				"type": "file",
+				"location": "mainnet-service.pkey"
+			}
+		},
 		"testnet-deployer": {
 			"address": "4fae0a028f1057ae",
 			"key": {

@@ -18,7 +18,7 @@ export { flowJSON };
 export const addresses = {
     LeaderboardService: {
         emulator: "0xf8d6e0586b0a20c7",
-        mainnet: "0x",
+        mainnet: "0xb56e8d0d805eebf8",
         testnet: "0xe647591c05619dba",
     },
 };

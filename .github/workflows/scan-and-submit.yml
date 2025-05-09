@@ -1,10 +1,11 @@
-name: Daily Sync Leaderboard
+name: Scan and Submit Topics
 
 on:
   pull_request:
     types: [closed]
     paths:
       - 'submissions/**'
+  workflow_dispatch:
 
 jobs:
   sync-and-submit:

@@ -399,10 +399,6 @@ contract Leaderboard {
         }
     }
 
-    access(contract)
-    fun updateLeaderboard(list: auth(Mutate) &[ScoreRecord], limit: Int, newUpdatedScore: &UserScore) {
-    }
-
     access(all) struct UserScore {
         access(all) let admin: Address
         access(all) let period: UInt64

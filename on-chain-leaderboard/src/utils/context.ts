@@ -18,3 +18,12 @@ export async function buildBlockchainContext(
     }
     return { connector, wallet };
 }
+
+export async function waitForTransaction(connector: FlowConnector, txid: string) {
+    console.log(`\n⏳ Waiting for transaction ${txid}...`);
+    const status = await connector.onceTransactionExecuted(txid);
+    console.log(
+        `📝 Transaction status: ${status.status}${status.errorMessage ? ` (${status.errorMessage})` : ""}\n`,
+    );
+    return status;
+}

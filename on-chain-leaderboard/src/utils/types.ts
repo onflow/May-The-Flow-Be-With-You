@@ -46,3 +46,11 @@ export interface ParticipantScoreRecord {
     participant: string;
     score: number;
 }
+
+export interface TopicInfo {
+    userId: string;
+    periodAlias: string;
+    topic: string;
+    topicPath: string;
+    completed?: string[];
+}

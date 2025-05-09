@@ -22,14 +22,22 @@ fun main(
   periodAlias: String,
   topics: [String]
 ): [TopicResult]? {
+  if let adminRef = Leaderboard.borrowLeaderboardAdmin(adminAddress) {
+    if adminRef.borrowPeriodByName(periodAlias) == nil {
+      return nil
+    }
+  }
+  let results: [TopicResult] = []
   if let userProfile = Leaderboard.borrowUserScoringProfile(userOwner, userId) {
-    let results: [TopicResult] = []
     for topic in topics {
       if let isSubmitted = userProfile.isTopicSubmitted(adminAddress, periodAlias, topic) {
         results.append(TopicResult(adminAddress, periodAlias, topic, isSubmitted))
       }
     }
-    return results
+  } else {
+    for topic in topics {
+      results.append(TopicResult(adminAddress, periodAlias, topic, false))
+    }
   }
-  return nil
+  return results
 }

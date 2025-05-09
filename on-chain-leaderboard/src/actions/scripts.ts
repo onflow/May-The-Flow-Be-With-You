@@ -1,7 +1,7 @@
 import type { IFlowScriptExecutor, ParticipantScoreRecord, TopicResult } from "../utils/types";
 import { addresses, networkName } from "../utils/config";
 
-import scriptCheckSubmissionStatus from "../../cadence/scripts/check-submission-status.cdc?raw";
+import scriptCheckSubmissionStatus from "../../cadence/scripts/check-submissions-status.cdc?raw";
 import scriptGetLeaderboard from "../../cadence/scripts/get-leaderboard.cdc?raw";
 
 export async function getLeaderboard(

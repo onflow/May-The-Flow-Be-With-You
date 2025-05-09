@@ -25,5 +25,13 @@ export async function waitForTransaction(connector: FlowConnector, txid: string)
     console.log(
         `📝 Transaction status: ${status.status}${status.errorMessage ? ` (${status.errorMessage})` : ""}\n`,
     );
+    console.log("📝 Transaction events:");
+    if (status.events && status.events.length > 0) {
+        for (const event of status.events) {
+            console.log(`- [${event.type}]`);
+        }
+    } else {
+        console.log("No events emitted.");
+    }
     return status;
 }

@@ -35,6 +35,7 @@ A simple dice game built with Phaser 3 and integrated with Flow blockchain for t
 - [x] Add score display
 - [ ] Create game instructions
 - [ ] Implement game over screen
+- [ ] Develop responsive web layout to house the game (using v0.dev for cyberpunk-themed UI)
 
 ### Phase 3: Flow Blockchain Integration (2-3 days)
 #### Smart Contract
@@ -137,6 +138,8 @@ class DiceGameScene extends Phaser.Scene {
     }
 }
 ```
+
+Note: The game is configured for a 1024x768 resolution, optimized for both desktop and mobile viewing. The layout is designed to be responsive while maintaining the cyberpunk aesthetic.
 
 ### Flow Integration
 ```typescript

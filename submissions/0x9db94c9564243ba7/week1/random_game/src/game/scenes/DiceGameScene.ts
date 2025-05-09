@@ -33,9 +33,9 @@ export class DiceGameScene extends Phaser.Scene {
         this.background.setDisplaySize(this.scale.width, this.scale.height);
 
         // Set game title with responsive positioning
-        const titleY = this.isMobile ? 100 : 150;
-        const title = this.add.text(this.scale.width / 2, titleY, 'FLOW Community Craps', {
-            fontSize: this.isMobile ? '24px' : '32px',
+        const titleY = this.isMobile ? 150 : 200;
+        const title = this.add.text(this.scale.width / 2, titleY, 'FLOW Onchain Craps', {
+            fontSize: '32px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
@@ -50,9 +50,9 @@ export class DiceGameScene extends Phaser.Scene {
         .on('pointerdown', () => this.scene.start('MainMenu'));
 
         // Calculate dice positioning based on screen size
-        const diceScale = this.isMobile ? 0.2 : 0.3;
+        const diceScale = this.isMobile ? 0.3 : 0.45;
         const diceY = this.isMobile ? this.scale.height / 2 - 50 : 300;
-        const diceGap = this.isMobile ? 70 : 100;
+        const diceGap = this.isMobile ? 100 : 150;
         
         // Create two dice sprites side by side
         this.dice1 = this.add.sprite(this.scale.width / 2 - diceGap / 2, diceY, 'dice', 0)
@@ -64,7 +64,7 @@ export class DiceGameScene extends Phaser.Scene {
         // Create roll button with responsive positioning
         const buttonY = this.isMobile ? this.scale.height / 2 + 100 : 450;
         this.rollButton = this.add.text(this.scale.width / 2, buttonY, 'Roll Dice', {
-            fontSize: this.isMobile ? '20px' : '24px',
+            fontSize: '32px',
             color: '#ffffff',
             backgroundColor: '#000000',
             padding: { x: 20, y: 10 }
@@ -78,7 +78,7 @@ export class DiceGameScene extends Phaser.Scene {
         // Create score text with responsive positioning
         const scoreY = this.isMobile ? this.scale.height / 2 + 170 : 550;
         this.scoreText = this.add.text(this.scale.width / 2, scoreY, 'Score: 0', {
-            fontSize: this.isMobile ? '20px' : '24px',
+            fontSize: '32px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
@@ -103,14 +103,14 @@ export class DiceGameScene extends Phaser.Scene {
         // Update title
         const title = this.children.getByName('title') as Phaser.GameObjects.Text;
         if (title) {
-            title.setPosition(width / 2, this.isMobile ? 100 : 150);
+            title.setPosition(width / 2, this.isMobile ? 150 : 200);
             title.setFontSize(this.isMobile ? 24 : 32);
         }
         
         // Update dice positions
-        const diceScale = this.isMobile ? 0.2 : 0.3;
+        const diceScale = this.isMobile ? 0.3 : 0.45;
         const diceY = this.isMobile ? height / 2 - 50 : 300;
-        const diceGap = this.isMobile ? 70 : 100;
+        const diceGap = this.isMobile ? 100 : 150;
         
         this.dice1.setPosition(width / 2 - diceGap / 2, diceY);
         this.dice1.setScale(diceScale);
@@ -121,12 +121,12 @@ export class DiceGameScene extends Phaser.Scene {
         // Update button position
         const buttonY = this.isMobile ? height / 2 + 100 : 450;
         this.rollButton.setPosition(width / 2, buttonY);
-        this.rollButton.setFontSize(this.isMobile ? 20 : 24);
+        this.rollButton.setFontSize(32);
         
         // Update score text position
         const scoreY = this.isMobile ? height / 2 + 170 : 550;
         this.scoreText.setPosition(width / 2, scoreY);
-        this.scoreText.setFontSize(this.isMobile ? 20 : 24);
+        this.scoreText.setFontSize(32);
     }
     
     update() {

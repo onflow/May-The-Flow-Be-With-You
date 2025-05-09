@@ -26,7 +26,16 @@ async function main() {
     console.log(`Signer address: ${ctx.wallet.address}`);
 
     const txid = await syncLeaderboardPeriod(ctx.wallet);
-    await waitForTransaction(ctx.connector, txid);
+    const result = await waitForTransaction(ctx.connector, txid);
+    console.log("Transaction events:");
+    if (result.events && result.events.length > 0) {
+        for (const event of result.events) {
+            console.log(`- [${event.type}]`);
+            console.log("  Data:", JSON.stringify(event.data, null, 2));
+        }
+    } else {
+        console.log("No events emitted.");
+    }
 
     process.exit(0);
 }

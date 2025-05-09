@@ -9,10 +9,10 @@ jobs:
   sync-leaderboard:
     runs-on: ubuntu-latest
     env:
-      NETWORK: ${{ secrets.NETWORK }}
-      MAINNET_FLOW_ADDRESS: ${{ secrets.MAINNET_FLOW_ADDRESS }}
+      NETWORK: ${{ vars.NETWORK }}
+      MAINNET_FLOW_ADDRESS: ${{ vars.MAINNET_FLOW_ADDRESS }}
+      TESTNET_FLOW_ADDRESS: ${{ vars.TESTNET_FLOW_ADDRESS }}
       MAINNET_FLOW_PRIVATE_KEY: ${{ secrets.MAINNET_FLOW_PRIVATE_KEY }}
-      TESTNET_FLOW_ADDRESS: ${{ secrets.TESTNET_FLOW_ADDRESS }}
       TESTNET_FLOW_PRIVATE_KEY: ${{ secrets.TESTNET_FLOW_PRIVATE_KEY }}
 
     steps:

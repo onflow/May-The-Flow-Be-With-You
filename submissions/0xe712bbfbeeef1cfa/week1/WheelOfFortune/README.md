@@ -84,6 +84,3 @@ WheelOfMisfortune/
 npm run build
 ```
 
-## License
-
-MIT

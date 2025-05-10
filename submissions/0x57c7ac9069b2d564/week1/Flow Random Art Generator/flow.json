@@ -1,0 +1,33 @@
+{
+  "emulators": {
+    "default": {
+      "port": 8080,
+      "serviceAccount": "emulator-account"
+    }
+  },
+  "contracts": {
+    "RandomArt": "./cadence/contracts/RandomArt.cdc"
+  },
+  "networks": {
+    "emulator": "127.0.0.1:8080",
+    "testnet": "rest-testnet.onflow.org:443"
+  },
+  "accounts": {
+    "emulator-account": {
+      "address": "${FLOW_TESTNET_ADDRESS}",
+      "key": "${FLOW_TESTNET_PRIVATE_KEY}"
+    },
+    "testnet-account": {
+      "address": "57c7ac9069b2d564",
+      "key": "5bf0a6480cb8b68a33f46a467973c14bc62644f894bfb309d438e02ecb6442e8"
+    }
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": ["RandomArt"]
+    },
+    "testnet": {
+      "testnet-account": ["RandomArt"]
+    }
+  }
+}

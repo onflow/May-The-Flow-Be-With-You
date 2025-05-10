@@ -2,7 +2,7 @@ import { Box, Typography, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
-  width: '300px',
+  width: '480px',
   backgroundColor: '#0a0a0a',
   border: '2px solid #ff00ff',
   boxShadow: '0 0 20px #ff00ff',
@@ -10,6 +10,7 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   color: '#ffffff',
   [theme.breakpoints.down('md')]: {
     width: '100%',
+    maxWidth: '480px',
   },
 }));
 

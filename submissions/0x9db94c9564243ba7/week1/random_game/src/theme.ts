@@ -6,6 +6,7 @@ declare module '@mui/material/styles' {
       cyan: string;
       magenta: string;
       dark: string;
+      orange: string;
     };
   }
   interface PaletteOptions {
@@ -13,6 +14,7 @@ declare module '@mui/material/styles' {
       cyan: string;
       magenta: string;
       dark: string;
+      orange: string;
     };
   }
 }
@@ -38,6 +40,7 @@ export const theme = createTheme({
       cyan: '#00ffff',
       magenta: '#ff00ff',
       dark: '#0a0a0a',
+      orange: "#FF7F11"
     },
   },
   typography: {

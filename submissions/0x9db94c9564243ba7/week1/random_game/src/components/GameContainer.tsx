@@ -8,8 +8,8 @@ const StyledGameContainer = styled(Box)(({ theme }) => ({
   height: '640px',
   position: 'relative',
   backgroundColor: '#0a0a0a',
-  border: '2px solid #00ffff',
-  boxShadow: '0 0 20px #00ffff',
+  border: `2px solid ${theme.palette.primary.main}`,
+  boxShadow: `0 0 20px ${theme.palette.primary.main}`,
   borderRadius: '4px',
   overflow: 'hidden',
   transition: 'all 0.3s ease-in-out',
@@ -17,7 +17,7 @@ const StyledGameContainer = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'center',
   '&:hover': {
-    boxShadow: '0 0 30px #00ffff',
+    boxShadow: `0 0 30px ${theme.palette.primary.main}`,
   },
   '& .game-wrapper': {
     width: '100%',

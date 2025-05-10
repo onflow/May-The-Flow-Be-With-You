@@ -3,9 +3,16 @@ import { styled } from '@mui/material/styles';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor: '#0a0a0a',
-  borderBottom: '2px solid #00ffff',
-  boxShadow: '0 0 10px #00ffff',
+  borderBottom: `2px solid ${theme.palette.secondary.main}`,
+  boxShadow: `0 0 10px ${theme.palette.secondary.main}`,
   height: '64px',
+  width: '480px',
+  margin: '0 auto',
+  borderRadius: '12px',
+  [theme.breakpoints.down('md')]: {
+    width: '100%',
+    maxWidth: '480px',
+  },
 }));
 
 const StyledTypography = styled(Typography)(({ theme }) => ({
@@ -15,13 +22,11 @@ const StyledTypography = styled(Typography)(({ theme }) => ({
 }));
 
 const WalletButton = styled(Button)(({ theme }) => ({
-  backgroundColor: 'transparent',
-  border: '1px solid #ff00ff',
-  color: '#ffffff',
   fontFamily: 'JetBrains Mono, monospace',
+  color: '#ffffff',
   '&:hover': {
-    backgroundColor: 'rgba(255, 0, 255, 0.1)',
-    boxShadow: '0 0 10px #ff00ff',
+    backgroundColor: theme.palette.primary.dark,
+    boxShadow: `0 0 10px ${theme.palette.primary.main}`,
   },
 }));
 
@@ -30,9 +35,9 @@ const NavBar = () => {
     <StyledAppBar position="static">
       <Toolbar>
         <StyledTypography variant="h6">
-          Cyber Dice
+          Onchain Dice
         </StyledTypography>
-        <WalletButton variant="outlined">
+        <WalletButton color = "primary" variant="outlined">
           Connect Wallet
         </WalletButton>
       </Toolbar>

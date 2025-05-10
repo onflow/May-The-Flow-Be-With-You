@@ -46,12 +46,12 @@ func main() {
 	// Bob will buy a couple of Eggs
 	o.Tx("buy_eggs",
 		WithSigner("bob"),
-		WithArg("amount", "5"),
+		WithArg("amount", "3"),
 	)
 	// Bob will open a couple of Eggs
-	o.Tx("open_eggs",
+	o.Tx("reveal_phrases",
 		WithSigner("bob"),
-		WithArg("amount", "5"),
+		WithArg("amount", "3"),
 	)
 	// Fetch Bob's owned NFTs
 	o.Script("get_owned_nfts",
@@ -59,13 +59,13 @@ func main() {
 	)
 	// Check the contract's balance
 	o.Script("get_balance",
-		WithArg("account", "account"),
+		WithArg("address", "bob"),
 	)
 	// Bob will upload a couple of phrases
 	o.Tx("create_phrase",
 		WithSigner("bob"),
 		WithArg("phrase", "Flow-powered and Feline-ready"),
-		WithArg("base64Img", "THIS IS BASE64CODE"),
+		WithArg("base64Img", "THIS WAS BY BOB"),
 		WithArg("namesOnScreen", `["Axlocity", "KittyCatRightMeow", "Noahoverflow"]`),
 		WithArg("catsOnScreen", `["Pride", "Prince", "Page"]`),
 		WithArg("background", "Dawn"),
@@ -73,25 +73,25 @@ func main() {
 
 	// Alice will buy a couple of Eggs
 	o.Tx("buy_eggs",
-		WithSigner("alice"),
+		WithSigner("account"),
 		WithArg("amount", "5"),
 	)
 	// Alice will open a couple of Eggs
-	o.Tx("open_eggs",
-		WithSigner("alice"),
+	o.Tx("reveal_phrases",
+		WithSigner("account"),
 		WithArg("amount", "5"),
 	)
 	// Fetch Alice's owned NFTs
 	o.Script("get_owned_nfts",
-		WithArg("account", "alice"),
+		WithArg("account", "account"),
 	)
 	// Check the contract's balance
 	o.Script("get_balance",
-		WithArg("account", "account"),
+		WithArg("address", "account"),
 	)
 	// Check bob's balance
 	o.Script("get_balance",
-		WithArg("account", "bob"),
+		WithArg("address", "bob"),
 	)
 
 }

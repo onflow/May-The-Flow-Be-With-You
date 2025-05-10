@@ -18,7 +18,7 @@ transaction(amount: Int) {
             let receipt <- storageRef.withdraw()
 
             // Reveal by redeeming my receipt - fingers crossed!
-            EggWisdom.revealPhrase(receipt: <- receipt, minter: signer.address)
+            storageRef.revealPhrase(receipt: <- receipt, minter: signer.address)
 
             counter = counter + 1
         }

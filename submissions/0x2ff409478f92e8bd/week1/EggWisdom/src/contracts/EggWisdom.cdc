@@ -394,6 +394,17 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
     access(all) resource EggStorage: EggStoragePublic {
         // List of Eggs 
 		access(all) var Eggs: @[Egg]    
+        access(self) let poolPath: PublicPath  
+        access(self) let pool: @FlowToken.Vault
+
+        init() {
+            let identifier = "EggWisdom_".concat(self.uuid.toString())
+            self.poolPath = PublicPath(identifier: identifier)!
+            self.Eggs <- []
+            // Create storage slot for distribution of royalties
+            let pool <-  FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+            self.pool <- pool
+        }
 		// Deposit takes a Egg and adds it to the storage list
 		access(all) fun deposit(Egg: @Egg) {
             let id = Egg.uuid
@@ -410,13 +421,74 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             emit EggWithdraw(id: id, from: self.owner?.address)
             return <- Egg
 		}
+        // Mint Egg 
+        access(all)
+        fun mintEgg(recipient: Address, payment: @{FungibleToken.Vault}): @Egg {
+            pre {
+                payment.balance == 1.0: "Payment is not 1 Flow"
+            }
+            // import storage
+            let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
+            // Produce a random number
+            let request <- EggWisdom.consumer.requestRandomness()
+            // Create a Egg resource
+            let Egg <- create Egg(request: <-request)
+            // Get contract's Vault
+            let WisdomTreasury = getAccount(EggWisdom.account.address).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
+            // Get money for Royalty
+            let poolRoyalties<- payment.withdraw(amount: 0.1)
+            // Deposit the Flow into the account
+            WisdomTreasury.deposit(from: <- payment)
+            // Deposit the Flow into the pool
+            self.pool.deposit(from: <- poolRoyalties)
+            // Return the Egg
+            return <- Egg
+        }
+        /* --- Reveal --- */
+        /// Here the caller provides the Receipt given to them at commitment. The contract then "reveals pack" with
+        /// _randomNumber(), providing the Receipt's contained Request.
+        ///
+        access(all)
+        fun revealPhrase(receipt: @Egg, minter: Address) {
+            pre {
+                receipt.request != nil: "Cannot reveal the egg! The provided receipt has already been revealed."
+                receipt.getRequestBlock()! <= getCurrentBlock().height: "Cannot reveal the egg! The provided receipt was committed for block height ".concat(receipt.getRequestBlock()!.toString()).concat(" but the current block height is ").concat(getCurrentBlock().height.toString())
+            }
+            // Get reference to recipt
+            let commitBlock = receipt.getRequestBlock()!
+            let receiptID = receipt.uuid
+            let recipient = getAccount(minter)
+            // Get reference to recipient's account
+            let receiverRef: &{EggWisdom.EggWisdomCollectionPublic} = recipient.capabilities.borrow<&{EggWisdom.EggWisdomCollectionPublic}>(EggWisdom.CollectionPublicPath)
+                ?? panic("Cannot borrow a reference to the recipient's Egg Wisdom collection")
+            // Get the random number
+            // fulfill the request with a PRG to generate multiple random numbers from
+            let prg = EggWisdom.consumer.fulfillWithPRG(request: <-receipt.popRequest())
+            let prgRef = &prg as &Xorshift128plus.PRG
+            // Get a phrase picked at random among the possible phrases
+            let phraseSlot = RandomConsumer.getNumberInRange(prg: prgRef, min: 1, max: UInt64(EggWisdom.totalPhrases))
+            // Burn the receipt
+            Burner.burn(<-receipt) 
+            // import storage
+            let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
+            // Get random Wisdom Egg metadata
+            let phaseStruct = storage.getPhrase(phraseID: phraseSlot)!
+            // Deposit royalties into this Phrase's creator
+            let poolRoyalties <- self.pool.withdraw(amount: 0.1)
+            // Get account's Vault
+            let accountReceiver = getAccount(phaseStruct.uploader).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
+            // Deposit the Flow into the account
+            accountReceiver.deposit(from: <- poolRoyalties)
+            // Create a new NFT
+            let nft <- create NFT(metadataStruct: phaseStruct)
+            // Deposit the NFT into the recipient's collection
+            receiverRef.deposit(token: <- nft)
+        }
         // Get number of Eggs in storage
         access(all) fun getBalance(): Int {
             return self.Eggs.length
         }
-        init() {
-            self.Eggs <- []
-        }
+
     }
     access(all) resource interface EggStoragePublic {  
         access(all) fun deposit(Egg: @Egg)
@@ -520,61 +592,6 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
 		let WisdomTreasury = getAccount(EggWisdom.account.address).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
         // Deposit the Flow into the account
         WisdomTreasury.deposit(from: <- payment)
-    }
-
-    // Mint Egg 
-    access(all)
-    fun mintEgg(recipient: Address, payment: @{FungibleToken.Vault}): @Egg {
-        pre {
-            payment.balance == 1.0: "Payment is not 1 Flow"
-        }
-        // import storage
-        let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
-        // Produce a random number
-        let request <- EggWisdom.consumer.requestRandomness()
-        // Create a Egg resource
-        let Egg <- create Egg(request: <-request)
-        // Get contract's Vault
-		let WisdomTreasury = getAccount(EggWisdom.account.address).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
-        // Deposit the Flow into the account
-        WisdomTreasury.deposit(from: <- payment)
-        // Return the Egg
-        return <- Egg
-    }
-    /* --- Reveal --- */
-    //
-    /// Here the caller provides the Receipt given to them at commitment. The contract then "reveals pack" with
-    /// _randomNumber(), providing the Receipt's contained Request.
-    ///
-    access(all)
-    fun revealPhrase(receipt: @Egg, minter: Address) {
-        pre {
-            receipt.request != nil: "Cannot reveal the egg! The provided receipt has already been revealed."
-            receipt.getRequestBlock()! <= getCurrentBlock().height: "Cannot reveal the egg! The provided receipt was committed for block height ".concat(receipt.getRequestBlock()!.toString()).concat(" but the current block height is ").concat(getCurrentBlock().height.toString())
-        }
-        // Get reference to recipt
-        let commitBlock = receipt.getRequestBlock()!
-        let receiptID = receipt.uuid
-        let recipient = getAccount(minter)
-        // Get reference to recipient's account
-        let receiverRef: &{EggWisdom.EggWisdomCollectionPublic} = recipient.capabilities.borrow<&{EggWisdom.EggWisdomCollectionPublic}>(EggWisdom.CollectionPublicPath)
-            ?? panic("Cannot borrow a reference to the recipient's Egg Wisdom collection")
-        // Get the random number
-        // fulfill the request with a PRG to generate multiple random numbers from
-        let prg = self.consumer.fulfillWithPRG(request: <-receipt.popRequest())
-        let prgRef = &prg as &Xorshift128plus.PRG
-        // Get a phrase picked at random among the possible phrases
-        let phraseSlot = RandomConsumer.getNumberInRange(prg: prgRef, min: 1, max: UInt64(self.totalPhrases))
-        // Burn the receipt
-        Burner.burn(<-receipt) 
-        // import storage
-        let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
-        // Get random Wisdom Egg metadata
-        let phaseStruct = storage.getPhrase(phraseID: phraseSlot)!
-        // Create a new NFT
-        let nft <- create NFT(metadataStruct: phaseStruct)
-        // Deposit the NFT into the recipient's collection
-        receiverRef.deposit(token: <- nft)
     }
     // -----------------------------------------------------------------------
     // EggWisdom Generic or Standard public "script" functions

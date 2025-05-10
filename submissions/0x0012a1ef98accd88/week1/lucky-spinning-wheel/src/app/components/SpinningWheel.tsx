@@ -11,24 +11,29 @@ export default function SpinningWheel({ isSpinning, selectedNumber, onSpinComple
     const segments = Array.from({ length: 10 }, (_, i) => i + 1);
     const segmentAngle = 360 / segments.length;
 
+    type PrizeType = string;
+
+    const prizes: PrizeType[] = Array.from({ length: 10 }, (_, i) =>
+        i < 9 ? `You lost 😞 #${i + 1}` : 'Flow is with you 🥳'
+    );
+
     return (
         <div className="relative w-[300px] h-[300px] md:w-[400px] md:h-[400px] mx-auto">
             {/* Outer ring with glow effect */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 animate-pulse blur-md"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 animate-pulse blur-md opacity-50"></div>
 
             {/* Wheel container */}
             <div
-                className={`relative w-full h-full rounded-full bg-black border-4 border-purple-500/30 overflow-hidden transform ${isSpinning ? 'animate-spin-slow' : ''
+                className={`relative w-full h-full rounded-full bg-white border-4 border-purple-500/30 overflow-hidden transform ${isSpinning ? 'animate-spin-slow' : ''
                     } transition-transform duration-[3000ms] ease-out`}
                 style={{
                     transform: selectedNumber ? `rotate(${-(selectedNumber - 0.5) * segmentAngle}deg)` : 'rotate(0deg)'
                 }}
-                onAnimationEnd={onSpinComplete}
             >
                 {/* Wheel segments */}
-                {segments.map((number, index) => (
+                {prizes.map((prize, index) => (
                     <div
-                        key={number}
+                        key={index}
                         className="absolute w-1/2 h-1/2 left-1/2 top-0 origin-bottom-left"
                         style={{
                             transform: `rotate(${index * segmentAngle}deg)`
@@ -36,12 +41,12 @@ export default function SpinningWheel({ isSpinning, selectedNumber, onSpinComple
                     >
                         <div className="absolute inset-0 border-l border-purple-500/30">
                             <div
-                                className="absolute left-1/2 top-[25%] -translate-x-1/2 transform text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"
+                                className="absolute left-1/6 top-[40%] -translate-x-1/2 transform text-sm font-bold text-gray-700 whitespace-nowrap"
                                 style={{
-                                    transform: `rotate(${-index * segmentAngle - (segmentAngle / 2)}deg)`,
+                                    transform: `rotate(110deg) `,
                                 }}
                             >
-                                {number}
+                                {prize}
                             </div>
                         </div>
                     </div>

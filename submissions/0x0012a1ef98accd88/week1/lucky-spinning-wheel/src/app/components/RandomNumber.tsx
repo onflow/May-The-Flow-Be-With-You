@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getRandomNumber } from '../utils/contracts';
 import SpinningWheel from './SpinningWheel';
 
@@ -9,12 +9,24 @@ export default function RandomNumber() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSpinning, setIsSpinning] = useState(false);
+    const [showWinnerAlert, setShowWinnerAlert] = useState(false);
+
+    useEffect(() => {
+        if (result === 10) {
+            // Wait for the spin to complete before showing the alert
+            const timer = setTimeout(() => {
+                setShowWinnerAlert(true);
+            }, 4000); // Same as spin duration
+            return () => clearTimeout(timer);
+        }
+    }, [result]);
 
     const generateRandom = async () => {
         try {
             setLoading(true);
             setError(null);
             setIsSpinning(true);
+            setShowWinnerAlert(false);
             const randomNumber = await getRandomNumber();
             // Ensure the number is between 1 and 12
             const normalizedNumber = ((randomNumber % 12) + 12) % 12 + 1;
@@ -34,6 +46,29 @@ export default function RandomNumber() {
 
     return (
         <div className="space-y-10">
+            {/* Winner Alert */}
+            {showWinnerAlert && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-8 max-w-md mx-4 relative animate-bounce-once">
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-2xl blur opacity-50"></div>
+                        <div className="relative bg-white rounded-xl p-6 text-center space-y-4">
+                            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 bg-clip-text text-transparent">
+                                🎉 Congratulations! 🎉
+                            </h2>
+                            <p className="text-gray-700">
+                                You are the weekly winner of MayFlowBeWithYou competition!
+                            </p>
+                            <button
+                                onClick={() => setShowWinnerAlert(false)}
+                                className="px-4 py-2 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Spinning Wheel */}
             <div className="relative">
                 <SpinningWheel
@@ -46,12 +81,12 @@ export default function RandomNumber() {
             {/* Spin Button */}
             <button
                 onClick={generateRandom}
-                disabled={loading || isSpinning}
+                disabled={loading}
                 className="relative w-full group"
             >
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-xl blur opacity-50 group-hover:opacity-75 transition duration-1000 group-disabled:opacity-25 animate-gradient"></div>
-                <div className="relative px-6 py-4 bg-black rounded-xl flex items-center justify-center gap-3 text-sm text-white group-hover:text-blue-400 transition-all duration-300 group-disabled:cursor-not-allowed">
-                    {loading || isSpinning ? (
+                <div className="relative px-6 py-4 bg-white rounded-xl flex items-center justify-center gap-3 text-sm text-gray-700 group-hover:text-purple-500 transition-all duration-300 group-disabled:cursor-not-allowed">
+                    {loading ? (
                         <>
                             <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -71,7 +106,7 @@ export default function RandomNumber() {
             </button>
 
             {error && (
-                <div className="bg-red-500/10 border-2 border-red-500/50 rounded-xl p-6 text-red-400 text-center text-sm animate-pulse">
+                <div className="bg-red-50 border-2 border-red-500/50 rounded-xl p-6 text-red-500 text-center text-sm animate-pulse">
                     {error}
                 </div>
             )}

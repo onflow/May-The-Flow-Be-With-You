@@ -6,7 +6,6 @@ export class MainMenu extends Scene
 {
     background: GameObjects.Image;
     logo: GameObjects.Image;
-    title: GameObjects.Text;
     logoTween: Phaser.Tweens.Tween | null;
     diceGameButton: GameObjects.Text;
     isMobile: boolean = false;
@@ -32,17 +31,6 @@ export class MainMenu extends Scene
         // Scale the logo based on screen size
         const logoScale = this.isMobile ? 0.7 : 1;
         this.logo.setScale(logoScale);
-
-        // Responsive title positioning
-        const titleY = this.isMobile ? this.scale.height / 2 : 460;
-        this.title = this.add.text(this.scale.width / 2, titleY, 'Flow Dice Game', {
-            fontFamily: 'Arial Black', 
-            fontSize: this.isMobile ? 30 : 38, 
-            color: '#ffffff',
-            stroke: '#000000', 
-            strokeThickness: 8,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(100);
 
         // Responsive button positioning
         const buttonY = this.isMobile ? this.scale.height * 0.65 : 520;
@@ -80,11 +68,6 @@ export class MainMenu extends Scene
         const logoScale = this.isMobile ? 0.7 : 1;
         this.logo.setPosition(width / 2, logoY);
         this.logo.setScale(logoScale);
-        
-        // Update title
-        const titleY = this.isMobile ? height / 2 : 460;
-        this.title.setPosition(width / 2, titleY);
-        this.title.setFontSize(this.isMobile ? 30 : 38);
         
         // Update button
         const buttonY = this.isMobile ? height * 0.65 : 520;

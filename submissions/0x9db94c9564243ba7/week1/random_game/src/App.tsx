@@ -2,6 +2,10 @@ import { useRef } from 'react';
 import { IRefPhaserGame, PhaserGame } from './PhaserGame';
 import { MainMenu } from './game/scenes/MainMenu';
 import { FlowProvider } from './lib/flow/FlowProvider';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { theme } from './theme';
+import AppLayout from './components/AppLayout';
 
 function App()
 {
@@ -14,13 +18,14 @@ function App()
     }
 
     return (
-        <div className="app-container">
+        <ThemeProvider theme={theme}>
+            <CssBaseline />
             <FlowProvider>
-                <div id="app">
+                <AppLayout>
                     <PhaserGame ref={phaserRef} currentActiveScene={currentScene} />
-                </div>
+                </AppLayout>
             </FlowProvider>
-        </div>
+        </ThemeProvider>
     );
 }
 

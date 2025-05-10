@@ -5,7 +5,7 @@ import "FlowToken"
 import "FungibleToken"
 
 // This transaction is for minting an EggWisdom NFT
-transaction(phrase: String) {
+transaction(amount: Int) {
     prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
 
         let collectionData = EggWisdom.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
@@ -41,10 +41,17 @@ transaction(phrase: String) {
         let storageRef = signer.storage.borrow<&EggWisdom.EggStorage>(from: EggWisdom.EggStoragePath)
             ?? panic("Cannot borrow a reference to the recipient's EggWisdom EggStorage")
         
-        // Mint Wisdom
-        let egg <- EggWisdom.mintEgg(recipient: signer.address, payment: <- vaultRef.withdraw(amount: 1.0))
-        // deposit the egg into the storage
-        storageRef.deposit(Egg: <- egg)
+                var counter = 0
+
+        while counter < amount {
+            // Mint Wisdom
+            let egg <- EggWisdom.mintEgg(recipient: signer.address, payment: <- vaultRef.withdraw(amount: 1.0))
+            
+            // deposit the egg into the storage
+            storageRef.deposit(Egg: <- egg)
+
+            counter = counter + 1
+        }
 
     }
     execute {

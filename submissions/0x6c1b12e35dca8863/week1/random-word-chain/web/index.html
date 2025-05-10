@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Word Chain Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        h1, h2 {
+            color: #3c45a2;
+        }
+        
+        .letters {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .letter {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            background-color: #00ef8b;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 28px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .letter:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stats {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .form {
+            margin: 25px 0;
+        }
+        
+        input {
+            padding: 10px 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            width: 250px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #3c45a2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #2a317a;
+        }
+        
+        #message {
+            padding: 10px;
+            border-radius: 6px;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Random Word Chain Game</h1>
+    <p>A blockchain word game powered by Flow's on-chain randomness</p>
+    
+    <div class="stats">
+        <h2>Your Stats</h2>
+        <p>Score: <span id="score">0</span></p>
+        <p>Words Submitted: <span id="wordsSubmitted">0</span></p>
+    </div>
+    
+    <div>
+        <h2>Your Letters</h2>
+        <div class="letters" id="letters">
+            <!-- Letters will be added here dynamically -->
+            <div class="letter">D</div>
+            <div class="letter">E</div>
+            <div class="letter">F</div>
+            <div class="letter">L</div>
+            <div class="letter">O</div>
+            <div class="letter">W</div>
+            <div class="letter">R</div>
+        </div>
+    </div>
+    
+    <div class="form">
+        <form id="wordForm">
+            <input type="text" id="wordInput" placeholder="Enter a word" required>
+            <button type="submit">Submit Word</button>
+        </form>
+    </div>
+    
+    <div>
+        <h2>Message</h2>
+        <p id="message">Welcome to Random Word Chain Game! Use your letters to form words.</p>
+    </div>
+    
+    <script>
+        // Basic demo functionality - in a real implementation this would connect to Flow
+        document.getElementById('wordForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const wordInput = document.getElementById('wordInput');
+            const word = wordInput.value.toUpperCase();
+            const letters = Array.from(document.querySelectorAll('.letter')).map(el => el.textContent);
+            
+            // Simple check if the word can be formed from available letters
+            const lettersCopy = [...letters];
+            let valid = true;
+            
+            for (const char of word) {
+                const index = lettersCopy.indexOf(char);
+                if (index === -1) {
+                    valid = false;
+                    break;
+                }
+                lettersCopy.splice(index, 1);
+            }
+            
+            const message = document.getElementById('message');
+            
+            if (valid) {
+                // Update stats
+                const score = document.getElementById('score');
+                const wordsSubmitted = document.getElementById('wordsSubmitted');
+                
+                score.textContent = parseInt(score.textContent) + word.length;
+                wordsSubmitted.textContent = parseInt(wordsSubmitted.textContent) + 1;
+                
+                message.textContent = `Success! You submitted "${word}" for ${word.length} points.`;
+                message.className = 'success';
+                
+                // Clear input
+                wordInput.value = '';
+                
+                // In a real implementation, this would call the Flow contract
+                console.log('Word submitted:', word);
+            } else {
+                message.textContent = `Invalid word! You cannot form "${word}" with your current letters.`;
+                message.className = 'error';
+            }
+        });
+    </script>
+</body>
+</html>

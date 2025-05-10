@@ -33,6 +33,16 @@ func main() {
 	)
 	// Fetch phrases
 	o.Script("get_all_phrases")
+	o.Tx("admin/create_phrase",
+		WithSigner("account"),
+		WithArg("phrase", "Happy Birthday!"),
+		WithArg("base64Img", "THIS IS BASE64CODE"),
+		WithArg("namesOnScreen", `["Axlocity", "Joolzs"]`),
+		WithArg("catsOnScreen", `["Cat1", "Cat45"]`),
+		WithArg("background", "Break"),
+	)
+	// Fetch phrases
+	o.Script("get_all_phrases")
 	// Bob will buy a couple of Eggs
 	o.Tx("buy_eggs",
 		WithSigner("bob"),
@@ -60,6 +70,7 @@ func main() {
 		WithArg("catsOnScreen", `["Pride", "Prince", "Page"]`),
 		WithArg("background", "Dawn"),
 	)
+
 	// Alice will buy a couple of Eggs
 	o.Tx("buy_eggs",
 		WithSigner("alice"),

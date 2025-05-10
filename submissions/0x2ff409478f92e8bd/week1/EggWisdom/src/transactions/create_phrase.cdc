@@ -37,7 +37,7 @@ transaction(
             catsOnScreen: catsOnScreen,
             background: background,
             uploader: signer.address,
-            payment: <- vaultRef.withdraw(amount: 1.0)
+            payment: <- vaultRef.withdraw(amount: 5.0)
             )
     }
     execute {   

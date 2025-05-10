@@ -32,9 +32,9 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
     // The Wisdom Egg's everchanging metadata
     access(self) var wisdomEgg: PhraseStruct?
     // Track of total supply of EggWisdom NFTs (goes up with minting)
-    access(all) var totalSupply: UInt64
+    access(self) var totalSupply: UInt64
     // Track of total number of EggWisdom phrases
-    access(all) var totalPhrases: UInt64
+    access(self) var totalPhrases: UInt64
     /// The RandomConsumer.Consumer resource used to request & fulfill randomness
     access(self) let consumer: @RandomConsumer.Consumer
     // -----------------------------------------------------------------------
@@ -116,8 +116,6 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             pre {
                 // EggWisdom.phrases[phrase] == nil: "There's already a phrase like: ".concat(phrase)
             }
-            // Increment the global Metadatas IDs
-            EggWisdom.totalPhrases = EggWisdom.totalPhrases + 1
             self.id = EggWisdom.totalPhrases
             self.phrase = phrase
             self.base64Img = base64Img
@@ -125,8 +123,7 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             self.catsOnScreen = catsOnScreen
             self.background = background
             self.uploader = uploader
-            // Add phrase to the contract's mapping
-            EggWisdom.phrases[phrase] = 1
+
         }
     }
 
@@ -379,12 +376,16 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             pre {
                 EggWisdom.phrases[phrase] == nil: "There's already a phrase like: ".concat(phrase)
             }
+            // Increment the global Metadatas IDs
+            EggWisdom.totalPhrases = EggWisdom.totalPhrases + 1
             // Create metadata struct
             let newMetadata = PhraseStruct(phrase, base64Img, namesOnScreen, catsOnScreen, background, EggWisdom.account.address)
             // import storage
             let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
             // save new metadata inside the storage
             storage.addMetadata(newPhrase: phrase, newMetadata: newMetadata)
+            // Add phrase to the contract's mapping
+            EggWisdom.phrases[phrase] = newMetadata.id
         } 
     }
     // -----------------------------------------------------------------------
@@ -476,8 +477,10 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             payment: @{FungibleToken.Vault}
             ) {
             pre {
-                payment.balance == 1.0: "Payment is not 10 Flow"
+                payment.balance == 5.0: "Payment is not 5 Flow"
             }
+            // Increment the global Metadatas IDs
+            EggWisdom.totalPhrases = EggWisdom.totalPhrases + 1
             // Create metadata struct
             let newMetadata = PhraseStruct(phrase, base64Img, namesOnScreen, catsOnScreen, background, uploader)
             // import storage
@@ -488,6 +491,8 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             let WisdomTreasury = getAccount(EggWisdom.account.address).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
             // Deposit the Flow into the account
             WisdomTreasury.deposit(from: <- payment)
+            // Add phrase to the contract's mapping
+            EggWisdom.phrases[phrase] = newMetadata.id
     }
     // Mint EggWisdom NFT
     access(all)
@@ -559,7 +564,7 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         let prg = self.consumer.fulfillWithPRG(request: <-receipt.popRequest())
         let prgRef = &prg as &Xorshift128plus.PRG
         // Get a phrase picked at random among the possible phrases
-        let phraseSlot = RandomConsumer.getNumberInRange(prg: prgRef, min: 0, max: UInt64(self.totalPhrases))
+        let phraseSlot = RandomConsumer.getNumberInRange(prg: prgRef, min: 1, max: UInt64(self.totalPhrases))
         // Burn the receipt
         Burner.burn(<-receipt) 
         // import storage

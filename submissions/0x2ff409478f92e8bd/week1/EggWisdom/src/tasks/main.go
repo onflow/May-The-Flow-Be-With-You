@@ -93,5 +93,17 @@ func main() {
 	o.Script("get_balance",
 		WithArg("address", "bob"),
 	)
+	// Mint a wisdom egg
+	o.Tx("mint_wisdom_egg",
+		WithSigner("account"),
+	)
+	// Fetch wisdom egg
+	o.Script("get_wisdom")
+	// Pet the wisdom egg
+	o.Tx("pet_egg",
+		WithSigner("account"),
+	)
+	// Fetch wisdom egg
+	o.Script("get_wisdom")
 
 }

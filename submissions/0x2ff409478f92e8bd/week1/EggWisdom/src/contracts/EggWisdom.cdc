@@ -156,9 +156,10 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             }
         }
         // Pet the Egg Wisdom to change its phrase
-        access(all) fun petEgg() {
+        access(all) fun petEgg(payment: @{FungibleToken.Vault}) {
             pre {
                 self.isWisdom == true: "This is not a Wisdom Egg"
+                payment.balance == 0.01: "Payment is not 0.01 Flow"
             }
             // import storage
             let storage = EggWisdom.account.storage.borrow<&EggWisdom.PhraseStorage>(from: EggWisdom.PhraseStoragePath)!
@@ -173,6 +174,10 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             let phaseStruct = storage.getPhrase(phraseID: randomIDIndex)!
             // Update Wisdom Egg metadata
             EggWisdom.wisdomEgg = phaseStruct
+            // Get contract's Vault
+            let WisdomTreasury = getAccount(EggWisdom.account.address).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
+            // Deposit the Flow into the account
+            WisdomTreasury.deposit(from: <- payment)
             // Emit event
             emit WisdomEggPetted(id: self.id, phrase: phaseStruct.phrase, petter: self.owner?.address!)
         }
@@ -181,12 +186,13 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         init(metadataStruct: PhraseStruct?) {
             // Increment the global Cards IDs
             EggWisdom.totalSupply = EggWisdom.totalSupply + 1
-            self.id = EggWisdom.totalSupply
             self.metadata = metadataStruct
             if self.metadata == nil {
                 self.serial = 0
                 self.isWisdom = true
+                self.id = 0
             } else {
+                self.id = EggWisdom.totalSupply
                 self.serial = EggWisdom.totalSupply
                 self.isWisdom = false
             }

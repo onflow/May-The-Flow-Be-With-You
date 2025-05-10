@@ -113,36 +113,37 @@ const App: React.FC = () => {
   }, [user]);
 
   const handleSpin = async () => {
-    if (isSpinning) return;
+    if (isSpinning || !user?.addr) return;
     setIsSpinning(true);
     setResult(null);
 
     try {
-      // Execute the spin wheel script
-      const result = await fcl.query({
+      const txId = await fcl.mutate({
         cadence: `
-          import WheelOfFortune from 0xf6dda46f6473a998
-          
-          pub fun main(): String {
-              let wheel = getAccount(0xf6dda46f6473a998).contracts.borrow<&WheelOfFortune>(name: "WheelOfFortune")
-                  ?? panic("WheelOfFortune contract not found")
-              return wheel.spinWheel()
-          }
+          import WheelOfFortuneV2 from 0xb3905e10b1e5c542
+            transaction {
+
+              prepare(acct: authAccount) {
+                let result = WheelOfFortuneV2.spinWheel(caller: acct.address)
+                log("You spun: ".concat(result))
+              }
+
+              execute {
+                // Nothing needed here for now
+              }
+            }
         `,
-        args: (arg: any, t: any) => []
+        proposer: fcl.currentUser,
+        payer: fcl.currentUser,
+        authorizations: [fcl.currentUser],
+        limit: 100
       });
 
-      if (!result) {
-        throw new Error("No result returned from contract");
-      }
-
-      // Calculate random rotation between 1800 and 3600 degrees
       const newRotation = rotation + 1800 + Math.random() * 1800;
       setRotation(newRotation);
 
-      // Wait for the wheel to stop spinning
       setTimeout(() => {
-        setResult(result);
+        setResult('Check wallet for spin result!');
         setIsSpinning(false);
       }, 3000);
     } catch (error) {
@@ -154,9 +155,7 @@ const App: React.FC = () => {
 
   const handleConnect = async () => {
     try {
-      // First unauthenticate to clear any existing connection
       await fcl.unauthenticate();
-      // Then authenticate with the new wallet
       await fcl.authenticate();
     } catch (error) {
       console.error('Error connecting wallet:', error);
@@ -198,11 +197,11 @@ const App: React.FC = () => {
           <Button onClick={handleSpin} disabled={isSpinning}>
             {isSpinning ? 'Spinning...' : 'Spin the Wheel'}
           </Button>
-          {result && <Result>You won: {result}</Result>}
+          {result && <Result>{result}</Result>}
         </>
       )}
     </Container>
   );
 };
 
-export default App; 
+export default App;

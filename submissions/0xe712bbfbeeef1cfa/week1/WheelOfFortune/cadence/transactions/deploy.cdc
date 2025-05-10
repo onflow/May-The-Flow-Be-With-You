@@ -1,8 +1,0 @@
-import WheelOfFortune from "../contracts/WheelOfFortune.cdc"
-
-transaction {
-    prepare(signer: &Account) {
-        // Deploy the contract
-        signer.contracts.add(name: "WheelOfFortune", code: "access(all) contract WheelOfFortune { access(all) event WheelSpun(player: Address, prize: String, timestamp: UFix64) access(all) struct WheelSegment { access(all) let prize: String access(all) let weight: UInt32 init(prize: String, weight: UInt32) { self.prize = prize self.weight = weight } } access(all) var segments: [WheelSegment] init() { self.segments = [ WheelSegment(prize: \"100 FLOW\", weight: 5), WheelSegment(prize: \"50 FLOW\", weight: 10), WheelSegment(prize: \"25 FLOW\", weight: 15), WheelSegment(prize: \"10 FLOW\", weight: 20), WheelSegment(prize: \"5 FLOW\", weight: 25), WheelSegment(prize: \"Try Again\", weight: 25) ] } access(all) fun spinWheel(): String { let randomNumber = self.getRandomNumber() var totalWeight: UInt32 = 0 for segment in self.segments { totalWeight = totalWeight + segment.weight } var currentWeight: UInt32 = 0 for segment in self.segments { currentWeight = currentWeight + segment.weight if randomNumber <= currentWeight { emit WheelSpun(player: self.account.address, prize: segment.prize, timestamp: getCurrentBlock().timestamp) return segment.prize } } return \"Try Again\" } access(self) fun getRandomNumber(): UInt32 { let randomNumber = self.getRandomUInt32() return randomNumber } access(self) fun getRandomUInt32(): UInt32 { let randomSeed = getCurrentBlock().timestamp let randomNumber = UInt32(randomSeed) return randomNumber % 100 } }")
-    }
-} 

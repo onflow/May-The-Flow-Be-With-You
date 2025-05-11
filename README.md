@@ -28,7 +28,10 @@ Useful Links:
 - [Live app](https://randoms.wtf/) built using Flow random and coresponding [GitHub](https://github.com/Aliserag/random.wtf)
 - Implement [Randomness with Solidity](https://developers.flow.com/evm/guides/vrf ) in 3 min
 
-### Week 2: To be announced (May 11-17)
+### Week 2: Actually Fun Games (May 11-17)
+- Twitter Space: May 14 (Wed) @ 4:00 PM PST - "Game Design 101"
+- Winners announced: May 19
+- End of Week 1 will be May 17th, 11:59pm PST
 
 ### Week 3: To be announced (May 18-24)
 

@@ -14,11 +14,8 @@ transaction(amount: Int) {
         var counter = 0
         
         while counter < amount {
-            // Load my receipt from storage
-            let receipt <- storageRef.withdraw()
-
             // Reveal by redeeming my receipt - fingers crossed!
-            storageRef.revealPhrase(receipt: <- receipt, minter: signer.address)
+            storageRef.revealPhrase()
 
             counter = counter + 1
         }

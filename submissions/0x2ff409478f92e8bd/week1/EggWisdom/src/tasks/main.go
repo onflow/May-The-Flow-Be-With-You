@@ -105,5 +105,10 @@ func main() {
 	)
 	// Fetch wisdom egg
 	o.Script("get_wisdom")
-
+	// Pet the wisdom egg
+	o.Tx("pet_egg",
+		WithSigner("account"),
+	)
+	// Fetch wisdom egg
+	o.Script("get_wisdom")
 }

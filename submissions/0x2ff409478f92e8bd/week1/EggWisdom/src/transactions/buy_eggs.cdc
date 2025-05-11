@@ -45,10 +45,7 @@ transaction(amount: Int) {
 
         while counter < amount {
             // Mint Wisdom
-            let egg <- storageRef.mintEgg(recipient: signer.address, payment: <- vaultRef.withdraw(amount: 1.0))
-            
-            // deposit the egg into the storage
-            storageRef.deposit(Egg: <- egg)
+            storageRef.mintEgg(recipient: signer.address, payment: <- vaultRef.withdraw(amount: 1.0))
 
             counter = counter + 1
         }

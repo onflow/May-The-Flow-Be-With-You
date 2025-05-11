@@ -29,8 +29,8 @@ The project is developed by [Tasneem Toolba](https://x.com/tasneemtoolba), using
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/lucky-spinning-wheel.git
-cd lucky-spinning-wheel
+git clone https://github.com/tasneemtoolba/May-The-Flow-Be-With-You.git
+cd submissions/0x0012a1ef98accd88/week1/lucky-spinning-wheel
 ```
 
 ### 2. Install dependencies

@@ -20,9 +20,9 @@ For Week 1’s **Randomness Revolution** theme, the project demonstrates:
 The remaining weeks will either expand on this foundation or introduce new ideas aligned with each weekly theme:
 
 - **Week 1 – Randomness Revolution:** ✅ *Lucky Spinning Wheel game using Flow’s VRF beacon*  
-- **Week 2 –   
-- **Week 3 –   
-- **Week 4 – 
+- **Week 2 –**   
+- **Week 3 –**   
+- **Week 4 –**
 
 ## Weekly Progress
 Check each weekly folder for daily submissions and updates:

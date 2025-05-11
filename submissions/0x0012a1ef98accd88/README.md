@@ -1,4 +1,4 @@
-# Flow Hackathon Project – Lucky Spinning Wheel
+# Flow Hackathon Project
 
 ## Project Overview
 This project is part of the **"May the Flow be with You"** hackathon, focused on creating innovative, blockchain-powered applications using Flow EVM and smart contracts.

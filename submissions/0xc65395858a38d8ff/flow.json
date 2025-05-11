@@ -1,0 +1,47 @@
+{
+    "version": "1.10.0",
+    "emulator": {
+        "serviceAccount": "emulator-account"
+    },
+    "accounts": {
+        "emulator-account": {
+            "address": "0xf8d6e0586b0a20c7",
+            "keys": "e691b31855087c8680365f63955130ae6120fb5fa57be0d9c0146eb6380c59f4"
+        },
+        "elemental-strikers-admin": {
+            "address": "0xf8d6e0586b0a20c7",
+            "keys": "e691b31855087c8680365f63955130ae6120fb5fa57be0d9c0146eb6380c59f4"
+        }
+    },
+    "contracts": {
+        "FungibleToken": {
+            "source": "",
+            "aliases": {
+                "emulator": "0xee82856bf20e2aa6"
+            }
+        },
+        "FlowToken": {
+            "source": "",
+            "aliases": {
+                "emulator": "0x0ae53cb6e3f42a79"
+            }
+        },
+        "ElementalStrikers": {
+            "source": "week1/ElementalStrikers/cadence/contracts/ElementalStrikers.cdc",
+            "aliases": {
+                "emulator": "0x01cf0e2f2f715450"
+            }
+        }
+    },
+    "deployments": {
+        "emulator": {
+            "emulator-account": [],
+            "elemental-strikers-admin": [
+                "ElementalStrikers"
+            ]
+        }
+    },
+    "networks": {
+        "emulator": "127.0.0.1:3569"
+    }
+} 

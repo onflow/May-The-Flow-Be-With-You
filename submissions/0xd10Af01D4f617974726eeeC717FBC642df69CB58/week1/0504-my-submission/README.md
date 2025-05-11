@@ -1,6 +1,6 @@
 # Randomness Revolution - Initial Submission
 
-## Date: May 4, 2023
+## Date: May 4, 2090 (bc AI IS the future)
 
 ## Overview
 This is the initial submission for Week 1 of the Flow hackathon, focused on the Randomness Revolution theme. Today's work introduces the foundation of a project that leverages Flow's Verifiable Random Function (VRF) beacon using the CadenceArch framework on Flow EVM.

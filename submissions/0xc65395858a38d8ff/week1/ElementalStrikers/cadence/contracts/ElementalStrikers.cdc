@@ -1,9 +1,9 @@
 // ElementalStrikers.cdc
 
 // Standard Flow contract imports
-import FungibleToken from 0x9a0766d93b6608b7 // FungibleToken standard address for Testnet
-import FlowToken from 0x7e60df042a9c0868     // FlowToken standard address for Testnet
-import RandomBeaconHistory from 0x8c5303eaa26202d6 // RandomBeaconHistory for commit-reveal on Testnet
+import FungibleToken from "FungibleToken"
+import FlowToken from "FlowToken"
+import RandomBeaconHistory from "RandomBeaconHistory"
 
 // TODO: Import or define a PRNG like Xorshift128plus
 // For now, we'll use a very simple placeholder.
@@ -38,15 +38,15 @@ access(all) contract ElementalStrikers {
     //-----------------------------------------------------------------------
     // Events
     //-----------------------------------------------------------------------
-    event ContractInitialized()
-    event GameCreated(gameId: UInt64, player1: Address, stakeAmount: UFix64, mode: String)
-    event GameJoined(gameId: UInt64, player2: Address)
+    access(all) event ContractInitialized()
+    access(all) event GameCreated(gameId: UInt64, player1: Address, stakeAmount: UFix64, mode: UInt8)
+    access(all) event GameJoined(gameId: UInt64, player2: Address)
     // Using String for element for simplicity, could be UInt8 for Fuego=0, Agua=1, Planta=2
-    event MoveMade(gameId: UInt64, player: Address, element: String)
-    event GameCommittedToRandomness(gameId: UInt64, commitBlockHeight: UInt64)
-    event GameResolved(
+    access(all) event MoveMade(gameId: UInt64, player: Address, element: String)
+    access(all) event GameCommittedToRandomness(gameId: UInt64, commitBlockHeight: UInt64)
+    access(all) event GameResolved(
         gameId: UInt64,
-        mode: String,
+        mode: UInt8,
         winner: Address?,
         loser: Address?,
         player1Move: String,
@@ -56,8 +56,8 @@ access(all) contract ElementalStrikers {
         criticalHitTypeP2OrComputer: String, // For PvP: player2Crit, For PvE: (can be "None" or flavor)
         winnings: UFix64
     )
-    event StakeReturned(player: Address, amount: UFix64)
-    event GameError(gameId: UInt64?, player: Address?, message: String)
+    access(all) event StakeReturned(player: Address, amount: UFix64)
+    access(all) event GameError(gameId: UInt64?, player: Address?, message: String)
 
     //-----------------------------------------------------------------------
     // Contract State & Constants
@@ -239,7 +239,7 @@ access(all) contract ElementalStrikers {
 
             emit GameResolved(
                 gameId: self.gameId,
-                mode: self.mode.toString(),
+                mode: self.mode.rawValue,
                 winner: winnerAddress,
                 loser: loserAddress,
                 player1Move: self.player1Move!,
@@ -316,13 +316,10 @@ access(all) contract ElementalStrikers {
 
     // Actual resource that players will store to interact
     access(all) resource PlayerAgent: GamePlayer {
-        access(self) let owner: Address
+        access(self) let ownerAddress: Address // Renamed from owner to avoid conflict with built-in self.owner for resource account
+        init(account: &Account) { self.ownerAddress = account.address } // Use passed account to get address
 
-        init() {
-            self.owner = self.account.address
-        }
-
-        fun getGameDetails(gameId: UInt64): GameDetails? {
+        access(all) fun getGameDetails(gameId: UInt64): GameDetails? {
             if let gameRef = ElementalStrikers.games[gameId] {
                 // Allow anyone to see game details for now, or restrict to players
                 return GameDetails(gameRef: gameRef)
@@ -330,7 +327,7 @@ access(all) contract ElementalStrikers {
             return nil
         }
 
-        fun makeMove(gameId: UInt64, element: String) {
+        access(all) fun makeMove(gameId: UInt64, element: String) {
             pre {
                 element == "Fuego" || element == "Agua" || element == "Planta" : "Invalid element choice provided"
                 ElementalStrikers.games[gameId] != nil : "Game does not exist"
@@ -338,16 +335,16 @@ access(all) contract ElementalStrikers {
             let gameRef = ElementalStrikers.games[gameId] ?? panic("Game not found after check, critical error")
             
             if gameRef.status != GameStatus.awaitingMoves {
-                emit GameError(gameId: gameId, player: self.owner, message: "Game not awaiting moves.")
+                emit GameError(gameId: gameId, player: self.ownerAddress, message: "Game not awaiting moves.")
                 panic("Game not awaiting moves.")
             }
-            if self.owner != gameRef.player1 && self.owner != gameRef.player2 {
-                emit GameError(gameId: gameId, player: self.owner, message: "Player is not part of this game.")
+            if self.ownerAddress != gameRef.player1 && self.ownerAddress != gameRef.player2 {
+                emit GameError(gameId: gameId, player: self.ownerAddress, message: "Player is not part of this game.")
                 panic("Player is not part of this game")
             }
             
-            let readyToCommit = gameRef.setPlayerMove(player: self.owner, move: element)
-            emit MoveMade(gameId: gameId, player: self.owner, element: element)
+            let readyToCommit = gameRef.setPlayerMove(player: self.ownerAddress, move: element)
+            emit MoveMade(gameId: gameId, player: self.ownerAddress, element: element)
 
             if readyToCommit {
                 gameRef.commitToRandomness()
@@ -355,17 +352,17 @@ access(all) contract ElementalStrikers {
         }
 
         // New function for player to trigger reveal
-        fun revealOutcome(gameId: UInt64) {
-            ElementalStrikers.revealGameOutcome(gameId: gameId, callingPlayerAddress: self.owner)
+        access(all) fun revealOutcome(gameId: UInt64) {
+            ElementalStrikers.revealGameOutcome(gameId: gameId, callingPlayerAddress: self.ownerAddress)
         }
     }
 
-    fun createPlayerAgent(): @PlayerAgent {
-        return <- create PlayerAgent()
+    access(all) fun createPlayerAgent(account: &Account): @PlayerAgent {
+        return <- create PlayerAgent(account: account)
     }
 
 
-    fun createGame(player1StakeVault: @FungibleToken.Vault, initialStakeAmount: UFix64): UInt64 {
+    access(all) fun createGame(player1StakeVault: @FungibleToken.Vault, initialStakeAmount: UFix64): UInt64 {
         pre {
             player1StakeVault.balance == initialStakeAmount : "Initial stake amount does not match vault balance."
             // Placeholder for FungibleToken.Receiver capability check if not directly taking vault
@@ -387,11 +384,11 @@ access(all) contract ElementalStrikers {
         destroy oldGame // Destroy the nil or old resource at that key
 
         self.nextGameId = self.nextGameId + 1
-        emit GameCreated(gameId: gameId, player1: player1Address, stakeAmount: initialStakeAmount, mode: GameMode.PvPStaked.toString())
+        emit GameCreated(gameId: gameId, player1: player1Address, stakeAmount: initialStakeAmount, mode: GameMode.PvPStaked.rawValue)
         return gameId
     }
 
-    fun joinGame(gameId: UInt64, player2StakeVault: @FungibleToken.Vault) {
+    access(all) fun joinGame(gameId: UInt64, player2StakeVault: @FungibleToken.Vault) {
         pre {
             self.games[gameId] != nil : "Game with this ID does not exist."
             // player2StakeVault.owner != nil : "Player 2 vault has no owner." // owner is Address?, so this is good
@@ -413,111 +410,8 @@ access(all) contract ElementalStrikers {
     }
 
     // Public function to trigger randomness reveal and game resolution
-    fun revealGameOutcome(gameId: UInt64, callingPlayerAddress: Address) {
-        let game = self.games[gameId] ?? panic("Game to resolve not found")
-        if game.status != GameStatus.awaitingRandomness {
-            emit GameError(gameId: gameId, player: callingPlayerAddress, message: "Game not awaiting randomness.")
-            return
-        }
-        let commitBlockHeight = game.committedBlockHeight ?? panic("Commit block height missing")
-        
-        var source: UInt64
-        if Test.isTesting() && self.nextTestRandomSource != nil {
-            source = self.nextTestRandomSource!
-            self.nextTestRandomSource = nil // Consume the test source
-        } else {
-            source = RandomBeaconHistory.getSourceOfRandomness(atBlockHeight: commitBlockHeight)
-                ?? panic("Failed source for block ".concat(commitBlockHeight.toString()))
-        }
-
-        let prng = PRNG(seed: source, salt: UInt64(gameId))
-        
-        let envRandom = prng.next()
-        let critP1Random = prng.next()
-        // For PvP, P2's crit is generated here. For PvE, computer's move is generated here.
-        let thirdRandomVal = prng.next() 
-
-        let environment = self.deriveEnvironmentFromRandom(envRandom)
-        let critP1 = self.deriveHitEffectFromRandom(critP1Random)
-        
-        var winner: Address? = nil
-        var loser: Address? = nil
-        var winningsForWinner: UFix64 = 0.0
-        var critP2OrComputer = "None"
-        var finalPlayerOrComputerMove = ""
-
-        let p1Move = game.player1Move!
-
-        if game.mode == GameMode.PvPStaked {
-            finalPlayerOrComputerMove = game.player2Move!
-            critP2OrComputer = self.deriveHitEffectFromRandom(thirdRandomVal)
-
-            if p1Move == finalPlayerOrComputerMove { // Elemental Draw
-                // Apply environmental tie-breaker for PvP
-                if environment == "Día Soleado" && (p1Move == "Fuego" || finalPlayerOrComputerMove == "Fuego") {
-                    winner = (p1Move == "Fuego") ? game.player1 : game.player2
-                    loser = (p1Move == "Fuego") ? game.player2 : game.player1
-                } else if environment == "Lluvia Torrencial" && (p1Move == "Agua" || finalPlayerOrComputerMove == "Agua") {
-                    winner = (p1Move == "Agua") ? game.player1 : game.player2
-                    loser = (p1Move == "Agua") ? game.player2 : game.player1
-                } else if environment == "Tierra Fértil" && (p1Move == "Planta" || finalPlayerOrComputerMove == "Planta") {
-                    winner = (p1Move == "Planta") ? game.player1 : game.player2
-                    loser = (p1Move == "Planta") ? game.player2 : game.player1
-                } else {
-                    // Still a draw if environment doesn't break the tie
-                    winner = nil
-                    loser = nil
-                }
-            } else if (self.Elements[p1Move] == finalPlayerOrComputerMove) { // Player 1 wins by element
-                winner = game.player1
-                loser = game.player2
-            } else { // Player 2 wins by element
-                winner = game.player2
-                loser = game.player1
-            }
-            // Determine winnings for PvP
-            if winner != nil {
-                winningsForWinner = game.stakeAmount * 2.0
-            } else {
-                winningsForWinner = 0.0 // Stakes returned in finalizeResolution for a draw
-            }
-
-        } else { // GameMode.PvEPractice
-            finalPlayerOrComputerMove = self.deriveElementFromRandom(thirdRandomVal)
-            // critP2OrComputer remains "None" for PvE flavor
-
-            if p1Move == finalPlayerOrComputerMove { // Elemental Draw
-                // Apply environmental tie-breaker for PvE
-                if environment == "Día Soleado" && p1Move == "Fuego" {
-                    winner = game.player1
-                } else if environment == "Lluvia Torrencial" && p1Move == "Agua" {
-                    winner = game.player1
-                } else if environment == "Tierra Fértil" && p1Move == "Planta" {
-                    winner = game.player1
-                } else if environment == "Día Soleado" && finalPlayerOrComputerMove == "Fuego" { 
-                    // Computer wins tie break, no specific winner address needed for PvE loser if computer wins
-                    loser = game.player1
-                } else if environment == "Lluvia Torrencial" && finalPlayerOrComputerMove == "Agua" {
-                    loser = game.player1
-                } else if environment == "Tierra Fértil" && finalPlayerOrComputerMove == "Planta" {
-                    loser = game.player1
-                } else {
-                    // Still a draw
-                    winner = nil // Explicitly nil for PvE draw
-                    loser = nil  // No specific loser if it's a pure draw against computer
-                }
-            } else if (self.Elements[p1Move] == finalPlayerOrComputerMove) { // Player 1 wins by element
-                winner = game.player1
-            } else { // Computer wins by element
-                loser = game.player1
-            }
-            winningsForWinner = 0.0 // No actual winnings in PvE
-        }
-        
-        game.finalizeResolution(
-            environmentalModifier: environment, criticalHitTypeP1: critP1, criticalHitTypeP2OrComputer: critP2OrComputer,
-            winnerAddress: winner, loserAddress: loser, winningsToWinner: winningsForWinner, computerGeneratedMove: (game.mode == GameMode.PvEPractice ? finalPlayerOrComputerMove : nil)
-        )
+    access(all) fun revealGameOutcome(gameId: UInt64, callingPlayerAddress: Address) {
+        log("test")
     }
 
     // --- Placeholder PRNG-dependent functions ---
@@ -537,40 +431,23 @@ access(all) contract ElementalStrikers {
     // --- End Placeholder ---
 
     // Add this new public function:
-    fun getGamePublicDetails(gameId: UInt64): GameDetails? {
+    access(all) fun getGamePublicDetails(gameId: UInt64): GameDetails? {
         if let gameRef = self.games[gameId] {
             return GameDetails(gameRef: gameRef)
         }
         return nil
     }
 
-    // --- Test-only state and functions ---
-    access(all) var nextTestRandomSource: UInt64? // Only used if Test.isTesting()
-    fun setNextTestRandomSource(source: UInt64) {
-        if !Test.isTesting() {
-            panic("This function can only be called in a testing environment.")
-        }
-        self.nextTestRandomSource = source
-    }
-    // --- End Test-only --- 
-
     //-----------------------------------------------------------------------
     // Initialization
     //-----------------------------------------------------------------------
     init() {
-        self.PlayerVaultStoragePath = /storage/ElementalStrikersPlayerVault01 // Increment or make unique for testing
-        self.GamePlayerPublicPath = /public/ElementalStrikersGamePlayer01
-        self.games <- {} // Initialize the dictionary for resources
+        self.PlayerVaultStoragePath = /storage/ElementalStrikersPlayerAgentV4 
+        self.GamePlayerPublicPath = /public/ElementalStrikersGamePlayerV4
+        self.games <- {}
         self.nextGameId = 1
-
-        // Fuego > Planta > Agua > Fuego
-        self.Elements = {
-            "Fuego": "Planta",
-            "Planta": "Agua",
-            "Agua": "Fuego"
-        }
-        // Initialize test-only variable
-        self.nextTestRandomSource = nil
+        self.Elements = {"Fuego": "Planta", "Planta": "Agua", "Agua": "Fuego"}
+        // self.nextTestRandomSource = nil // Commented out for deployment
         emit ContractInitialized()
     }
 } 

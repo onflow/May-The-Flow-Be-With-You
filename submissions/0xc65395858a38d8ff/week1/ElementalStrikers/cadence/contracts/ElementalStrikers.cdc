@@ -29,7 +29,7 @@ access(all) contract ElementalStrikers {
             self.state = (seed ^ salt)
         }
 
-        access(all) fun next(): UInt64 {
+        pub fun next(): UInt64 {
             self.state = (self.state * self.a + self.c) % self.m
             return self.state
         }
@@ -260,28 +260,6 @@ access(all) contract ElementalStrikers {
             self.committedBlockHeight = getCurrentBlock().height
             self.status = GameStatus.awaitingRandomness
             emit GameCommittedToRandomness(gameId: self.gameId, commitBlockHeight: self.committedBlockHeight!)
-        }
-
-        destroy() {
-            // If game is not resolved and vaults exist, they must be returned or handled.
-            // This current `finalizeResolution` attempts to empty vaults.
-            // If `finalizeResolution` wasn't called, and vaults still have funds, this is a leak.
-            // This requires careful state management to ensure funds are always returned if not won.
-            // For now, assume `finalizeResolution` is the only way stakes are moved out.
-            // If player2Vault was taken out by finalizeResolution, this will panic.
-            // We need to ensure that by the time destroy() is called, the vaults are either empty or already destroyed.
-            // The `finalizeResolution` function should ideally destroy the vaults it empties, or they should be nilled out.
-            // Let's assume finalizeResolution handles the vaults correctly (empties them for payout).
-            // If for some reason they weren't emptied (e.g. game cancelled before resolution), this is more complex.
-
-            // If player1Vault still exists (e.g. error before resolution/payout), destroy it.
-            // This path should ideally not be hit with funds in it.
-            // destroy self.player1Vault // This will fail if already moved out by finalizeResolution
-
-            // If player2Vault still exists, destroy it.
-            // if self.player2Vault != nil {
-            // destroy self.player2Vault! // This will fail if already moved out
-            // }
         }
     }
 

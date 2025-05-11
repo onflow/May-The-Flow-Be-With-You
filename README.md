@@ -29,7 +29,7 @@ Useful Links:
 - Implement [Randomness with Solidity](https://developers.flow.com/evm/guides/vrf ) in 3 min
 
 ### Week 2: Actually Fun Games (May 11-17)
-- Twitter Space: May 14 (Wed) @ 4:00 PM PST - "Game Design 101"
+- Twitter Space: May 14 (Wed) @ 4:00 PM PST - "How to Build Fun Games"
 - Winners announced: May 19
 - End of Week 1 will be May 17th, 11:59pm PST
 

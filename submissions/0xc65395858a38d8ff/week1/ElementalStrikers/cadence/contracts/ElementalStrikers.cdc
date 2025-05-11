@@ -29,7 +29,7 @@ access(all) contract ElementalStrikers {
             self.state = (seed ^ salt)
         }
 
-        pub fun next(): UInt64 {
+        access(all) fun next(): UInt64 {
             self.state = (self.state * self.a + self.c) % self.m
             return self.state
         }
@@ -38,13 +38,13 @@ access(all) contract ElementalStrikers {
     //-----------------------------------------------------------------------
     // Events
     //-----------------------------------------------------------------------
-    pub event ContractInitialized()
-    pub event GameCreated(gameId: UInt64, player1: Address, stakeAmount: UFix64, mode: String)
-    pub event GameJoined(gameId: UInt64, player2: Address)
+    event ContractInitialized()
+    event GameCreated(gameId: UInt64, player1: Address, stakeAmount: UFix64, mode: String)
+    event GameJoined(gameId: UInt64, player2: Address)
     // Using String for element for simplicity, could be UInt8 for Fuego=0, Agua=1, Planta=2
-    pub event MoveMade(gameId: UInt64, player: Address, element: String)
-    pub event GameCommittedToRandomness(gameId: UInt64, commitBlockHeight: UInt64)
-    pub event GameResolved(
+    event MoveMade(gameId: UInt64, player: Address, element: String)
+    event GameCommittedToRandomness(gameId: UInt64, commitBlockHeight: UInt64)
+    event GameResolved(
         gameId: UInt64,
         mode: String,
         winner: Address?,
@@ -56,8 +56,8 @@ access(all) contract ElementalStrikers {
         criticalHitTypeP2OrComputer: String, // For PvP: player2Crit, For PvE: (can be "None" or flavor)
         winnings: UFix64
     )
-    pub event StakeReturned(player: Address, amount: UFix64)
-    pub event GameError(gameId: UInt64?, player: Address?, message: String)
+    event StakeReturned(player: Address, amount: UFix64)
+    event GameError(gameId: UInt64?, player: Address?, message: String)
 
     //-----------------------------------------------------------------------
     // Contract State & Constants
@@ -82,20 +82,20 @@ access(all) contract ElementalStrikers {
 
     // Structure for an individual game
     access(all) resource Game { // Using a resource for easier management of vaults and state
-        pub let gameId: UInt64
-        pub let mode: GameMode
-        pub let player1: Address
+        access(all) let gameId: UInt64
+        access(all) let mode: GameMode
+        access(all) let player1: Address
         access(self) var player2: Address? // Only settable internally by the contract logic
         
         access(self) var player1Move: String? // "Fuego", "Agua", "Planta"
         access(self) var player2Move: String? // "Fuego", "Agua", "Planta"
         access(self) var computerMove: String? // Only for PvE
         
-        pub let stakeAmount: UFix64
+        access(all) let stakeAmount: UFix64
         access(self) let player1Vault: @FungibleToken.Vault? // Optional for PvE
         access(self) var player2Vault: @FungibleToken.Vault? // Optional, only for PvP
         
-        pub var status: GameStatus
+        access(all) var status: GameStatus
         access(self) var committedBlockHeight: UInt64? // Block height for commit-reveal
         
         // Fields to store results after reveal, before being part of a public struct
@@ -129,7 +129,7 @@ access(all) contract ElementalStrikers {
             }
         }
 
-        pub fun addPlayer2(player2: Address, player2StakeVault: @FungibleToken.Vault) {
+        access(all) fun addPlayer2(player2: Address, player2StakeVault: @FungibleToken.Vault) {
             pre {
                 self.mode == GameMode.PvPStaked : "Cannot add player 2 to a practice game"
                 self.status == GameStatus.active : "Game not active for joining"
@@ -142,7 +142,7 @@ access(all) contract ElementalStrikers {
             self.status = GameStatus.awaitingMoves
         }
 
-        pub fun setPlayerMove(player: Address, move: String): Bool { // Returns true if ready to commit
+        access(all) fun setPlayerMove(player: Address, move: String): Bool { // Returns true if ready to commit
             pre {
                 self.mode == GameMode.PvPStaked : "Player moves are set via transactions only for PvP games"
                 move == "Fuego" || move == "Agua" || move == "Planta" : "Invalid element choice"
@@ -273,27 +273,27 @@ access(all) contract ElementalStrikers {
 
     // This interface will be implemented by users to interact with their games
     access(all) resource interface GamePlayer {
-        pub fun getGameDetails(gameId: UInt64): GameDetails?
-        pub fun makeMove(gameId: UInt64, element: String)
-        pub fun revealOutcome(gameId: UInt64) // New function for player to trigger reveal
+        fun getGameDetails(gameId: UInt64): GameDetails?
+        fun makeMove(gameId: UInt64, element: String)
+        fun revealOutcome(gameId: UInt64) // New function for player to trigger reveal
     }
 
     // Struct to return game details safely
     access(all) struct GameDetails {
-        pub let gameId: UInt64
-        pub let mode: GameMode
-        pub let player1: Address
-        pub let player2: Address?
-        pub let player1MoveMade: Bool
-        pub let player2MoveMade: Bool
-        pub let computerMove: String?
-        pub let stakeAmount: UFix64
-        pub let status: GameStatus 
-        pub let committedBlockHeight: UInt64?
-        pub let environmentalModifier: String?
-        pub let criticalHitTypePlayer1: String?
-        pub let criticalHitTypeP2OrComputer: String?
-        pub let winner: Address?
+        access(all) let gameId: UInt64
+        access(all) let mode: GameMode
+        access(all) let player1: Address
+        access(all) let player2: Address?
+        access(all) let player1MoveMade: Bool
+        access(all) let player2MoveMade: Bool
+        access(all) let computerMove: String?
+        access(all) let stakeAmount: UFix64
+        access(all) let status: GameStatus 
+        access(all) let committedBlockHeight: UInt64?
+        access(all) let environmentalModifier: String?
+        access(all) let criticalHitTypePlayer1: String?
+        access(all) let criticalHitTypeP2OrComputer: String?
+        access(all) let winner: Address?
 
         init(gameRef: &Game) {
             self.gameId = gameRef.gameId
@@ -322,7 +322,7 @@ access(all) contract ElementalStrikers {
             self.owner = self.account.address
         }
 
-        pub fun getGameDetails(gameId: UInt64): GameDetails? {
+        fun getGameDetails(gameId: UInt64): GameDetails? {
             if let gameRef = ElementalStrikers.games[gameId] {
                 // Allow anyone to see game details for now, or restrict to players
                 return GameDetails(gameRef: gameRef)
@@ -330,7 +330,7 @@ access(all) contract ElementalStrikers {
             return nil
         }
 
-        pub fun makeMove(gameId: UInt64, element: String) {
+        fun makeMove(gameId: UInt64, element: String) {
             pre {
                 element == "Fuego" || element == "Agua" || element == "Planta" : "Invalid element choice provided"
                 ElementalStrikers.games[gameId] != nil : "Game does not exist"
@@ -355,17 +355,17 @@ access(all) contract ElementalStrikers {
         }
 
         // New function for player to trigger reveal
-        pub fun revealOutcome(gameId: UInt64) {
+        fun revealOutcome(gameId: UInt64) {
             ElementalStrikers.revealGameOutcome(gameId: gameId, callingPlayerAddress: self.owner)
         }
     }
 
-    access(all) fun createPlayerAgent(): @PlayerAgent {
+    fun createPlayerAgent(): @PlayerAgent {
         return <- create PlayerAgent()
     }
 
 
-    access(all) fun createGame(player1StakeVault: @FungibleToken.Vault, initialStakeAmount: UFix64): UInt64 {
+    fun createGame(player1StakeVault: @FungibleToken.Vault, initialStakeAmount: UFix64): UInt64 {
         pre {
             player1StakeVault.balance == initialStakeAmount : "Initial stake amount does not match vault balance."
             // Placeholder for FungibleToken.Receiver capability check if not directly taking vault
@@ -391,7 +391,7 @@ access(all) contract ElementalStrikers {
         return gameId
     }
 
-    access(all) fun joinGame(gameId: UInt64, player2StakeVault: @FungibleToken.Vault) {
+    fun joinGame(gameId: UInt64, player2StakeVault: @FungibleToken.Vault) {
         pre {
             self.games[gameId] != nil : "Game with this ID does not exist."
             // player2StakeVault.owner != nil : "Player 2 vault has no owner." // owner is Address?, so this is good
@@ -413,7 +413,7 @@ access(all) contract ElementalStrikers {
     }
 
     // Public function to trigger randomness reveal and game resolution
-    access(all) fun revealGameOutcome(gameId: UInt64, callingPlayerAddress: Address) {
+    fun revealGameOutcome(gameId: UInt64, callingPlayerAddress: Address) {
         let game = self.games[gameId] ?? panic("Game to resolve not found")
         if game.status != GameStatus.awaitingRandomness {
             emit GameError(gameId: gameId, player: callingPlayerAddress, message: "Game not awaiting randomness.")
@@ -537,7 +537,7 @@ access(all) contract ElementalStrikers {
     // --- End Placeholder ---
 
     // Add this new public function:
-    access(all) fun getGamePublicDetails(gameId: UInt64): GameDetails? {
+    fun getGamePublicDetails(gameId: UInt64): GameDetails? {
         if let gameRef = self.games[gameId] {
             return GameDetails(gameRef: gameRef)
         }
@@ -546,7 +546,7 @@ access(all) contract ElementalStrikers {
 
     // --- Test-only state and functions ---
     access(all) var nextTestRandomSource: UInt64? // Only used if Test.isTesting()
-    access(all) fun setNextTestRandomSource(source: UInt64) {
+    fun setNextTestRandomSource(source: UInt64) {
         if !Test.isTesting() {
             panic("This function can only be called in a testing environment.")
         }

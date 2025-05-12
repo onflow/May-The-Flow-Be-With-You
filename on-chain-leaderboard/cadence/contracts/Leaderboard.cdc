@@ -440,12 +440,12 @@ contract Leaderboard {
         }
 
         access(UserWrite)
-        fun submitChecklist(_ admin: Address, topic: String, completed: [String]) {
+        fun submitChecklist(_ admin: Address, periodId: UInt64, topic: String, completed: [String]) {
             let adminRef = Leaderboard.borrowLeaderboardAdmin(admin)
                 ?? panic("Admin not found for address: ".concat(admin.toString()))
-            let periodRef = adminRef.borrowCurrentPeriod()
-                ?? panic("Current period not found")
-            
+            let periodRef = adminRef.borrowPeriod(periodId)
+                ?? panic("Period not found")
+
             // assert(periodRef.isActive(), message: "Period is not active")
 
             // Check if the topic is valid

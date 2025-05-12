@@ -488,6 +488,10 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             self.pool.deposit(from: <- poolRoyalties)
             // Deposit the Egg
             self.deposit(Egg: <- Egg)
+            let wisdomZen = EggWisdom.account.storage.borrow<auth(Zen.MinterEntitlement) &Zen.Minter>(from: Zen.TokenMinterStoragePath)!
+            let UserZen = getAccount(self.owner?.address!).capabilities.borrow<&Zen.Vault>(Zen.TokenPublicReceiverPath)!
+            let zen <- wisdomZen.mintTokens(amount: 250.0)
+            UserZen.deposit(from: <- zen)
         }
         /* --- Reveal --- */
         /// Here the caller provides the Receipt given to them at commitment. The contract then "reveals pack" with
@@ -663,9 +667,12 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
 
         let wisdomZen = EggWisdom.account.storage.borrow<auth(Zen.MinterEntitlement) &Zen.Minter>(from: Zen.TokenMinterStoragePath)!
         let UserZen = getAccount(phaseStruct.uploader).capabilities.borrow<&Zen.Vault>(Zen.TokenPublicReceiverPath)!
+        let MinterZen = getAccount(recipient).capabilities.borrow<&Zen.Vault>(Zen.TokenPublicReceiverPath)!
 
-        let zen <- wisdomZen.mintTokens(amount: 1000.0)
-        UserZen.deposit(from: <- zen)
+        let zen1 <- wisdomZen.mintTokens(amount: 500.0)
+        UserZen.deposit(from: <- zen1)
+        let zen2 <- wisdomZen.mintTokens(amount: 1000.0)
+        MinterZen.deposit(from: <- zen2)
     }
     // -----------------------------------------------------------------------
     // EggWisdom Generic or Standard public "script" functions

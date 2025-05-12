@@ -111,4 +111,12 @@ func main() {
 	)
 	// Fetch wisdom egg
 	o.Script("get_wisdom")
+	// Get Zen balance
+	o.Script("get_zen",
+		WithArg("address", "account"),
+	)
+	// Get Zen balance
+	o.Script("get_zen",
+		WithArg("address", "bob"),
+	)
 }

@@ -3,6 +3,7 @@ import "NonFungibleToken"
 import "MetadataViews"
 import "FlowToken"
 import "FungibleToken"
+import "Zen"
 // This transaction is for the admin to create a new phrase struct
 // and store it in the EggWisdom smart contract
 
@@ -13,7 +14,7 @@ transaction(
     catsOnScreen: [String],
     background: String) {
 
-    prepare(signer: auth(BorrowValue, SaveValue) &Account) {
+    prepare(signer: auth(BorrowValue, SaveValue, Capabilities) &Account) {
         let collectionData = EggWisdom.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
             ?? panic("ViewResolver does not resolve NFTCollectionData view")
 
@@ -23,6 +24,22 @@ transaction(
             let collection <- EggWisdom.createEmptyCollection(nftType: Type<@EggWisdom.NFT>())
             // save it to the account
             signer.storage.save(<-collection, to: collectionData.storagePath)
+        }
+        // Check if the account already Zen setup
+        if signer.storage.borrow<&Zen.Vault>(from: Zen.TokenStoragePath) == nil {
+            // Create a new empty collection
+            let vault <- Zen.createEmptyVault(vaultType: Type<@Zen.Vault>())
+            // save it to the account
+            signer.storage.save(<-vault, to: Zen.TokenStoragePath)
+            // Create a public capability to the stored Vault that only exposes
+            // the `deposit` method through the `Receiver` interface
+            var capability_1 = signer.capabilities.storage.issue<&Zen.Vault>(Zen.TokenStoragePath)
+            signer.capabilities.publish(capability_1, at: Zen.TokenPublicReceiverPath)
+            
+            // Create a public capability to the stored Vault that only exposes
+            // the `balance` field through the `Balance` interface
+            var capability_2 = signer.capabilities.storage.issue<&Zen.Vault>(Zen.TokenStoragePath)
+            signer.capabilities.publish(capability_2, at: Zen.TokenPublicBalancePath)
         }
                 // Get a reference to the signer's stored vault
         let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)

@@ -232,9 +232,9 @@ contract Leaderboard {
 
         access(contract)
         fun addParticipant(_ participant: String) {
-            pre {
-                self.isActive(): "Period is not active"
-            }
+            // pre {
+            //     self.isActive(): "Period is not active"
+            // }
             if self.participants.contains(participant) {
                 return
             }
@@ -446,7 +446,7 @@ contract Leaderboard {
             let periodRef = adminRef.borrowCurrentPeriod()
                 ?? panic("Current period not found")
             
-            assert(periodRef.isActive(), message: "Period is not active")
+            // assert(periodRef.isActive(), message: "Period is not active")
 
             // Check if the topic is valid
             let scoreRecordRef = self.borrowAndEnsureUserScore(admin, periodRef.id, self.id)

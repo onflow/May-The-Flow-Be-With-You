@@ -41,7 +41,7 @@ transaction(
         ?? panic("Admin not found for address: ".concat(admin.toString()))
       let periodRef = adminRef.borrowPeriodByName(periodAlias)
         ?? panic("Period not found: ".concat(periodAlias))
-      assert(periodRef.isActive(), message: "Period is not active")
+      // assert(periodRef.isActive(), message: "Period is not active")
       
       // Submit the topic
       self.userProfile.submitChecklist(admin, topic: topic, completed: completed)

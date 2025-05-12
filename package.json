@@ -2,7 +2,8 @@
   "name": "may-the-flow-be-with-you",
   "private": true,
   "workspaces": [
-    "on-chain-leaderboard"
+    "on-chain-leaderboard",
+    "frontend-leaderboard"
   ],
   "scripts": {
     "postinstall": "only-allow bun"

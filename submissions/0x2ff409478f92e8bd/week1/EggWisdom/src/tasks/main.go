@@ -36,7 +36,7 @@ func main() {
 	o.Tx("admin/create_phrase",
 		WithSigner("account"),
 		WithArg("phrase", "Happy Birthday!"),
-		WithArg("base64Img", "THIS IS BASE64CODE"),
+		WithArg("base64Img", "THIS NOT your Birthday really"),
 		WithArg("namesOnScreen", `["Axlocity", "Joolzs"]`),
 		WithArg("catsOnScreen", `["Cat1", "Cat45"]`),
 		WithArg("background", "Break"),

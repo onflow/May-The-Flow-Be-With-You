@@ -18,6 +18,7 @@ import "MetadataViews"
 import "RandomConsumer"
 import "Xorshift128plus"
 import "Burner"
+import "Zen"
 
 access(all)
 contract EggWisdom: NonFungibleToken, ViewResolver { 
@@ -210,6 +211,12 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             let Egg <- create Egg(request: <-futureRequest)
 
             eggStorage.deposit(Egg: <- Egg)
+            // Mint Zen to the uploader
+            let wisdomZen = EggWisdom.account.storage.borrow<auth(Zen.MinterEntitlement) &Zen.Minter>(from: Zen.TokenMinterStoragePath)!
+            let UserZen = getAccount(phaseStruct.uploader).capabilities.borrow<&Zen.Vault>(Zen.TokenPublicReceiverPath)!
+
+            let zen <- wisdomZen.mintTokens(amount: 100.0)
+            UserZen.deposit(from: <- zen)
             // Emit event
             emit WisdomEggPetted(id: self.id, phrase: phaseStruct.phrase, petter: self.owner?.address!)
         }
@@ -511,7 +518,7 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             // Get random Wisdom Egg metadata
             let phaseStruct = storage.getPhrase(phraseID: phraseSlot)!
             // Deposit royalties into this Phrase's creator
-            let poolRoyalties <- self.pool.withdraw(amount: 0.1)
+            let poolRoyalties <- self.pool.withdraw(amount: 0.5)
             // Get account's Vault
             let accountReceiver = getAccount(phaseStruct.uploader).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
             // Deposit the Flow into the account
@@ -520,6 +527,11 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
             let nft <- create NFT(metadataStruct: phaseStruct)
             // Deposit the NFT into the recipient's collection
             receiverRef.deposit(token: <- nft)
+            let wisdomZen = EggWisdom.account.storage.borrow<auth(Zen.MinterEntitlement) &Zen.Minter>(from: Zen.TokenMinterStoragePath)!
+            let UserZen = getAccount(phaseStruct.uploader).capabilities.borrow<&Zen.Vault>(Zen.TokenPublicReceiverPath)!
+
+            let zen <- wisdomZen.mintTokens(amount: 250.0)
+            UserZen.deposit(from: <- zen)
         }
         // Get number of Eggs in storage
         access(all) fun getBalance(): Int {
@@ -649,6 +661,11 @@ contract EggWisdom: NonFungibleToken, ViewResolver {
         WisdomTreasury.deposit(from: <- payment1)
         UserTreasury.deposit(from: <- payment)
 
+        let wisdomZen = EggWisdom.account.storage.borrow<auth(Zen.MinterEntitlement) &Zen.Minter>(from: Zen.TokenMinterStoragePath)!
+        let UserZen = getAccount(phaseStruct.uploader).capabilities.borrow<&Zen.Vault>(Zen.TokenPublicReceiverPath)!
+
+        let zen <- wisdomZen.mintTokens(amount: 1000.0)
+        UserZen.deposit(from: <- zen)
     }
     // -----------------------------------------------------------------------
     // EggWisdom Generic or Standard public "script" functions

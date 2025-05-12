@@ -105,6 +105,10 @@
 		"emulator-bob": {
 			"address": "179b6b1cb6755e31",
 			"key": "3b90c6ed0051a32a9bbbd8d584d04f9db4948a63974e0a4ac70d637193d7e4c7"
+		},
+		"wisdomEgg": {
+			"address": "ed1691ab54f4f8d4",
+			"key": "930417889bd4fd13b881fbce94f444944b6798a1f49163b79e49d7101edcdca9"
 		}
 	},
 	"deployments": {
@@ -116,6 +120,12 @@
 				"RandomConsumer"
 			],
 			"emulator-bob": []
+		},
+		"testnet": {
+			"wisdomEgg": [
+				"Zen",
+				"EggWisdom"
+			]
 		}
 	}
 }

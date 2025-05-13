@@ -1,16 +1,17 @@
 // transactions/join_game.cdc
 // Allows a player to join an existing game in ElementalStrikers by staking FLOW.
 
-import FungibleToken from 0x9a0766d93b6608b7 // FungibleToken standard address for Testnet
-import FlowToken from 0x7e60df042a9c0868     // FlowToken standard address for Testnet
+import FungibleToken from 0xee82856bf20e2aa6 // FungibleToken address for Emulator
+import FlowToken from 0x0ae53cb6e3f42a79     // FlowToken address for Emulator
 import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
 
 transaction(gameId: UInt64, stakeAmount: UFix64) {
 
     // The Vault resource that holds the FLOW tokens to be staked by the joining player
-    let stakeVault: @FungibleToken.Vault
+    let stakeVault: @{FungibleToken.Vault}
     // Reference to the signer's PlayerAgent resource
     let playerAgentRef: &ElementalStrikers.PlayerAgent
+    let playerAddress: Address // To hold the signer's address
 
     prepare(signer: auth(BorrowValue, Storage, Capabilities) &Account) {
         // 1. Get a reference to the signer's main FlowToken Vault.
@@ -26,17 +27,21 @@ transaction(gameId: UInt64, stakeAmount: UFix64) {
         self.playerAgentRef = signer.storage.borrow<&ElementalStrikers.PlayerAgent>(
             from: ElementalStrikers.PlayerVaultStoragePath
         ) ?? panic("Could not borrow a reference to PlayerAgent. Did you run setup_account.cdc?")
+
+        // 4. Get the signer's address
+        self.playerAddress = signer.address
         
-        log("Prepared to join game. Stake withdrawn.")
+        log("Prepared to join game. Stake withdrawn. Player address captured.")
     }
 
     execute {
-        // 4. Call the joinGame function on the ElementalStrikers contract
+        // 5. Call the joinGame function on the ElementalStrikers contract
         ElementalStrikers.joinGame(
             gameId: gameId,
+            player2Address: self.playerAddress, // Pass the signer's address
             player2StakeVault: <-self.stakeVault
             // The stakeAmount is implicitly checked by the contract against game.stakeAmount using player2StakeVault.balance
         )
-        log("Successfully joined game with ID: ".concat(gameId.toString()).concat(" by staking: ").concat(stakeAmount.toString()))
+        log("Successfully joined game with ID: ".concat(gameId.toString()).concat(" by staking: ").concat(stakeAmount.toString()).concat(" as player ").concat(self.playerAddress.toString()))
     }
 } 

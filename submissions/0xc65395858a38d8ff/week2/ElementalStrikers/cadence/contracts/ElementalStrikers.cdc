@@ -410,19 +410,21 @@ access(all) contract ElementalStrikers {
     }
 
 
-    access(all) fun createGame(player1StakeVault: @{FungibleToken.Vault}, initialStakeAmount: UFix64): UInt64 {
+    access(all) fun createGame(player1Address: Address, player1StakeVault: @{FungibleToken.Vault}, initialStakeAmount: UFix64): UInt64 {
         pre {
             player1StakeVault.balance == initialStakeAmount : "Initial stake amount does not match vault balance."
             // Placeholder for FungibleToken.Receiver capability check if not directly taking vault
         }
         
-        let player1Address = player1StakeVault.owner?.address ?? panic("Cannot determine owner of the stake vault")
+        // No longer needed as player1Address is a parameter:
+        // let player1Address = player1StakeVault.owner?.address ?? panic("Cannot determine owner of the stake vault")
+        
         let gameId = self.nextGameId
         
         let newGame <- create Game(
             gameId: gameId,
             mode: GameMode.PvPStaked,
-            player1: player1Address,
+            player1: player1Address, // Use the passed player1Address
             player1StakeVault: <-player1StakeVault,
             initialStakeAmount: initialStakeAmount,
             player1InitialMove: nil
@@ -436,7 +438,38 @@ access(all) contract ElementalStrikers {
         return gameId
     }
 
-    access(all) fun joinGame(gameId: UInt64, player2StakeVault: @{FungibleToken.Vault}) {
+    // Creates a new PvE practice game
+    access(all) fun createPracticeGame(player1Address: Address, player1Choice: String): UInt64 {
+        pre {
+            player1Choice == "Fuego" || player1Choice == "Agua" || player1Choice == "Planta" : "Invalid element choice provided"
+        }
+
+        let gameId = self.nextGameId
+
+        // Create a new Game resource for a PvE practice game
+        let newGame <- create Game(
+            gameId: gameId,
+            mode: GameMode.PvEPractice, // Set mode to practice
+            player1: player1Address,
+            player1StakeVault: nil, // No stake for practice games
+            initialStakeAmount: 0.0, // No stake amount
+            player1InitialMove: player1Choice // Player 1's move is set at creation
+        )
+
+        // Immediately commit to randomness for practice games as Player 2 (computer) move is derived from it.
+        // The game status will transition from awaitingMoves (set in init) to awaitingRandomness.
+        newGame.commitToRandomness()
+
+        let oldGame <- self.games[gameId] <- newGame // Store the new game resource
+        destroy oldGame // Destroy the nil or old resource at that key
+
+        self.nextGameId = self.nextGameId + 1
+        emit GameCreated(gameId: gameId, player1: player1Address, stakeAmount: 0.0, mode: GameMode.PvEPractice.rawValue)
+
+        return gameId
+    }
+
+    access(all) fun joinGame(gameId: UInt64, player2Address: Address, player2StakeVault: @{FungibleToken.Vault}) {
         pre {
             self.games[gameId] != nil : "Game with this ID does not exist."
             // player2StakeVault.owner != nil : "Player 2 vault has no owner." // owner is Address?, so this is good
@@ -446,26 +479,135 @@ access(all) contract ElementalStrikers {
         let gameRef = &self.games[gameId] as &Game? ?? panic("Game not found, though existence was checked.")
         
         if gameRef.player2 != nil {
-            emit GameError(gameId: gameId, player: player2StakeVault.owner?.address, message: "Game is already full.")
+            emit GameError(gameId: gameId, player: player2Address, message: "Game is already full.") // Use player2Address for logging
             panic("Game is already full")
         }
         if player2StakeVault.balance != gameRef.stakeAmount {
-            emit GameError(gameId: gameId, player: player2StakeVault.owner?.address, message: "Stake amount does not match game requirement.")
+            emit GameError(gameId: gameId, player: player2Address, message: "Stake amount does not match game requirement.") // Use player2Address for logging
             panic("Stake amount does not match game requirement")
         }
-        let player2Address = player2StakeVault.owner?.address ?? panic("Player 2 vault owner not found")
+        // Removed: let player2Address = player2StakeVault.owner?.address ?? panic("Player 2 vault owner not found")
 
-        gameRef.addPlayer2(player2: player2Address, player2StakeVault: <-player2StakeVault)
+        gameRef.addPlayer2(player2: player2Address, player2StakeVault: <-player2StakeVault) // Use the passed player2Address
         emit GameJoined(gameId: gameId, player2: player2Address)
     }
 
     // Public function to trigger randomness reveal and game resolution
     access(all) fun revealGameOutcome(gameId: UInt64, callingPlayerAddress: Address) {
-        log("test")
+        // Get game reference
+        let gameRef = &self.games[gameId] as &Game?
+        assert(gameRef != nil, message: "Game does not exist")
+        let game = gameRef! // Safe to force unwrap after assert
+
+        // Check status
+        if game.status != GameStatus.awaitingRandomness {
+            emit GameError(gameId: gameId, player: callingPlayerAddress, message: "Game not awaiting randomness.")
+            panic("Game not awaiting randomness.")
+        }
+
+        let committedBlockHeight = game.committedBlockHeight!
+        let currentBlockHeight = getCurrentBlock().height
+        let revealDelay: UInt64 = 10 // Example delay: wait 10 blocks for randomness
+
+        // Check if enough blocks have passed for randomness to be potentially available
+        if currentBlockHeight < committedBlockHeight + revealDelay {
+            emit GameError(gameId: gameId, player: callingPlayerAddress, message: "Not enough blocks have passed since commitment.")
+            log("Game ID: ".concat(gameId.toString()).concat(" committed at block: ").concat(committedBlockHeight.toString()).concat(". Current block: ").concat(currentBlockHeight.toString()).concat(". Need block height: ").concat((committedBlockHeight + revealDelay).toString()))
+            // Do NOT panic here, just exit if not ready
+            return
+        }
+
+        // --- Get Randomness Seed ---
+        // In a real application, you would interact with a trusted Randomness Provider contract
+        // (like a RandomBeaconHistory consumer) to get a *verifiable* random seed
+        // for the committed block height.
+        // For this MVP testing, we will use the block height itself as a simplified seed,
+        // acknowledging this is NOT cryptographically secure for production.
+        // If you have a RandomBeaconHistory consumer contract deployed and linked,
+        // you would use something like:
+        // let randomnessProvider = getAccount(PROVIDER_ADDRESS).getCapability(PROVIDER_PUBLIC_PATH)
+        //     .borrow<&RandomBeaconHistory.Consumer{RandomnessProvider}>()
+        //     ?? panic("Could not borrow Randomness Provider capability")
+        // let randomData = randomnessProvider.getRandomBeaconData(blockHeight: committedBlockHeight)
+        //     ?? panic("Could not get random data for block ".concat(committedBlockHeight.toString()))
+        // let prngSeed = randomData.slice(0, 8).toUInt64() // Example: use first 8 bytes as seed
+
+        // --- Simplified MVP Seed from Block Height ---
+        let prngSeed = committedBlockHeight // Simplified seed for MVP testing
+
+        let prng = PRNG(seed: prngSeed, salt: gameId)
+
+        // Derive outcomes using the PRNG
+        var computerMove: String? = nil
+        // If PvE game, determine computer's move using randomness
+        if game.mode == GameMode.PvEPractice {
+             computerMove = self.deriveElementFromRandom(val: prng.next())
+             // The computerMove field is set within finalizeResolution
+             // game.computerMove = computerMove // REMOVED: Direct assignment not allowed
+        }
+
+        let environmentalModifier = self.deriveEnvironmentFromRandom(val: prng.next())
+        let criticalHitP1 = self.deriveHitEffectFromRandom(val: prng.next())
+        let criticalHitP2OrComputer = self.deriveHitEffectFromRandom(val: prng.next())
+
+        // Determine winner (simplified logic for MVP)
+        var winnerAddress: Address? = nil
+        var loserAddress: Address? = nil
+        var winnings: UFix64 = 0.0 // Winnings are total pot for winner in PvP, 0 otherwise
+
+        let player1Move = game.player1Move! // Safe to force unwrap in awaitingRandomness state
+        // Get the opponent's move (Player 2 in PvP, Computer in PvE)
+        let player2OrComputerMove = game.mode == GameMode.PvPStaked ? game.player2Move! : (computerMove ?? panic("Computer move not determined for PvE game")) // Ensure computerMove is not nil for PvE
+
+        // Basic win/loss/draw logic based on elements (Fuego > Planta, Planta > Agua, Agua > Fuego)
+        let player1WinsBasic = self.Elements[player1Move] == player2OrComputerMove
+        let player2OrComputerWinsBasic = self.Elements[player2OrComputerMove] == player1Move
+
+        // NOTE: Environmental modifier and critical hits are derived but NOT
+        // implemented in the win/loss logic for this MVP. This would require
+        // more complex combat rules.
+
+        if player1WinsBasic && !player2OrComputerWinsBasic { // Player 1 wins (based on basic element rule)Paciente
+            winnerAddress = game.player1
+            loserAddress = game.mode == GameMode.PvPStaked ? game.player2 : nil // No explicit loser in PvE
+            if game.mode == GameMode.PvPStaked {
+                winnings = game.stakeAmount * 2.0 // Winner takes the full pot (both stakes)
+            } else {
+                winnings = 0.0 // No winnings in practice games
+            }
+        } else if player2OrComputerWinsBasic && !player1WinsBasic { // Player 2 or Computer wins
+             // Winner is Player 2 in PvP. In PvE, there is no "winner address" for the computer,
+             // but we track the outcome for logging/event.
+            winnerAddress = game.mode == GameMode.PvPStaked ? game.player2 : nil
+            loserAddress = game.player1 // Player 1 is the loser in PvE if computer wins
+             if game.mode == GameMode.PvPStaked {
+                winnings = game.stakeAmount * 2.0 // Winner takes the full pot (both stakes)
+            } else {
+                winnings = 0.0 // No winnings in practice games
+            }
+        } else { // Draw
+            winnerAddress = nil // Draw has no winner
+            loserAddress = nil
+            // In a draw, staked tokens are returned. Winnings represent the total received.
+            winnings = game.mode == GameMode.PvPStaked ? game.stakeAmount : 0.0 // Stakes returned in PvP draw, 0 in PvE
+        }
+
+        // Call finalizeResolution to update game state and handle payouts/events
+        // finalizeResolution will set game.computerMove if it's a PvE game
+        game.finalizeResolution(
+            environmentalModifier: environmentalModifier,
+            criticalHitTypeP1: criticalHitP1,
+            criticalHitTypeP2OrComputer: criticalHitP2OrComputer,
+            winnerAddress: winnerAddress,
+            loserAddress: loserAddress,
+            winningsToWinner: winnings, // This is the total received by winner or stake returned in draw
+            computerGeneratedMove: computerMove // Pass computer move for PvE logging in event
+        )
+
+        log("Game ID: ".concat(gameId.toString()).concat(" resolved."))
     }
 
     // --- Placeholder PRNG-dependent functions ---
-    // Replace with proper derivation from a PRNG sequence
     access(contract) fun deriveEnvironmentFromRandom(val: UInt64): String {
         let options = ["None", "Día Soleado", "Lluvia Torrencial", "Tierra Fértil"]
         return options[Int(val % UInt64(options.length))]

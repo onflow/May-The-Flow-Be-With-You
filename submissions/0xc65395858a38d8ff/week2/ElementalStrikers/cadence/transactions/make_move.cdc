@@ -23,7 +23,7 @@ transaction(gameId: UInt64, element: String) {
         // Check game status after move to inform user if it's awaiting reveal
         let gameDetails = self.playerAgentRef.getGameDetails(gameId: gameId)
         if let details = gameDetails {
-            log("Game status after move: ".concat(details.status.toString()))
+            log("Game status after move: ".concat(details.status.rawValue.toString()))
             if details.status == ElementalStrikers.GameStatus.awaitingRandomness {
                 log("Game is now awaiting randomness. Call 'reveal_outcome' transaction after block ".concat(details.committedBlockHeight!.toString()).concat(" has passed."))
             }

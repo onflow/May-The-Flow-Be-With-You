@@ -1,8 +1,6 @@
 {
 	"contracts": {
-		"ElementalStrikers": {
-			"source": "week2/ElementalStrikers/cadence/contracts/ElementalStrikers.cdc"
-		}
+		"ElementalStrikers": "week2/ElementalStrikers/cadence/contracts/ElementalStrikers.cdc"
 	},
 	"dependencies": {
 		"Burner": {
@@ -188,6 +186,10 @@
 				"type": "file",
 				"location": "emulator-account.pkey"
 			}
+		},
+		"player2-account": {
+			"address": "179b6b1cb6755e31",
+			"key": "3b840d7ea74a383e81192362f02d37264da5dfb6fa9c88031c13b78e1e2b3b0b"
 		}
 	},
 	"deployments": {

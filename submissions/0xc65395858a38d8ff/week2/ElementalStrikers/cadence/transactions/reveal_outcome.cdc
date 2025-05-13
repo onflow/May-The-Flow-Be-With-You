@@ -28,7 +28,7 @@ transaction(gameId: UInt64) {
 
                 let gameDetailsAfter = self.playerAgentRef.getGameDetails(gameId: gameId)
                 if let detailsAfter = gameDetailsAfter {
-                    log("Game status after reveal attempt: ".concat(detailsAfter.status.toString()))
+                    log("Game status after reveal attempt: ".concat(detailsAfter.status.rawValue.toString()))
                     if detailsAfter.status == ElementalStrikers.GameStatus.resolved {
                         log("Game successfully resolved. Winner: ".concat(detailsAfter.winner?.toString() ?? "Draw/None"))
                     } else {
@@ -36,7 +36,7 @@ transaction(gameId: UInt64) {
                     }
                 }
             } else {
-                log("Game ID: ".concat(gameId.toString()).concat(" is not awaiting randomness. Current status: ".concat(details.status.toString())))
+                log("Game ID: ".concat(gameId.toString()).concat(" is not awaiting randomness. Current status: ").concat(details.status.rawValue.toString()))
             }
         } else {
             panic("Could not retrieve game details for game ID: ".concat(gameId.toString()))

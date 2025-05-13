@@ -11,7 +11,7 @@ This repository documents my progress in the **May the Flow Be With You** coding
 
 ---
 
-## 📅 Week 2 — TBD
+## 📅 Week 2 — Actually Fun Games (May 11-17)
 
 ---
 

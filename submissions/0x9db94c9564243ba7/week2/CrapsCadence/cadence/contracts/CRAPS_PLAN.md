@@ -1,5 +1,46 @@
 # Craps Contract Pseudocode & Data Structure Plan
 
+## 1. Current Implementation Status
+
+### Implemented
+- Basic contract structure
+- Game and Bet structs
+- GameState enum
+- Storage for userGames and allowedBets
+- Initial allowed bets configuration:
+  - COMEOUT: ["PASS", "FIELD"]
+  - POINT: ["COME", "FIELD", "CRAPS", "YO", "2", "3", "4", "5", "6", "8", "9", "10", "11", "12", "Odds"]
+
+### Next Steps
+
+1. **Admin Resource Implementation**
+   - Create Admin resource for managing contract
+   - Add admin-only functions for bet management
+   - Implement access control
+
+2. **Core Game Functions**
+   - Implement placeBet function
+   - Add rollDice function with randomness
+   - Create bet resolution logic
+   - Add game state transition logic
+
+3. **User Info Storage**
+   - Implement commented userInfo storage
+   - Add UserInfo struct for tracking:
+     - User statistics
+     - Balance history
+     - Game history
+
+4. **Bet Management**
+   - Implement bet validation
+   - Add bet resolution rules
+   - Create payout calculation logic
+
+5. **Testing & Validation**
+   - Create test cases for all game states
+   - Implement bet validation tests
+   - Add integration tests
+
 ## 1. Main Data Structures
 
 ### Game Struct
@@ -7,38 +48,27 @@
 struct Game {
     state: GameState           // Enum: NoBets, ComeOut, Point, Resolved
     point: Optional<Int>       // The current point (if any)
+    pointAmount: Optional<UFix64> // Amount for point bet
+    come: Optional<Int>        // Come bet point value
     bets: {String: Bet}        // Dictionary of bet type to Bet struct
-    history: [RollResult]      // Array of previous rolls (optional, for audit)
 }
 ```
 
 ### Bet Struct
 ```
 struct Bet {
-    betType: String            // e.g., "PassLine", "Field", etc.
+    betType: String            // e.g., "PASS", "FIELD", etc.
     amount: UFix64
-    isActive: Bool
-    // Add more fields as needed for bet resolution
-}
-```
-
-### RollResult Struct (optional, for history/audit)
-```
-struct RollResult {
-    dice1: Int
-    dice2: Int
-    total: Int
-    timestamp: UFix64
 }
 ```
 
 ### GameState Enum
 ```
-enum GameState {
-    NoBets
-    ComeOut
-    Point
-    Resolved
+enum GameState: UInt8 {
+    NOBETS     // No Bets currently
+    COMEOUT    // COMEOUT Bets
+    POINT      // POINT Bets
+    RESOLVED   // TBD State
 }
 ```
 
@@ -51,85 +81,39 @@ enum GameState {
 var userGames: {Address: Game}   // Maps user address to their current game state
 ```
 
-### User Info (optional, for stats, balances, etc.)
+### Allowed Bets
 ```
-var userInfo: {Address: UserInfo}
-```
-
----
-
-## 3. Allowed Bets
-
-### Allowed Bets by State
-```
-var allowedBets: {GameState: [String]}   // e.g., {ComeOut: ["PassLine", "Field"], Point: ["Odds", "Hardways", ...]}
-```
-- This allows you to easily add new bet types for each state.
-
----
-
-## 4. Core Functions (Pseudocode)
-
-### Place Bet
-```
-function placeBet(user: Address, betType: String, amount: UFix64) {
-    let game = userGames[user]
-    assert(betType in allowedBets[game.state])
-    // Add or update bet in game.bets
-}
-```
-
-### Roll Dice
-```
-function rollDice(user: Address) {
-    let game = userGames[user]
-    // Use VRF or commit-reveal for randomness
-    // Update game state and resolve bets as needed
-    // If point is established, set game.point
-    // If resolved, payout and reset game
-}
-```
-
-### Add New Bet Type (Admin)
-```
-function addAllowedBet(state: GameState, betType: String) {
-    allowedBets[state].append(betType)
-}
-```
-
-### Get User Game State
-```
-function getGameState(user: Address): GameState {
-    return userGames[user].state
-}
+var allowedBets: {GameState: [String]}   // Maps game state to allowed bet types
 ```
 
 ---
 
-## 5. Access Control
-- Only the user can interact with their own game struct (enforced by checking `msg.sender` or `auth` in Cadence).
-- Admin-only functions for adding new bet types.
+## 3. Access Control Plan
+- Implement Admin resource for contract management
+- Add user authentication for game actions
+- Create role-based access control
 
 ---
 
-## 6. Extensibility
-- To add new bets, just add a new BetType and update the allowedBets mapping.
-- You can expand the Bet struct to include more complex bet logic as needed.
+## 4. Extensibility
+- Structure allows for easy addition of new bet types
+- Game state system supports future game phases
+- Modular design for adding new features
 
 ---
 
 ## Summary Table
 
-| Component         | Type/Structure                | Purpose                                 |
-|-------------------|------------------------------|-----------------------------------------|
-| Game              | struct                       | Tracks state, point, bets, history      |
-| Bet               | struct                       | Represents a single bet                 |
-| RollResult        | struct (optional)            | Stores roll outcomes                    |
-| GameState         | enum                         | Tracks phase of the game                |
-| userGames         | {Address: Game}              | Maps users to their game state          |
-| allowedBets       | {GameState: [String]}        | Allowed bets per game phase             |
-| userInfo          | {Address: UserInfo} (opt.)   | Stores user stats/info                  |
+| Component         | Type/Structure                | Status      | Next Steps                    |
+|-------------------|------------------------------|-------------|------------------------------|
+| Game              | struct                       | Implemented | Add game logic functions     |
+| Bet               | struct                       | Implemented | Add bet resolution logic     |
+| GameState         | enum                         | Implemented | Complete state transitions   |
+| userGames         | {Address: Game}              | Implemented | Add game management          |
+| allowedBets       | {GameState: [String]}        | Implemented | Add new bet types            |
+| userInfo          | {Address: UserInfo}          | Pending     | Implement storage            |
+| Admin Resource    | resource                     | Pending     | Create and implement         |
 
 ---
 
-Let me know if you want this mapped to Cadence syntax, or if you want to see how to handle randomness (VRF/commit-reveal) in this structure! 
+Let me know if you want to focus on implementing any specific component from the next steps! 

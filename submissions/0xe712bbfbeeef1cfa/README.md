@@ -7,9 +7,9 @@ This repository documents my progress in the **May the Flow Be With You** coding
 
 ---
 
-## 📅 Week 1 — Randomness Revolution 🎲
+## 📅 Week 1 — WheelOfFortune🎲
 
-**Theme:** Randomness on-chain without oracles
+**Theme:** The Randomness Revolution
 
 For Week 1, I created an interactive smart contract that simulates a **spin-the-wheel game** with weighted reward segments. Users connect their wallet through the React frontend and trigger a Flow transaction that emits a spin result based on a deterministic pseudo-random number (derived from block timestamps).
 
@@ -17,15 +17,24 @@ For Week 1, I created an interactive smart contract that simulates a **spin-the-
 - ✅ Frontend built in React with animated wheel and FCL wallet integration
 - ❌ No token transfers yet — rewards are virtual labels (e.g., "100 FLOW", "Try Again")
 
-🧠 Key learning from Week 1: building a deterministic reward system on-chain without access to true randomness, and handling FCL transaction logic on the frontend.
-
-Project folder: [`week1/`](./week1/)
+🧠 **Key learning from Week 1:**
+Building a deterministic reward system on-chain without access to true randomness, and handling FCL transaction logic on the frontend.
 
 ---
 
-## 📅 Week 2 — TBD
+## 📅 Week 2 — ToTheMOONNNN 🎮
 
-Project theme has not been announced yet. I’ll update this section once Week 2 begins.
+**Theme:** Actually Fun Games
+
+For Week 2, I built **Click-to-Moon**, a meme-infused on-chain clicker game where players generate *thrust points* by clicking a rocket button. Players can upgrade their boosters, automate thrust generation, and race to reach the Moon — all while progress is stored securely on the Flow blockchain.
+
+- ✅ Smart contract deployed to Flow Testnet: ``
+- ✅ Frontend built in React with animated rocket and real-time thrust counter
+- ✅ Players can upgrade boosters to increase thrust per click
+- 🔄 Auto-thrust upgrades and milestone-based NFT rewards in progress
+
+🧠 **Key learning from Week 2:**  
+Balancing on-chain state management with fun gameplay mechanics, optimizing Cadence resource logic for repeated player interactions, and creating a gameplay loop that is simple but addictive.
 
 ---
 

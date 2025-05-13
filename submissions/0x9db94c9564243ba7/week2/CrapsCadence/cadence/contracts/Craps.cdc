@@ -1,10 +1,17 @@
+import "FungibleToken"
+
 access(all) contract OnchainDice {
+
+  access(all) let CrapsAdminStoragePath: StoragePath
 
   access(all) let userGames: {Address : OnchainDice.Game}
 
   access(all) let allowedBets: {OnchainDice.GameState : [String]}
 
-  //to implement: access (all) let userInfo: { Address : String }
+  //an  array of fungible token vaults so we can hold multiple tokens.
+  access(all) var tokenVaults: @{String : {FungibleToken.Vault}}
+
+  //tbd implement: access (all) let userInfo: { Address : String }
 
   access(all) enum GameState: UInt8 {
     access(all) case NOBETS /// No Bets currently
@@ -39,7 +46,14 @@ access(all) contract OnchainDice {
     }
   }
 
-  //add an Admin resource
+  //add a key resource
+
+  access (all) resource CrapsAdmin {
+    //functions to add:
+    //transfer coins out of the Craps Vault
+    //ability to add new token vaults
+    //add new bets
+  }
 
   init(){
     self.allowedBets = {
@@ -47,6 +61,11 @@ access(all) contract OnchainDice {
       OnchainDice.GameState.POINT:["COME", "FIELD", "CRAPS", "YO", "2", "3", "4", "5", "6", "8", "9", "10", "11", "12", "Odds"]
     }
     self.userGames = {}
+    self.tokenVaults <- {} //add aiSportsJuice
+
+    // Set the named paths
+    self.CrapsAdminStoragePath = /storage/CrapsAdmin
+    self.account.storage.save(<-create CrapsAdmin(), to: self.CrapsAdminStoragePath)
   }
 
 }

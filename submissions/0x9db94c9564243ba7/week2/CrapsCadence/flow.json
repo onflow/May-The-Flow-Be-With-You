@@ -7,6 +7,35 @@
 			}
 		}
 	},
+	"dependencies": {
+		"Burner": {
+			"source": "mainnet://f233dcee88fe0abe.Burner",
+			"hash": "71af18e227984cd434a3ad00bb2f3618b76482842bae920ee55662c37c8bf331",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"FungibleToken": {
+			"source": "mainnet://f233dcee88fe0abe.FungibleToken",
+			"hash": "23c1159cf99b2b039b6b868d782d57ae39b8d784045d81597f100a4782f0285b",
+			"aliases": {
+				"emulator": "ee82856bf20e2aa6",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"ViewResolver": {
+			"source": "mainnet://1d7e57aa55817448.ViewResolver",
+			"hash": "374a1994046bac9f6228b4843cb32393ef40554df9bd9907a702d098a2987bde",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "1d7e57aa55817448",
+				"testnet": "631e88ae7f1d7c20"
+			}
+		}
+	},
 	"networks": {
 		"emulator": "127.0.0.1:3569",
 		"mainnet": "access.mainnet.nodes.onflow.org:9000",

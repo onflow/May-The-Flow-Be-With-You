@@ -85,26 +85,26 @@ access(all) contract ElementalStrikers {
         access(all) let gameId: UInt64
         access(all) let mode: GameMode
         access(all) let player1: Address
-        access(self) var player2: Address? // Only settable internally by the contract logic
+        access(all) var player2: Address? // Cambiado de access(self) a access(all)
         
-        access(self) var player1Move: String? // "Fuego", "Agua", "Planta"
-        access(self) var player2Move: String? // "Fuego", "Agua", "Planta"
-        access(self) var computerMove: String? // Only for PvE
+        access(all) var player1Move: String? // Cambiado de access(self) a access(all)
+        access(all) var player2Move: String? // Cambiado de access(self) a access(all)
+        access(all) var computerMove: String? // Cambiado de access(self) a access(all)
         
         access(all) let stakeAmount: UFix64
-        access(self) let player1Vault: @{FungibleToken.Vault}? // Optional for PvE
-        access(self) var player2Vault: @{FungibleToken.Vault}? // Optional, only for PvP
+        access(all) var player1Vault: @{FungibleToken.Vault}? // Cambiado de let a var
+        access(all) var player2Vault: @{FungibleToken.Vault}? // Cambiado de access(self) a access(all)
         
         access(all) var status: GameStatus
-        access(self) var committedBlockHeight: UInt64? // Block height for commit-reveal
+        access(all) var committedBlockHeight: UInt64? // Cambiado de access(self) a access(all)
         
         // Fields to store results after reveal, before being part of a public struct
-        access(self) var finalEnvironmentalModifier: String?
-        access(self) var finalCriticalHitTypePlayer1: String?
-        access(self) var finalCriticalHitTypeP2OrComputer: String? // PvP: P2 crit, PvE: (flavor / None)
-        access(self) var finalWinner: Address?
+        access(all) var finalEnvironmentalModifier: String? // Cambiado de access(self) a access(all)
+        access(all) var finalCriticalHitTypePlayer1: String? // Cambiado de access(self) a access(all)
+        access(all) var finalCriticalHitTypeP2OrComputer: String? // Cambiado de access(self) a access(all)
+        access(all) var finalWinner: Address? // Cambiado de access(self) a access(all)
 
-        init(gameId: UInt64, mode: GameMode, player1: Address, player1StakeVault: @FungibleToken.Vault?, initialStakeAmount: UFix64, player1InitialMove: String?) {
+        init(gameId: UInt64, mode: GameMode, player1: Address, player1StakeVault: @{FungibleToken.Vault}?, initialStakeAmount: UFix64, player1InitialMove: String?) {
             self.gameId = gameId
             self.mode = mode
             self.player1 = player1
@@ -118,6 +118,7 @@ access(all) contract ElementalStrikers {
             self.finalCriticalHitTypeP2OrComputer = nil
             self.finalWinner = nil
             self.computerMove = nil
+            self.player2Move = nil // Inicialización añadida
 
             if self.mode == GameMode.PvPStaked {
                 self.player1Move = nil // Player 1 makes move via transaction
@@ -189,44 +190,91 @@ access(all) contract ElementalStrikers {
 
             if self.mode == GameMode.PvPStaked {
                 // Payout logic only for PvPStaked games
-                let p1Vault <- self.player1Vault!
-                var p2VaultOpt = self.player2Vault
-                if p2VaultOpt != nil {
-                    self.player2Vault <- nil
-                }
-
-                if winnerAddress == self.player1 {
-                    let winnerReceiver = getAccount(self.player1).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-                        ?? panic("Cannot borrow receiver for player 1")
-                    winnerReceiver.deposit(from: <- p1Vault)
-                    if p2VaultOpt != nil {
-                        winnerReceiver.deposit(from: <- p2VaultOpt!)
+                // Extraer los vaults a variables locales usando el operador de intercambio
+                var p1Vault: @{FungibleToken.Vault}? <- nil
+                p1Vault <-> self.player1Vault
+                
+                if p1Vault != nil {
+                    let unwrappedP1Vault <- p1Vault!
+                    
+                    if winnerAddress == self.player1 {
+                        let winnerReceiver = getAccount(self.player1).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                            ?? panic("Cannot borrow receiver for player 1")
+                        
+                        // El ganador recibe su vault
+                        winnerReceiver.deposit(from: <-unwrappedP1Vault)
+                        
+                        // Y el vault del otro jugador si existe
+                        var p2Vault: @{FungibleToken.Vault}? <- nil
+                        p2Vault <-> self.player2Vault
+                        
+                        if p2Vault != nil {
+                            let unwrappedP2Vault <- p2Vault!
+                            winnerReceiver.deposit(from: <-unwrappedP2Vault)
+                        } else {
+                            destroy p2Vault
+                        }
+                    } else if winnerAddress == self.player2 && self.player2 != nil {
+                        let winnerReceiver = getAccount(self.player2!).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                            ?? panic("Cannot borrow receiver for player 2")
+                        
+                        // El ganador recibe ambos vaults
+                        var p2Vault: @{FungibleToken.Vault}? <- nil
+                        p2Vault <-> self.player2Vault
+                        
+                        if p2Vault != nil {
+                            let unwrappedP2Vault <- p2Vault!
+                            winnerReceiver.deposit(from: <-unwrappedP2Vault)
+                        } else {
+                            destroy p2Vault
+                        }
+                        
+                        winnerReceiver.deposit(from: <-unwrappedP1Vault)
+                    } else { // Draw - cada jugador recibe su stake de vuelta
+                        let p1Receiver = getAccount(self.player1).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                            ?? panic("Cannot borrow receiver for player 1 on draw")
+                        
+                        p1Receiver.deposit(from: <-unwrappedP1Vault)
+                        emit StakeReturned(player: self.player1, amount: self.stakeAmount)
+                        
+                        if self.player2 != nil {
+                            var p2Vault: @{FungibleToken.Vault}? <- nil
+                            p2Vault <-> self.player2Vault
+                            
+                            if p2Vault != nil {
+                                let unwrappedP2Vault <- p2Vault!
+                                let p2Receiver = getAccount(self.player2!).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                                    ?? panic("Cannot borrow receiver for player 2 on draw")
+                                
+                                p2Receiver.deposit(from: <-unwrappedP2Vault)
+                                emit StakeReturned(player: self.player2!, amount: self.stakeAmount)
+                            } else {
+                                destroy p2Vault
+                            }
+                        }
                     }
-                } else if winnerAddress == self.player2 {
-                    let winnerReceiver = getAccount(self.player2!).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-                        ?? panic("Cannot borrow receiver for player 2")
-                    if p2VaultOpt != nil {
-                        winnerReceiver.deposit(from: <- p2VaultOpt!)
-                    }
-                    winnerReceiver.deposit(from: <- p1Vault)
-                } else { // Draw
-                    let p1Receiver = getAccount(self.player1).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-                        ?? panic("Cannot borrow receiver for player 1 on draw")
-                    p1Receiver.deposit(from: <- p1Vault)
-                    emit StakeReturned(player: self.player1, amount: self.stakeAmount)
-                    if self.player2 != nil && p2VaultOpt != nil {
-                        let p2Receiver = getAccount(self.player2!).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-                            ?? panic("Cannot borrow receiver for player 2 on draw")
-                        p2Receiver.deposit(from: <- p2VaultOpt!)
-                        emit StakeReturned(player: self.player2!, amount: self.stakeAmount)
-                    }
+                } else {
+                    destroy p1Vault
                 }
-            } else { // PvEPractice - destroy dummy vaults if they existed (they shouldn't for PvE)
-                if let vault1 = self.player1Vault {
-                    destroy vault1
+            } else { // PvEPractice - extraer y destruir vaults si existieran
+                var p1Vault: @{FungibleToken.Vault}? <- nil
+                p1Vault <-> self.player1Vault
+                
+                if p1Vault != nil {
+                    let unwrappedP1Vault <- p1Vault!
+                    destroy unwrappedP1Vault
+                } else {
+                    destroy p1Vault
                 }
-                if let vault2 = self.player2Vault {
-                     destroy vault2
+                
+                var p2Vault: @{FungibleToken.Vault}? <- nil
+                p2Vault <-> self.player2Vault
+                
+                if p2Vault != nil {
+                    let unwrappedP2Vault <- p2Vault!
+                    destroy unwrappedP2Vault
+                } else {
+                    destroy p2Vault
                 }
             }
             
@@ -297,7 +345,6 @@ access(all) contract ElementalStrikers {
 
         init(gameRef: &Game) {
             self.gameId = gameRef.gameId
-            self.mode = gameRef.mode
             self.player1 = gameRef.player1
             self.player2 = gameRef.player2
             self.player1MoveMade = gameRef.player1Move != nil
@@ -310,6 +357,7 @@ access(all) contract ElementalStrikers {
             self.criticalHitTypePlayer1 = gameRef.finalCriticalHitTypePlayer1
             self.criticalHitTypeP2OrComputer = gameRef.finalCriticalHitTypeP2OrComputer
             self.winner = gameRef.finalWinner
+            self.mode = gameRef.mode
         }
     }
 
@@ -320,7 +368,7 @@ access(all) contract ElementalStrikers {
         init(account: &Account) { self.ownerAddress = account.address } // Use passed account to get address
 
         access(all) fun getGameDetails(gameId: UInt64): GameDetails? {
-            if let gameRef = ElementalStrikers.games[gameId] {
+            if let gameRef = &ElementalStrikers.games[gameId] as &Game? {
                 // Allow anyone to see game details for now, or restrict to players
                 return GameDetails(gameRef: gameRef)
             }
@@ -332,7 +380,7 @@ access(all) contract ElementalStrikers {
                 element == "Fuego" || element == "Agua" || element == "Planta" : "Invalid element choice provided"
                 ElementalStrikers.games[gameId] != nil : "Game does not exist"
             }
-            let gameRef = ElementalStrikers.games[gameId] ?? panic("Game not found after check, critical error")
+            let gameRef = &ElementalStrikers.games[gameId] as &Game? ?? panic("Game not found after check, critical error")
             
             if gameRef.status != GameStatus.awaitingMoves {
                 emit GameError(gameId: gameId, player: self.ownerAddress, message: "Game not awaiting moves.")
@@ -371,7 +419,7 @@ access(all) contract ElementalStrikers {
         let player1Address = player1StakeVault.owner?.address ?? panic("Cannot determine owner of the stake vault")
         let gameId = self.nextGameId
         
-        let newGame <- Game(
+        let newGame <- create Game(
             gameId: gameId,
             mode: GameMode.PvPStaked,
             player1: player1Address,
@@ -393,19 +441,21 @@ access(all) contract ElementalStrikers {
             self.games[gameId] != nil : "Game with this ID does not exist."
             // player2StakeVault.owner != nil : "Player 2 vault has no owner." // owner is Address?, so this is good
         }
-        let game = self.games[gameId] ?? panic("Game not found, though existence was checked.")
         
-        if game.player2 != nil {
+        // Borrow a reference to the game
+        let gameRef = &self.games[gameId] as &Game? ?? panic("Game not found, though existence was checked.")
+        
+        if gameRef.player2 != nil {
             emit GameError(gameId: gameId, player: player2StakeVault.owner?.address, message: "Game is already full.")
             panic("Game is already full")
         }
-        if player2StakeVault.balance != game.stakeAmount {
+        if player2StakeVault.balance != gameRef.stakeAmount {
             emit GameError(gameId: gameId, player: player2StakeVault.owner?.address, message: "Stake amount does not match game requirement.")
             panic("Stake amount does not match game requirement")
         }
         let player2Address = player2StakeVault.owner?.address ?? panic("Player 2 vault owner not found")
 
-        game.addPlayer2(player2: player2Address, player2StakeVault: <-player2StakeVault)
+        gameRef.addPlayer2(player2: player2Address, player2StakeVault: <-player2StakeVault)
         emit GameJoined(gameId: gameId, player2: player2Address)
     }
 
@@ -432,7 +482,7 @@ access(all) contract ElementalStrikers {
 
     // Add this new public function:
     access(all) fun getGamePublicDetails(gameId: UInt64): GameDetails? {
-        if let gameRef = self.games[gameId] {
+        if let gameRef = &self.games[gameId] as &Game? {
             return GameDetails(gameRef: gameRef)
         }
         return nil

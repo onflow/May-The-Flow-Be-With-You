@@ -10,13 +10,17 @@
 - Initial allowed bets configuration:
   - COMEOUT: ["PASS", "FIELD"]
   - POINT: ["COME", "FIELD", "CRAPS", "YO", "2", "3", "4", "5", "6", "8", "9", "10", "11", "12", "Odds"]
+- CrapsAdmin resource structure
+- Token vaults storage for multiple fungible tokens
 
 ### Next Steps
 
 1. **Admin Resource Implementation**
-   - Create Admin resource for managing contract
-   - Add admin-only functions for bet management
-   - Implement access control
+   - Implement CrapsAdmin functions:
+     - Transfer coins from Craps Vault
+     - Add new token vaults
+     - Add new bet types
+   - Complete access control implementation
 
 2. **Core Game Functions**
    - Implement placeBet function
@@ -86,12 +90,21 @@ var userGames: {Address: Game}   // Maps user address to their current game stat
 var allowedBets: {GameState: [String]}   // Maps game state to allowed bet types
 ```
 
+### Token Vaults
+```
+var tokenVaults: @{String: {FungibleToken.Vault}}   // Multiple fungible token vaults
+```
+
 ---
 
 ## 3. Access Control Plan
-- Implement Admin resource for contract management
-- Add user authentication for game actions
-- Create role-based access control
+- CrapsAdmin resource for contract management
+- Admin functions for:
+  - Transferring coins from Craps Vault
+  - Adding new token vaults
+  - Adding new bet types
+- User authentication for game actions
+- Role-based access control
 
 ---
 
@@ -99,6 +112,7 @@ var allowedBets: {GameState: [String]}   // Maps game state to allowed bet types
 - Structure allows for easy addition of new bet types
 - Game state system supports future game phases
 - Modular design for adding new features
+- Support for multiple fungible tokens
 
 ---
 
@@ -112,8 +126,5 @@ var allowedBets: {GameState: [String]}   // Maps game state to allowed bet types
 | userGames         | {Address: Game}              | Implemented | Add game management          |
 | allowedBets       | {GameState: [String]}        | Implemented | Add new bet types            |
 | userInfo          | {Address: UserInfo}          | Pending     | Implement storage            |
-| Admin Resource    | resource                     | Pending     | Create and implement         |
-
----
-
-Let me know if you want to focus on implementing any specific component from the next steps! 
+| Admin Resource    | resource                     | Implemented | Complete admin functions     |
+| Token Vaults      | {String: {Vault}}            | Implemented | Add token management         |

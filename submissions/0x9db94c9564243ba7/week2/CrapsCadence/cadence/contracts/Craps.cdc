@@ -8,7 +8,7 @@ access(all) contract OnchainDice {
 
   access(all) let allowedBets: {OnchainDice.GameState : [String]}
 
-  //an  array of fungible token vaults so we can hold multiple tokens.
+  //an dictionary of fungible token vaults to hold multiple tokens.
   access(all) var tokenVaults: @{String : {FungibleToken.Vault}}
 
   //tbd implement: access (all) let userInfo: { Address : String }
@@ -50,6 +50,7 @@ access(all) contract OnchainDice {
 
   access (all) resource CrapsAdmin {
     //functions to add:
+    
     //transfer coins out of the Craps Vault
     //ability to add new token vaults
     //add new bets

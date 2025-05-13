@@ -58,6 +58,19 @@ access(all) contract ElementalStrikers {
     )
     access(all) event StakeReturned(player: Address, amount: UFix64)
     access(all) event GameError(gameId: UInt64?, player: Address?, message: String)
+    access(all) event RoundResolved(
+        gameId: UInt64,
+        roundNumber: UInt64,
+        player1Move: String,
+        player2Move: String?, // Player 2 or Computer move
+        roundWinner: Address?,
+        environmentalModifier: String,
+        criticalHitTypeP1: String,
+        criticalHitTypeP2OrComputer: String,
+        player1Score: UInt64,
+        player2Score: UInt64,
+        isGameOver: Bool
+    )
 
     //-----------------------------------------------------------------------
     // Contract State & Constants
@@ -85,32 +98,38 @@ access(all) contract ElementalStrikers {
         access(all) let gameId: UInt64
         access(all) let mode: GameMode
         access(all) let player1: Address
-        access(all) var player2: Address? // Cambiado de access(self) a access(all)
+        access(all) var player2: Address? 
         
-        access(all) var player1Move: String? // Cambiado de access(self) a access(all)
-        access(all) var player2Move: String? // Cambiado de access(self) a access(all)
-        access(all) var computerMove: String? // Cambiado de access(self) a access(all)
+        access(all) var player1Move: String? 
+        access(all) var player2Move: String? 
+        access(all) var computerMove: String? 
         
         access(all) let stakeAmount: UFix64
-        access(all) var player1Vault: @{FungibleToken.Vault}? // Cambiado de let a var
-        access(all) var player2Vault: @{FungibleToken.Vault}? // Cambiado de access(self) a access(all)
+        access(all) var player1Vault: @{FungibleToken.Vault}? 
+        access(all) var player2Vault: @{FungibleToken.Vault}? 
         
         access(all) var status: GameStatus
-        access(all) var committedBlockHeight: UInt64? // Cambiado de access(self) a access(all)
+        access(all) var committedBlockHeight: UInt64? 
         
         // Fields to store results after reveal, before being part of a public struct
-        access(all) var finalEnvironmentalModifier: String? // Cambiado de access(self) a access(all)
-        access(all) var finalCriticalHitTypePlayer1: String? // Cambiado de access(self) a access(all)
-        access(all) var finalCriticalHitTypeP2OrComputer: String? // Cambiado de access(self) a access(all)
-        access(all) var finalWinner: Address? // Cambiado de access(self) a access(all)
+        access(all) var finalEnvironmentalModifier: String? 
+        access(all) var finalCriticalHitTypePlayer1: String? 
+        access(all) var finalCriticalHitTypeP2OrComputer: String? 
+        access(all) var finalWinner: Address? 
 
-        init(gameId: UInt64, mode: GameMode, player1: Address, player1StakeVault: @{FungibleToken.Vault}?, initialStakeAmount: UFix64, player1InitialMove: String?) {
+        // New fields for multi-round games
+        access(all) let totalRounds: UInt64 // Total rounds to play (e.g., 3 for best of 3)
+        access(all) var currentRound: UInt64 // The current round number (starts at 1)
+        access(all) var player1Score: UInt64 // Player 1's score
+        access(all) var player2Score: UInt64 // Player 2's score
+
+        init(gameId: UInt64, mode: GameMode, player1: Address, player1StakeVault: @{FungibleToken.Vault}?, initialStakeAmount: UFix64, player1InitialMove: String?, totalRounds: UInt64) { // Added totalRounds
             self.gameId = gameId
             self.mode = mode
             self.player1 = player1
             self.player2 = nil
             self.stakeAmount = initialStakeAmount
-            self.player1Vault <- player1StakeVault // Will be nil if PvE
+            self.player1Vault <- player1StakeVault
             self.player2Vault <- nil
             self.committedBlockHeight = nil
             self.finalEnvironmentalModifier = nil
@@ -119,6 +138,12 @@ access(all) contract ElementalStrikers {
             self.finalWinner = nil
             self.computerMove = nil
             self.player2Move = nil // Inicialización añadida
+            
+            // Initialize new fields
+            self.totalRounds = totalRounds
+            self.currentRound = 1
+            self.player1Score = 0
+            self.player2Score = 0
 
             if self.mode == GameMode.PvPStaked {
                 self.player1Move = nil // Player 1 makes move via transaction
@@ -127,7 +152,26 @@ access(all) contract ElementalStrikers {
                 assert(player1InitialMove != nil, message: "Player 1 initial move required for PvE practice game")
                 self.player1Move = player1InitialMove!
                 self.status = GameStatus.awaitingMoves // Will immediately transition to awaitingRandomness by commitToRandomness
+                // Note: PvE practice games might not make sense with multiple rounds/scoring in this structure
+                // but we add fields for consistency. We can revisit PvE multi-round later if needed.
             }
+        }
+
+        // New helper functions for multi-round state management
+        access(contract) fun incrementPlayer1Score() {
+            self.player1Score = self.player1Score + 1
+        }
+
+        access(contract) fun incrementPlayer2Score() {
+            self.player2Score = self.player2Score + 1
+        }
+
+        access(contract) fun advanceRound() {
+            self.currentRound = self.currentRound + 1
+            self.player1Move = nil
+            self.player2Move = nil // Reset moves for next round
+            self.committedBlockHeight = nil // Reset commitment for next round
+            self.status = GameStatus.awaitingMoves // Go back to awaiting moves
         }
 
         access(all) fun addPlayer2(player2: Address, player2StakeVault: @{FungibleToken.Vault}) {
@@ -410,31 +454,33 @@ access(all) contract ElementalStrikers {
     }
 
 
-    access(all) fun createGame(player1Address: Address, player1StakeVault: @{FungibleToken.Vault}, initialStakeAmount: UFix64): UInt64 {
+    access(all) fun createGame(player1Address: Address, player1StakeVault: @{FungibleToken.Vault}, initialStakeAmount: UFix64, totalRounds: UInt64): UInt64 { // Added totalRounds parameter
         pre {
             player1StakeVault.balance == initialStakeAmount : "Initial stake amount does not match vault balance."
-            // Placeholder for FungibleToken.Receiver capability check if not directly taking vault
+            totalRounds > 0 : "Total rounds must be greater than zero." // Add a check
         }
-        
+
         // No longer needed as player1Address is a parameter:
         // let player1Address = player1StakeVault.owner?.address ?? panic("Cannot determine owner of the stake vault")
-        
+
         let gameId = self.nextGameId
-        
+
         let newGame <- create Game(
             gameId: gameId,
             mode: GameMode.PvPStaked,
             player1: player1Address, // Use the passed player1Address
             player1StakeVault: <-player1StakeVault,
             initialStakeAmount: initialStakeAmount,
-            player1InitialMove: nil
+            player1InitialMove: nil,
+            totalRounds: totalRounds // Pass the parameter to the constructor
         )
-        
-        let oldGame <- self.games[gameId] <- newGame // Store the new game resource
-        destroy oldGame // Destroy the nil or old resource at that key
+
+        let oldGame <- self.games[gameId] <- newGame
+        destroy oldGame
 
         self.nextGameId = self.nextGameId + 1
         emit GameCreated(gameId: gameId, player1: player1Address, stakeAmount: initialStakeAmount, mode: GameMode.PvPStaked.rawValue)
+
         return gameId
     }
 
@@ -453,7 +499,8 @@ access(all) contract ElementalStrikers {
             player1: player1Address,
             player1StakeVault: nil, // No stake for practice games
             initialStakeAmount: 0.0, // No stake amount
-            player1InitialMove: player1Choice // Player 1's move is set at creation
+            player1InitialMove: player1Choice, // Player 1's move is set at creation
+            totalRounds: 3 // Assuming a default value, actual implementation should handle this
         )
 
         // Immediately commit to randomness for practice games as Player 2 (computer) move is derived from it.
@@ -493,16 +540,17 @@ access(all) contract ElementalStrikers {
     }
 
     // Public function to trigger randomness reveal and game resolution
+    // Refactored to resolve a single round in a multi-round game
     access(all) fun revealGameOutcome(gameId: UInt64, callingPlayerAddress: Address) {
         // Get game reference
         let gameRef = &self.games[gameId] as &Game?
         assert(gameRef != nil, message: "Game does not exist")
         let game = gameRef! // Safe to force unwrap after assert
 
-        // Check status
+        // Check status - Must be awaiting randomness for this round
         if game.status != GameStatus.awaitingRandomness {
-            emit GameError(gameId: gameId, player: callingPlayerAddress, message: "Game not awaiting randomness.")
-            panic("Game not awaiting randomness.")
+            emit GameError(gameId: gameId, player: callingPlayerAddress, message: "Game not awaiting randomness for round resolution.")
+            panic("Game not awaiting randomness for round resolution.")
         }
 
         let committedBlockHeight = game.committedBlockHeight!
@@ -511,100 +559,110 @@ access(all) contract ElementalStrikers {
 
         // Check if enough blocks have passed for randomness to be potentially available
         if currentBlockHeight < committedBlockHeight + revealDelay {
-            emit GameError(gameId: gameId, player: callingPlayerAddress, message: "Not enough blocks have passed since commitment.")
-            log("Game ID: ".concat(gameId.toString()).concat(" committed at block: ").concat(committedBlockHeight.toString()).concat(". Current block: ").concat(currentBlockHeight.toString()).concat(". Need block height: ").concat((committedBlockHeight + revealDelay).toString()))
+            emit GameError(gameId: gameId, player: callingPlayerAddress, message: "Not enough blocks have passed since round commitment.")
+            log("Game ID: ".concat(gameId.toString()).concat(" committed at block: ").concat(committedBlockHeight.toString()).concat(". Current block: ").concat(currentBlockHeight.toString()).concat(". Need block height: ").concat((committedBlockHeight + revealDelay).toString()).concat(" for round resolution."))
             // Do NOT panic here, just exit if not ready
             return
         }
 
         // --- Get Randomness Seed ---
-        // In a real application, you would interact with a trusted Randomness Provider contract
-        // (like a RandomBeaconHistory consumer) to get a *verifiable* random seed
-        // for the committed block height.
-        // For this MVP testing, we will use the block height itself as a simplified seed,
-        // acknowledging this is NOT cryptographically secure for production.
-        // If you have a RandomBeaconHistory consumer contract deployed and linked,
-        // you would use something like:
-        // let randomnessProvider = getAccount(PROVIDER_ADDRESS).getCapability(PROVIDER_PUBLIC_PATH)
-        //     .borrow<&RandomBeaconHistory.Consumer{RandomnessProvider}>()
-        //     ?? panic("Could not borrow Randomness Provider capability")
-        // let randomData = randomnessProvider.getRandomBeaconData(blockHeight: committedBlockHeight)
-        //     ?? panic("Could not get random data for block ".concat(committedBlockHeight.toString()))
-        // let prngSeed = randomData.slice(0, 8).toUInt64() // Example: use first 8 bytes as seed
-
-        // --- Simplified MVP Seed from Block Height ---
+        // (Keep the simplified MVP seed logic for now)
         let prngSeed = committedBlockHeight // Simplified seed for MVP testing
-
-        let prng = PRNG(seed: prngSeed, salt: gameId)
+        let prng = PRNG(seed: prngSeed, salt: gameId + game.currentRound) // Include round number in salt
 
         // Derive outcomes using the PRNG
         var computerMove: String? = nil
         // If PvE game, determine computer's move using randomness
         if game.mode == GameMode.PvEPractice {
              computerMove = self.deriveElementFromRandom(val: prng.next())
-             // The computerMove field is set within finalizeResolution
-             // game.computerMove = computerMove // REMOVED: Direct assignment not allowed
         }
 
         let environmentalModifier = self.deriveEnvironmentFromRandom(val: prng.next())
         let criticalHitP1 = self.deriveHitEffectFromRandom(val: prng.next())
         let criticalHitP2OrComputer = self.deriveHitEffectFromRandom(val: prng.next())
 
-        // Determine winner (simplified logic for MVP)
-        var winnerAddress: Address? = nil
-        var loserAddress: Address? = nil
-        var winnings: UFix64 = 0.0 // Winnings are total pot for winner in PvP, 0 otherwise
+        // Determine ROUND winner (simplified logic for MVP)
+        var roundWinnerAddress: Address? = nil
 
-        let player1Move = game.player1Move! // Safe to force unwrap in awaitingRandomness state
+        let player1Move = game.player1Move! // Safe to force unwrap in awaitingRandomness state for this round
         // Get the opponent's move (Player 2 in PvP, Computer in PvE)
-        let player2OrComputerMove = game.mode == GameMode.PvPStaked ? game.player2Move! : (computerMove ?? panic("Computer move not determined for PvE game")) // Ensure computerMove is not nil for PvE
+        let player2OrComputerMove = game.mode == GameMode.PvPStaked ? game.player2Move! : (computerMove ?? panic("Computer move not determined for PvE game round")) // Ensure computerMove is not nil for PvE
 
         // Basic win/loss/draw logic based on elements (Fuego > Planta, Planta > Agua, Agua > Fuego)
-        let player1WinsBasic = self.Elements[player1Move] == player2OrComputerMove
-        let player2OrComputerWinsBasic = self.Elements[player2OrComputerMove] == player1Move
+        let player1WinsRoundBasic = self.Elements[player1Move] == player2OrComputerMove
+        let player2OrComputerWinsRoundBasic = self.Elements[player2OrComputerMove] == player1Move
 
-        // NOTE: Environmental modifier and critical hits are derived but NOT
-        // implemented in the win/loss logic for this MVP. This would require
-        // more complex combat rules.
-
-        if player1WinsBasic && !player2OrComputerWinsBasic { // Player 1 wins (based on basic element rule)Paciente
-            winnerAddress = game.player1
-            loserAddress = game.mode == GameMode.PvPStaked ? game.player2 : nil // No explicit loser in PvE
-            if game.mode == GameMode.PvPStaked {
-                winnings = game.stakeAmount * 2.0 // Winner takes the full pot (both stakes)
-            } else {
-                winnings = 0.0 // No winnings in practice games
-            }
-        } else if player2OrComputerWinsBasic && !player1WinsBasic { // Player 2 or Computer wins
-             // Winner is Player 2 in PvP. In PvE, there is no "winner address" for the computer,
-             // but we track the outcome for logging/event.
-            winnerAddress = game.mode == GameMode.PvPStaked ? game.player2 : nil
-            loserAddress = game.player1 // Player 1 is the loser in PvE if computer wins
-             if game.mode == GameMode.PvPStaked {
-                winnings = game.stakeAmount * 2.0 // Winner takes the full pot (both stakes)
-            } else {
-                winnings = 0.0 // No winnings in practice games
-            }
-        } else { // Draw
-            winnerAddress = nil // Draw has no winner
-            loserAddress = nil
-            // In a draw, staked tokens are returned. Winnings represent the total received.
-            winnings = game.mode == GameMode.PvPStaked ? game.stakeAmount : 0.0 // Stakes returned in PvP draw, 0 in PvE
+        if player1WinsRoundBasic && !player2OrComputerWinsRoundBasic { // Player 1 wins the round
+            roundWinnerAddress = game.player1
+            game.incrementPlayer1Score() // Use helper function
+        } else if player2OrComputerWinsRoundBasic && !player1WinsRoundBasic { // Player 2 or Computer wins the round
+             roundWinnerAddress = game.mode == GameMode.PvPStaked ? game.player2 : nil // Computer doesn't win score for account
+             game.incrementPlayer2Score() // Use helper function
+        } else { // Draw round
+            roundWinnerAddress = nil
+            // Scores remain unchanged in a draw
         }
 
-        // Call finalizeResolution to update game state and handle payouts/events
-        // finalizeResolution will set game.computerMove if it's a PvE game
-        game.finalizeResolution(
+        // Check if the match is over ("Best of N" logic)
+        let winningScore = game.totalRounds / 2 + game.totalRounds % 2 // e.g., Best of 3 (totalRounds=3) needs 3/2+3%2 = 1+1 = 2 wins
+        let isGameOver = game.player1Score >= winningScore || game.player2Score >= winningScore
+
+        // Emit RoundResolved event
+         emit RoundResolved(
+            gameId: game.gameId,
+            roundNumber: game.currentRound,
+            player1Move: player1Move,
+            player2Move: player2OrComputerMove,
+            roundWinner: roundWinnerAddress,
             environmentalModifier: environmentalModifier,
             criticalHitTypeP1: criticalHitP1,
             criticalHitTypeP2OrComputer: criticalHitP2OrComputer,
-            winnerAddress: winnerAddress,
-            loserAddress: loserAddress,
-            winningsToWinner: winnings, // This is the total received by winner or stake returned in draw
-            computerGeneratedMove: computerMove // Pass computer move for PvE logging in event
+            player1Score: game.player1Score,
+            player2Score: game.player2Score,
+            isGameOver: isGameOver
         )
 
-        log("Game ID: ".concat(gameId.toString()).concat(" resolved."))
+
+        if isGameOver {
+            // Match is over, finalize resolution (handles payouts)
+            // Need to pass final winner and winnings to finalizeResolution
+            var finalWinnerAddress: Address? = nil
+            var finalLoserAddress: Address? = nil
+            var totalWinnings: UFix64 = 0.0
+
+            if game.player1Score > game.player2Score {
+                finalWinnerAddress = game.player1
+                finalLoserAddress = game.player2 // Only applies in PvP
+                totalWinnings = game.mode == GameMode.PvPStaked ? game.stakeAmount * 2.0 : 0.0
+            } else if game.player2Score > game.player1Score {
+                finalWinnerAddress = game.player2 // Only applies in PvP
+                finalLoserAddress = game.player1
+                 totalWinnings = game.mode == GameMode.PvPStaked ? game.stakeAmount * 2.0 : 0.0
+            } else { // Draw overall match - return stakes in PvP
+                 finalWinnerAddress = nil // No winner in draw
+                 finalLoserAddress = nil
+                 totalWinnings = game.mode == GameMode.PvPStaked ? game.stakeAmount : 0.0 // Stakes returned
+            }
+
+
+            game.finalizeResolution(
+                environmentalModifier: environmentalModifier, // Using last round's modifiers for event, could store all
+                criticalHitTypeP1: criticalHitP1, // Using last round's modifiers for event
+                criticalHitTypeP2OrComputer: criticalHitP2OrComputer, // Using last round's modifiers for event
+                winnerAddress: finalWinnerAddress,
+                loserAddress: finalLoserAddress, // Loser address only relevant for PvP
+                winningsToWinner: totalWinnings, // This is the total received by winner or stake returned in draw
+                computerGeneratedMove: computerMove // Pass computer move from last round if PvE
+            )
+
+            log("Game ID: ".concat(gameId.toString()).concat(" resolved after ").concat(game.currentRound.toString()).concat(" rounds."))
+
+        } else {
+            // Match is NOT over, reset for the next round
+            game.advanceRound() // Use helper function
+
+            log("Game ID: ".concat(gameId.toString()).concat(" - Round ").concat((game.currentRound - 1).toString()).concat(" resolved. Moving to Round ").concat(game.currentRound.toString()).concat(". Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString()))
+        }
     }
 
     // --- Placeholder PRNG-dependent functions ---

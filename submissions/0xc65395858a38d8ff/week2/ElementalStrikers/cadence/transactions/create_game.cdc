@@ -5,7 +5,7 @@ import FungibleToken from 0xee82856bf20e2aa6 // FungibleToken address for Emulat
 import FlowToken from 0x0ae53cb6e3f42a79     // FlowToken address for Emulator
 import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
 
-transaction(stakeAmount: UFix64) {
+transaction(stakeAmount: UFix64, totalRounds: UInt64) {
 
     // The Vault resource that holds the FLOW tokens to be staked
     let stakeVault: @{FungibleToken.Vault}
@@ -40,8 +40,9 @@ transaction(stakeAmount: UFix64) {
         let gameId = ElementalStrikers.createGame(
             player1Address: self.playerAddress, // Pass the signer's address
             player1StakeVault: <-self.stakeVault,
-            initialStakeAmount: stakeAmount
+            initialStakeAmount: stakeAmount,
+            totalRounds: totalRounds // Pass totalRounds to the contract function
         )
-        log("Game created with ID: ".concat(gameId.toString()).concat(" and stake: ").concat(stakeAmount.toString()))
+        log("Game created with ID: ".concat(gameId.toString()).concat(" with stake: ").concat(stakeAmount.toString()).concat(" for ").concat(totalRounds.toString()).concat(" rounds."))
     }
 } 

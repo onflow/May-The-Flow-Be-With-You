@@ -1,14 +1,14 @@
 // transactions/create_game.cdc
 // Allows a player to create a new game in ElementalStrikers by staking FLOW.
 
-import FungibleToken from 0x9a0766d93b6608b7 // FungibleToken standard address for Testnet
-import FlowToken from 0x7e60df042a9c0868     // FlowToken standard address for Testnet
+import FungibleToken from 0xee82856bf20e2aa6 // FungibleToken address for Emulator
+import FlowToken from 0x0ae53cb6e3f42a79     // FlowToken address for Emulator
 import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
 
 transaction(stakeAmount: UFix64) {
 
     // The Vault resource that holds the FLOW tokens to be staked
-    let stakeVault: @FungibleToken.Vault
+    let stakeVault: @{FungibleToken.Vault}
     // Capability to the signer's PlayerAgent resource
     let playerAgentRef: &ElementalStrikers.PlayerAgent
 

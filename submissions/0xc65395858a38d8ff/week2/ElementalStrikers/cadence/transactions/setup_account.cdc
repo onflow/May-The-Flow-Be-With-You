@@ -5,11 +5,11 @@ import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
 
 transaction {
 
-    prepare(signer: auth(Save, Capabilities) &Account) {
+    prepare(signer: auth(Storage, PublishCapability, UnpublishCapability, IssueStorageCapabilityController) &Account) {
         // Check if the PlayerAgent is already stored
         if signer.storage.type(at: ElementalStrikers.PlayerVaultStoragePath) == nil {
             // Create a new PlayerAgent resource and save it to account storage
-            let agent <- ElementalStrikers.createPlayerAgent()
+            let agent <- ElementalStrikers.createPlayerAgent(account: signer)
             signer.storage.save(<-agent, to: ElementalStrikers.PlayerVaultStoragePath)
 
             // Unpublish any existing capability at the public path to avoid collision

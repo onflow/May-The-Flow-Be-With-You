@@ -1,0 +1,43 @@
+{
+	"contracts": {
+		"Counter": {
+			"source": "cadence/contracts/Counter.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"RandomNumberGenerator": {
+			"source": "cadence/contracts/RandomNumberGenerator.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		}
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testing": "127.0.0.1:3569",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": {
+				"type": "file",
+				"location": "emulator-account.pkey"
+			}
+		},
+		"test-account": {
+			"address": "179b6b1cb6755e31",
+			"key": "570b1eb582c236407fc0b2299686f5bc4d0d12bc0ff642fe2b84bf890772ab46"
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"Counter",
+				"RandomNumberGenerator"
+			]
+		}
+	}
+}

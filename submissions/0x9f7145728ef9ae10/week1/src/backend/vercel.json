@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "functions": {
+    "api/paint.js": {
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/register",
+      "dest": "/api/register.js"
+    },
+    {
+      "src": "/api/paint",
+      "dest": "/api/paint.js"
+    }
+  ]
+}

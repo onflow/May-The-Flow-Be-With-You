@@ -1,59 +1,89 @@
 /// A simple contract that generates random numbers within a specified range
 /// using Flow's secure randomness
 access(all) contract RandomNumberGenerator {
-    // Event emitted when a random number is generated
-    access(all) event RandomNumberGenerated(min: UInt64, max: UInt64, randomNumber: UInt64)
+    // Event emitted when a random number request is committed
+    access(all) event RandomNumberRequested(
+        requestId: UInt64,
+        min: UInt64,
+        max: UInt64,
+        blockHeight: UInt64
+    )
 
-    /// Generates a random number between min and max (inclusive)
-    /// @param min The minimum value (inclusive)
-    /// @param max The maximum value (inclusive)
-    /// @return A random number between min and max (inclusive)
-    access(all) fun generateRandomNumber(min: UInt64, max: UInt64): UInt64 {
-        pre {
-            min <= max: "Minimum value must be less than or equal to maximum value"
+    // Event emitted when a random number is revealed
+    access(all) event RandomNumberRevealed(
+        requestId: UInt64,
+        min: UInt64,
+        max: UInt64,
+        randomNumber: UInt64
+    )
+
+    // Store pending requests
+    access(self) var pendingRequests: {UInt64: RandomNumberRequest}
+    
+    // Struct to store request information
+    access(all) struct RandomNumberRequest {
+        access(all) let min: UInt64
+        access(all) let max: UInt64
+        access(all) let blockHeight: UInt64
+
+        init(min: UInt64, max: UInt64, blockHeight: UInt64) {
+            self.min = min
+            self.max = max
+            self.blockHeight = blockHeight
         }
-        
-        // Get a random number from Flow's secure randomness beacon
-        let randomValue = revertibleRandom<UInt64>()
-        
-        // Calculate the range size
-        let range = max - min + 1
-        
-        // Map the random value to our desired range
-        let randomNumber = min + (randomValue % range)
-        
-        emit RandomNumberGenerated(
-            min: min,
-            max: max,
-            randomNumber: randomNumber
-        )
-        
-        return randomNumber
     }
 
-    /// Generates a random number between min and max (inclusive) using a seed
-    /// @param min The minimum value (inclusive)
-    /// @param max The maximum value (inclusive)
-    /// @param seed A string to use as additional entropy
-    /// @return A random number between min and max (inclusive)
-    access(all) fun generateRandomNumberWithSeed(min: UInt64, max: UInt64, seed: String): UInt64 {
+    init() {
+        self.pendingRequests = {}
+    }
+
+    // Request a random number
+    access(all) fun requestRandomNumber(min: UInt64, max: UInt64): UInt64 {
         pre {
             min <= max: "Minimum value must be less than or equal to maximum value"
         }
         
-        // Get a random number from Flow's secure randomness beacon
-        let randomValue = revertibleRandom<UInt64>()
+        let requestId = UInt64(self.pendingRequests.length + 1)
+        let blockHeight = getCurrentBlock().height
         
-        // Calculate the range size
-        let range = max - min + 1
-        
-        // Use both the random value and seed to generate a number
-        let seedValue = randomValue + UInt64(seed.utf8[0])
-        let randomNumber = min + (seedValue % range)
-        
-        emit RandomNumberGenerated(
+        let request = RandomNumberRequest(
             min: min,
             max: max,
+            blockHeight: blockHeight
+        )
+        
+        self.pendingRequests[requestId] = request
+        
+        emit RandomNumberRequested(
+            requestId: requestId,
+            min: min,
+            max: max,
+            blockHeight: blockHeight
+        )
+        
+        return requestId
+    }
+
+    // Reveal the random number
+    access(all) fun revealRandomNumber(requestId: UInt64): UInt64 {
+        let request = self.pendingRequests[requestId] ?? panic("Request not found")
+        
+        // Get the source of randomness from the committed block
+        let sor = getCurrentBlock().height
+        
+        // Calculate the range size
+        let range = request.max - request.min + 1
+        
+        // Generate the random number using the source of randomness
+        let randomNumber = request.min + (sor % range)
+        
+        // Remove the request and store the removed value
+        let removedRequest = self.pendingRequests.remove(key: requestId)
+        
+        emit RandomNumberRevealed(
+            requestId: requestId,
+            min: request.min,
+            max: request.max,
             randomNumber: randomNumber
         )
         

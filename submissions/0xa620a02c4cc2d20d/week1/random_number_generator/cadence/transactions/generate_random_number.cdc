@@ -1,8 +1,9 @@
 import RandomNumberGenerator from "../contracts/RandomNumberGenerator.cdc"
 
-transaction(min: UInt64, max: UInt64, seed: String) {
+transaction(min: UInt64, max: UInt64) {
     execute {
-        let random = RandomNumberGenerator.generateRandomNumberWithSeed(min: min, max: max, seed: seed)
-        log("Random number: ".concat(random.toString()))
+        // Request a random number
+        let requestId = RandomNumberGenerator.requestRandomNumber(min: min, max: max)
+        log("Requested random number with ID: ".concat(requestId.toString()))
     }
 } 

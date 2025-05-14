@@ -189,11 +189,7 @@
 		},
 		"player2-account": {
 			"address": "179b6b1cb6755e31",
-			"key": "fcd7a06d8577f854c4008840bd9f56158caed585c414233cdc4e8e8602c3e575"
-		},
-		"player2-accountv2": {
-			"address": "179b6b1cb6755e31",
-			"key": "153aed06d39e941d003025c421050eb6e8d4310f0bf1712fd8fdfecda438a645"
+			"key": "a99619b69698c5c7150b5e03b8935a99618384a0be7305aae14c9d67d4ca1e6f"
 		}
 	},
 	"deployments": {

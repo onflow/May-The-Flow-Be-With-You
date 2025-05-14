@@ -209,8 +209,29 @@ access(all) contract ElementalStrikers {
             self.lastRoundLoser = loser
         }
 
-        access(contract) fun setStatus(newStatus: GameStatus) {
+        access(all) fun setStatus(newStatus: GameStatus) {
             self.status = newStatus
+        }
+
+        access(all) fun setDoubleOfferedBy(offerer: Address?) {
+            self.doubleOfferedBy = offerer
+        }
+
+        access(all) fun offerDoubleOrNothing(offererAddress: Address) {
+            pre {
+                self.status == GameStatus.awaitingDoubleOffer : "Game is not awaiting a double offer."
+                offererAddress == self.lastRoundLoser : "Only the loser of the game can offer to double."
+                // The check for the offerer's balance to cover the additional stake
+                // is done in the transaction's prepare phase, as the contract cannot directly access account balances.
+            }
+
+            self.setDoubleOfferedBy(offerer: offererAddress)
+            self.setStatus(newStatus: GameStatus.awaitingDoubleResponse)
+
+            let newTotalStakePerPlayer = self.currentStakeAmount * 2.0 // This is the stake *if* the double is accepted.
+
+            emit DoubleOffered(gameId: self.gameId, offeredBy: offererAddress, newTotalStakePerPlayer: newTotalStakePerPlayer)
+            log("Player ".concat(offererAddress.toString()).concat(" offered to double the stake for game ").concat(self.gameId.toString()).concat(". New potential stake per player if accepted: ").concat(newTotalStakePerPlayer.toString()))
         }
 
         access(all) fun addPlayer2(player2: Address, player2StakeVault: @{FungibleToken.Vault}) {

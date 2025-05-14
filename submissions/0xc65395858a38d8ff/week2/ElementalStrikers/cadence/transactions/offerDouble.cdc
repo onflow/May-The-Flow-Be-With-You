@@ -11,16 +11,17 @@ transaction(gameId: UInt64) {
     prepare(signer: AuthAccount) {
         self.angebotenVonAddress = signer.address
 
-        self.gameRef = ElementalStrikers.borrowGame(gameId: gameId)
+        let game: &ElementalStrikers.Game = ElementalStrikers.borrowGame(gameId: gameId)
             ?? panic("Game not found")
+        
+        self.gameRef = game 
 
         assert(self.gameRef!.status == ElementalStrikers.GameStatus.awaitingDoubleOffer, 
                message: "Game is not awaiting a double offer.")
 
         assert(self.angebotenVonAddress == self.gameRef!.lastRoundLoser, 
-               message: "Only the loser of the last round can offer to double.")
+               message: "Only the loser of the game can offer to double.")
 
-        // The player must have enough to cover their *additional* stake if accepted.
         self.requiredBalance = self.gameRef!.currentStakeAmount 
 
         let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
@@ -31,12 +32,8 @@ transaction(gameId: UInt64) {
     }
 
     execute {
-        self.gameRef!.doubleOfferedBy = self.angebotenVonAddress
-        self.gameRef!.status = ElementalStrikers.GameStatus.awaitingDoubleResponse
-
-        let newTotalStakePerPlayer = self.gameRef!.currentStakeAmount * 2.0
-
-        emit ElementalStrikers.DoubleOffered(gameId: gameId, offeredBy: self.angebotenVonAddress, newTotalStakePerPlayer: newTotalStakePerPlayer)
-        log("Player ".concat(self.angebotenVonAddress.toString()).concat(" offered to double the stake for game ").concat(gameId.toString()).concat(". New potential stake per player: ").concat(newTotalStakePerPlayer.toString()))
+        self.gameRef!.offerDoubleOrNothing(offererAddress: self.angebotenVonAddress)
+        
+        log("Transaction to offer double for game ".concat(gameId.toString()).concat(" by ").concat(self.angebotenVonAddress.toString()).concat(" submitted successfully."))
     }
 } 

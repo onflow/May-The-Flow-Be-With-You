@@ -78,76 +78,36 @@ transaction(gameId: UInt64, accept: Bool, offererAdditionalVault: @{FungibleToke
             self.gameRef.currentMaxWins = self.gameRef.currentMaxWins + 1
 
             self.gameRef.doubleOfferedBy = nil // Clear the offer
-            self.gameRef.status = ElementalStrikers.GameStatus.awaitingMoves
-            self.gameRef.advanceRound() // Advances to the next round, resets moves, etc.
+            self.gameRef.advanceRound() // Advances to the next round, resets moves, updates status, increments currentRound
 
             emit ElementalStrikers.DoubleOfferResponded(gameId: gameId, accepted: true, newTotalStakePerPlayer: self.gameRef.currentStakeAmount)
-            log("Player ".concat(self.responderAddress.toString()).concat(" accepted the double offer for game ".concat(gameId.toString()).concat(". New stake per player: ").concat(self.gameRef.currentStakeAmount.toString()).concat(". New max wins: ").concat(self.gameRef.currentMaxWins.toString()))
+            log("Player ".concat(self.responderAddress.toString()).concat(" accepted the double offer for game ".concat(gameId.toString()).concat(". New stake per player: ").concat(self.gameRef.currentStakeAmount.toString()).concat(". New max wins: ").concat(self.gameRef.currentMaxWins.toString()).concat(". Advancing to round: ").concat(self.gameRef.currentRound.toString()))
         } else {
-            // Double offer rejected. Game ends. Offerer (last round loser) loses the game.
-            // Responder (last round winner) wins the original stake.
-            let winnerAddress = self.responderAddress
-            let loserAddress = offerer
-            let winnings = self.gameRef.stakeAmount * 2.0 // Based on the original stake before double offer
+            // Double offer rejected. Game ends. Offerer (last game loser) loses the game definitively.
+            // Responder (last game winner) wins the current total stake that was on the line.
+            let winnerAddress = self.responderAddress // This is gameRef.lastRoundWinner from the previous game-ending state
+            let loserAddress = offerer             // This is gameRef.lastRoundLoser from the previous game-ending state
+            let totalWinnings = self.gameRef.currentStakeAmount * 2.0 // Total pot based on stake *per player* before this rejected double attempt
 
-            // Directly manage payout and game state update here
-            self.gameRef.finalWinner = winnerAddress
-            // self.gameRef.finalLoser = loserAddress // Game resource doesn't have finalLoser
-            self.gameRef.status = ElementalStrikers.GameStatus.resolved
+            emit ElementalStrikers.GameForfeitedByRejectingDouble(gameId: gameId, winner: winnerAddress, loser: loserAddress, winnings: totalWinnings)
 
-            // Payout logic (simplified from finalizeResolution)
-            // Transfer player1's original vault
-            var p1Vault <- self.gameRef.player1Vault <- nil
-            if p1Vault == nil { panic("Player 1 vault missing unexpectedly") }
-            let unwrappedP1Vault <- p1Vault!
-
-            // Transfer player2's original vault
-            var p2Vault <- self.gameRef.player2Vault <- nil
-            if p2Vault == nil { panic("Player 2 vault missing unexpectedly") }
-            let unwrappedP2Vault <- p2Vault!
-
-            let winnerReceiver = getAccount(winnerAddress).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-                ?? panic("Cannot borrow receiver for winner")
-
-            winnerReceiver.deposit(from: <-unwrappedP1Vault)
-            winnerReceiver.deposit(from: <-unwrappedP2Vault)
-            
-            // Any extra vaults that were part of the unaccepted offer should be destroyed safely.
-            // Here, we ensure that offererAdditionalVault and responderAdditionalVault are destroyed if they somehow persisted (though prepare should handle it)
-            // This explicit destruction is more of a safeguard for the execute phase.
-            // The transaction signature ensures offererAdditionalVault is passed, responderAdditionalVault is optional.
-
-            // Destroy any extra stake vaults that might have been pre-prepared by players but are now not needed.
-            // Note: `offererAdditionalVault` and `responderAdditionalVault` are parameters consumed by the transaction.
-            // If they were passed to `execute` (i.e., for an `accept` path that then failed), they would need destruction here.
-            // However, our `prepare` block handles their destruction for the `reject` case.
-            // The extra vaults *within the game resource* (player1ExtraStakeVault, player2ExtraStakeVault) are nil at this point.
-
-            emit ElementalStrikers.GameForfeitedByRejectingDouble(gameId: gameId, winner: winnerAddress, loser: loserAddress, winnings: winnings)
-            // Emit GameResolved as well, as the game is now over.
-            // Note: Some fields for GameResolved might be from the last completed round, not this forfeiture action directly.
-            emit ElementalStrikers.GameResolved(
-                gameId: gameId,
-                mode: self.gameRef.mode.rawValue,
-                winner: winnerAddress,
-                loser: loserAddress,
-                player1Move: self.gameRef.player1Move ?? "N/A", // Moves from last round, or N/A
-                playerOrComputerMove: self.gameRef.player2Move ?? self.gameRef.computerMove ?? "N/A",
+            // Call finalizeResolution from the contract to handle payouts and event emission
+            self.gameRef.finalizeResolution(
                 environmentalModifier: self.gameRef.finalEnvironmentalModifier ?? "N/A",
                 criticalHitTypeP1: self.gameRef.finalCriticalHitTypePlayer1 ?? "N/A",
                 criticalHitTypeP2OrComputer: self.gameRef.finalCriticalHitTypeP2OrComputer ?? "N/A",
-                winnings: winnings
+                winnerAddress: winnerAddress,
+                loserAddress: loserAddress,
+                winningsToWinner: totalWinnings,
+                computerGeneratedMove: self.gameRef.computerMove ?? "N/A"
             )
             
-            log("Player ".concat(self.responderAddress.toString()).concat(" rejected the double offer for game ").concat(gameId.toString()).concat(". Player ").concat(loserAddress.toString()).concat(" forfeits. Winner: ").concat(winnerAddress.toString()).concat(". Winnings: ").concat(winnings.toString()))
+            log("Player ".concat(self.responderAddress.toString()).concat(" rejected the double offer for game ".concat(gameId.toString()).concat(". Player ".concat(loserAddress.toString()).concat(" forfeits. Winner: ").concat(winnerAddress.toString()).concat(". Winnings: ").concat(totalWinnings.toString()))
 
-            // Clean up remaining game resource fields that might hold old vault references
-            var p1ExtraVault <- self.gameRef.player1ExtraStakeVault <- nil
-            destroy p1ExtraVault
-            var p2ExtraVault <- self.gameRef.player2ExtraStakeVault <- nil
-            destroy p2ExtraVault
+            // The vaults passed as parameters (offererAdditionalVault, responderAdditionalVault) are destroyed in the prepare block for the reject case.
+            // finalizeResolution handles the game's internal vaults (player1Vault, player2Vault, and any existing ExtraStakeVaults from *previous* doubles).
 
-            self.gameRef.doubleOfferedBy = nil
+            self.gameRef.doubleOfferedBy = nil // Clear the offer details
         }
     }
 } 

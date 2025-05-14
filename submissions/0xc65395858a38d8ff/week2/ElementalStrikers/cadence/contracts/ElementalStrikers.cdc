@@ -740,52 +740,53 @@ access(all) contract ElementalStrikers {
                 // Use currentStakeAmount for winnings
                  totalWinnings = game.mode == GameMode.PvPStaked ? game.currentStakeAmount * 2.0 : 0.0
             } else { // Draw overall match - return stakes in PvP
+                // This is an overall game draw after all rounds according to maxWins.
                 finalWinnerAddress = nil // No winner in draw
                 finalLoserAddress = nil
                 // Each player gets their current stake back
                 totalWinnings = game.mode == GameMode.PvPStaked ? game.currentStakeAmount : 0.0 // This is per player in case of draw
+                
+                // Directly finalize resolution for a game draw, no double or nothing.
+                game.finalizeResolution(
+                    environmentalModifier: environmentalModifier,
+                    criticalHitTypeP1: criticalHitP1,
+                    criticalHitTypeP2OrComputer: criticalHitP2OrComputer,
+                    winnerAddress: finalWinnerAddress,
+                    loserAddress: finalLoserAddress,
+                    winningsToWinner: totalWinnings,
+                    computerGeneratedMove: computerMove
+                )
+                log("Game ID: ".concat(gameId.toString()).concat(" resolved as a DRAW after ").concat(game.currentRound.toString()).concat(" rounds."))
+                return // Exit early for game draw
             }
 
-            game.finalizeResolution(
-                environmentalModifier: environmentalModifier, // Using last round's modifiers for event, could store all
-                criticalHitTypeP1: criticalHitP1, // Using last round's modifiers for event
-                criticalHitTypeP2OrComputer: criticalHitP2OrComputer, // Using last round's modifiers for event
-                winnerAddress: finalWinnerAddress,
-                loserAddress: finalLoserAddress, // Loser address only relevant for PvP
-                winningsToWinner: totalWinnings, // This is the total received by winner or stake returned in draw
-                computerGeneratedMove: computerMove // Pass computer move from last round if PvE
-            )
-
-            log("Game ID: ".concat(gameId.toString()).concat(" resolved after ").concat(game.currentRound.toString()).concat(" rounds."))
+            // If we reach here, there is a winner and a loser for the game.
+            // Instead of finalizing, set up for a double or nothing offer from the game loser.
+            if finalWinnerAddress != nil && finalLoserAddress != nil {
+                game.setLastRoundWinner(winner: finalWinnerAddress) // game winner
+                game.setLastRoundLoser(loser: finalLoserAddress)   // game loser
+                game.setStatus(newStatus: GameStatus.awaitingDoubleOffer)
+                log("Game ID: ".concat(gameId.toString()).concat(" finished. Player ").concat(finalLoserAddress!.toString()).concat(" (game loser) can offer to double. Winner: ").concat(finalWinnerAddress!.toString()).concat(". Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString()))
+            } else {
+                // This should not be reached if the logic above for draw or win/loss is correct.
+                // Fallback to finalize if something unexpected happened.
+                game.finalizeResolution(
+                    environmentalModifier: environmentalModifier,
+                    criticalHitTypeP1: criticalHitP1,
+                    criticalHitTypeP2OrComputer: criticalHitP2OrComputer,
+                    winnerAddress: finalWinnerAddress, // Could be nil if state is inconsistent
+                    loserAddress: finalLoserAddress,   // Could be nil
+                    winningsToWinner: totalWinnings,
+                    computerGeneratedMove: computerMove
+                )
+                log("Game ID: ".concat(gameId.toString()).concat(" resolved (unexpected state during game over)."))
+            }
 
         } else {
-            // Match is NOT over
-            // Set last round winner and loser for double or nothing offer
-            game.setLastRoundWinner(winner: roundWinnerAddress)
-            if roundWinnerAddress == game.player1 {
-                game.setLastRoundLoser(loser: game.player2)
-            } else if roundWinnerAddress == game.player2 {
-                game.setLastRoundLoser(loser: game.player1)
-            } else { // Draw round, either player can technically offer, or we can disallow doubling on a draw.
-                     // For now, let's assume no one is explicitly the "loser" to offer double on a draw.
-                     // The game will proceed to the next round without a double offer phase.
-                game.setLastRoundWinner(winner: nil)
-                game.setLastRoundLoser(loser: nil)
-                game.advanceRound() // Use helper function
-                log("Game ID: ".concat(gameId.toString()).concat(" - Round ").concat((game.currentRound - 1).toString()).concat(" was a draw. Moving to Round ").concat(game.currentRound.toString()).concat(". Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString()))
-                return // Exit early as we are not going to awaitingDoubleOffer
-            }
-
-            // If there was a winner for the round, proceed to awaitingDoubleOffer
-            if game.lastRoundLoser != nil { // lastRoundLoser is set only if there's a round winner
-                game.setStatus(newStatus: GameStatus.awaitingDoubleOffer)
-                log("Game ID: ".concat(gameId.toString()).concat(" - Round ").concat(game.currentRound.toString()).concat(" resolved. Player ").concat(game.lastRoundLoser!.toString()).concat(" can offer to double. Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString()))
-            } else {
-                 // This case should ideally not be reached if the draw logic is correct above.
-                 // If somehow it is, advance round to prevent game getting stuck.
-                game.advanceRound()
-                log("Game ID: ".concat(gameId.toString()).concat(" - Round ".concat((game.currentRound - 1).toString()).concat(" resolved (unexpected state). Moving to Round ").concat(game.currentRound.toString()).concat(". Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString())))
-            }
+            // Match is NOT over, advance to the next round.
+            // No double or nothing offer between rounds.
+            game.advanceRound() // Use helper function to increment round, clear moves, set status to awaitingMoves
+            log("Game ID: ".concat(gameId.toString()).concat(" - Round ").concat((game.currentRound - 1).toString()).concat(" resolved. Moving to Round ").concat(game.currentRound.toString()).concat(". Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString()))
         }
     }
 

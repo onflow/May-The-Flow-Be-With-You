@@ -9,7 +9,29 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Elemental Strikers",
-  description: "A Flow-based game of elemental combat on Flow",
+  description: "A strategic elemental battle game built on the Flow blockchain",
+  openGraph: {
+    title: "Elemental Strikers | Flow Blockchain Game",
+    description: "A strategic elemental battle game where Fire, Water, and Plant clash in blockchain-based combat",
+    url: "https://elementalstrikers.flow.com",
+    siteName: "Elemental Strikers",
+    images: [
+      {
+        url: "/assets/icons/lorc/spiral-tentacle.png",
+        width: 800,
+        height: 800,
+        alt: "Elemental Strikers - Flow blockchain game with elemental powers",
+      }
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Elemental Strikers | Strategic Elemental Battles",
+    description: "Join the elemental combat arena on Flow blockchain",
+    images: ["/assets/icons/lorc/spiral-tentacle.png"],
+  },
 };
 
 export default function RootLayout({

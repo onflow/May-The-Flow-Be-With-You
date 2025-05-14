@@ -116,16 +116,46 @@ export default function HomePage() {
     <Box>
       {/* Hero Section with Background */}
       <Box 
-        bg="gray.800" 
+        bg="gray.800"
         color="white" 
         py={20} 
         position="relative"
-        backgroundImage="linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.6)), url('/assets/icons/lorc/vortex.png')"
-        backgroundSize="cover"
-        backgroundPosition="center"
-        backgroundRepeat="no-repeat"
+        overflow="hidden"
       >
-        <Container maxW="container.xl">
+        {/* Contenedor centrado para la imagen giratoria */}
+        <Box
+          position="absolute"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%)"
+          width="100%"
+          height="100%"
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+        >
+          {/* Spinning Spiral Image */}
+          <Image
+            src="/assets/icons/lorc/spiral-tentacle.png"
+            alt="Spinning Spiral Background"
+            width="160%"
+            height="160%"
+            objectFit="contain"
+            className="spinning-image"
+          />
+        </Box>
+        {/* Gradient Overlay */}
+        <Box
+          position="absolute"
+          top="0"
+          left="0"
+          right="0"
+          bottom="0"
+          bgImage="linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.6))"
+          zIndex="1"
+        />
+        {/* Content Container - ensure it's on top */}
+        <Container maxW="container.xl" position="relative" zIndex="2">
           <VStack gap={8} textAlign="center">
             <Badge colorScheme="green" p={2} fontSize="md">Week 2 Challenge</Badge>
             <Heading as="h1" size="2xl" fontWeight="bold">
@@ -202,29 +232,78 @@ export default function HomePage() {
 
         {/* Elements Section */}
         <Heading textAlign="center" size="lg" mb={8}>The Elements</Heading>
-        <SimpleGrid columns={{ base: 1, md: 3 }} gap={10} mb={16}>
-          <ElementCard 
-            element="Fire" 
-            color={elementColors.fuego}
-            icon={FiZap}
-            strengths="Plant"
-            weaknesses="Water"
-          />
-          <ElementCard 
-            element="Water" 
-            color={elementColors.agua}
-            icon={FiDroplet}
-            strengths="Fire"
-            weaknesses="Plant"
-          />
-          <ElementCard 
-            element="Plant" 
-            color={elementColors.planta}
-            icon={FiSun}
-            strengths="Water"
-            weaknesses="Fire"
-          />
-        </SimpleGrid>
+        
+        {/* Triangular arrangement - Container */}
+        <Box position="relative" height="500px" mb={16}>
+          {/* Fire element - top center */}
+          <Box position="absolute" top="0" left="50%" transform="translateX(-50%)" width="300px">
+            <ElementCard 
+              element="Fire" 
+              color={elementColors.fuego}
+              icon={FiZap}
+              strengths="Plant"
+              weaknesses="Water"
+            />
+          </Box>
+          
+          {/* Water element - bottom left */}
+          <Box position="absolute" bottom="0" left="20%" transform="translateX(-50%)" width="300px">
+            <ElementCard 
+              element="Water" 
+              color={elementColors.agua}
+              icon={FiDroplet}
+              strengths="Fire"
+              weaknesses="Plant"
+            />
+          </Box>
+          
+          {/* Plant element - bottom right */}
+          <Box position="absolute" bottom="0" right="20%" transform="translateX(50%)" width="300px">
+            <ElementCard 
+              element="Plant" 
+              color={elementColors.planta}
+              icon={FiSun}
+              strengths="Water"
+              weaknesses="Fire"
+            />
+          </Box>
+          
+          {/* Connecting lines showing relationship (optional) */}
+          <svg 
+            width="100%" 
+            height="100%" 
+            style={{ position: 'absolute', top: 0, left: 0, zIndex: 0 }}
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            {/* Line from Fire to Plant (Fire beats Plant) */}
+            <line 
+              x1="50" y1="20" 
+              x2="75" y2="80" 
+              stroke={elementColors.fuego} 
+              strokeWidth="1.5" 
+              strokeDasharray="5,3"
+            />
+            
+            {/* Line from Plant to Water (Plant beats Water) */}
+            <line 
+              x1="75" y1="80" 
+              x2="25" y2="80" 
+              stroke={elementColors.planta} 
+              strokeWidth="1.5" 
+              strokeDasharray="5,3"
+            />
+            
+            {/* Line from Water to Fire (Water beats Fire) */}
+            <line 
+              x1="25" y1="80" 
+              x2="50" y2="20" 
+              stroke={elementColors.agua} 
+              strokeWidth="1.5" 
+              strokeDasharray="5,3"
+            />
+          </svg>
+        </Box>
 
         {/* Features Section */}
         <Heading textAlign="center" size="lg" mb={8}>Week 2 Features</Heading>

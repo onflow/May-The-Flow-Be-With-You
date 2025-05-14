@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Elemental Strikers | OpenGraph Image</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(120deg, #0a0a0a, #1a1a1a);
+      color: white;
+    }
+    .container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .title {
+      font-size: 64px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-align: center;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+    .subtitle {
+      font-size: 32px;
+      margin-bottom: 40px;
+      text-align: center;
+      color: #ccc;
+    }
+    .elements {
+      position: relative;
+      width: 600px;
+      height: 400px;
+    }
+    .element {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+    .element.fire {
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(229, 62, 62, 0.3);
+      border: 2px solid #e53e3e;
+    }
+    .element.water {
+      bottom: 0;
+      left: 100px;
+      background-color: rgba(49, 130, 206, 0.3);
+      border: 2px solid #3182ce;
+    }
+    .element.plant {
+      bottom: 0;
+      right: 100px;
+      background-color: rgba(56, 178, 72, 0.3);
+      border: 2px solid #38b248;
+    }
+    .element img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 10px;
+    }
+    .element-name {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .triangle-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+    .background-spiral {
+      position: absolute;
+      width: 1000px;
+      height: 1000px;
+      opacity: 0.1;
+      z-index: -2;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .flow-logo {
+      position: absolute;
+      bottom: 30px;
+      right: 30px;
+      font-size: 24px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="../icons/lorc/spiral-tentacle.png" class="background-spiral" alt="">
+    
+    <h1 class="title">ELEMENTAL STRIKERS</h1>
+    <p class="subtitle">A strategic elemental battle game on Flow blockchain</p>
+    
+    <div class="elements">
+      <svg class="triangle-lines" viewBox="0 0 600 400">
+        <!-- Line from Fire to Plant (Fire beats Plant) -->
+        <line x1="300" y1="100" x2="500" y2="300" stroke="#e53e3e" stroke-width="3" stroke-dasharray="10,5" />
+        
+        <!-- Line from Plant to Water (Plant beats Water) -->
+        <line x1="500" y1="300" x2="100" y2="300" stroke="#38b248" stroke-width="3" stroke-dasharray="10,5" />
+        
+        <!-- Line from Water to Fire (Water beats Fire) -->
+        <line x1="100" y1="300" x2="300" y2="100" stroke="#3182ce" stroke-width="3" stroke-dasharray="10,5" />
+      </svg>
+      
+      <div class="element fire">
+        <img src="../icons/lorc/sword-spin.png" alt="Fire">
+        <span class="element-name">FIRE</span>
+      </div>
+      
+      <div class="element water">
+        <img src="../icons/lorc/falling-eye.png" alt="Water">
+        <span class="element-name">WATER</span>
+      </div>
+      
+      <div class="element plant">
+        <img src="../icons/lorc/thorny-vine.png" alt="Plant">
+        <span class="element-name">PLANT</span>
+      </div>
+    </div>
+    
+    <div class="flow-logo">
+      Powered by Flow Blockchain
+    </div>
+  </div>
+</body>
+</html> 

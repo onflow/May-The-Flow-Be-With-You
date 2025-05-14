@@ -24,3 +24,33 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Animación de giro para la imagen del vortex */
+@keyframes spin {
+  0% { 
+    transform: rotate(0deg) scale(1); 
+    opacity: 0.9;
+  }
+  25% {
+    transform: rotate(90deg) scale(1.02);
+    opacity: 0.95;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.05);
+    opacity: 1;
+  }
+  75% {
+    transform: rotate(270deg) scale(1.02);
+    opacity: 0.95;
+  }
+  100% { 
+    transform: rotate(360deg) scale(1); 
+    opacity: 0.9;
+  }
+}
+
+/* Solo para la animación de giro */
+.spinning-image {
+  animation: spin 60s linear infinite;
+  transform-origin: center center;
+}

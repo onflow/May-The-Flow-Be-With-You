@@ -1,0 +1,25 @@
+{
+  "name": "elemental-strikers-tests",
+  "version": "1.0.0",
+  "description": "Automated tests for ElementalStrikers contract on Flow emulator.",
+  "main": "run_tests.js",
+  "scripts": {
+    "test": "node run_tests.js"
+  },
+  "keywords": [
+    "flow",
+    "cadence",
+    "emulator",
+    "test"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@onflow/fcl": "^1.4.0",
+    "@onflow/transport-grpc": "^1.4.1",
+    "@onflow/types": "^1.0.5",
+    "buffer": "^6.0.3",
+    "elliptic": "^6.6.1",
+    "sha3": "^2.1.4"
+  }
+}

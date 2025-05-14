@@ -1,9 +1,9 @@
 // transactions/join_game.cdc
 // Allows a player to join an existing game in ElementalStrikers by staking FLOW.
 
-import FungibleToken from 0xee82856bf20e2aa6 // FungibleToken address for Emulator
-import FlowToken from 0x0ae53cb6e3f42a79     // FlowToken address for Emulator
-import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
+import FungibleToken from 0xee82856bf20e2aa6
+import FlowToken from 0x0ae53cb6e3f42a79
+import ElementalStrikers from 0xf8d6e0586b0a20c7
 
 transaction(gameId: UInt64, stakeAmount: UFix64) {
 

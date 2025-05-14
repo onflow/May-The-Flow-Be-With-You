@@ -1,7 +1,7 @@
 // transactions/reveal_outcome.cdc
 // Allows a player to trigger the reveal phase of a game in ElementalStrikers.
 
-import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
+import ElementalStrikers from 0xf8d6e0586b0a20c7
 
 transaction(gameId: UInt64) {
 

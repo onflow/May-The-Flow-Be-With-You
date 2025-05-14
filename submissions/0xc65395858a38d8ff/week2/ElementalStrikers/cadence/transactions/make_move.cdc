@@ -1,7 +1,7 @@
 // transactions/make_move.cdc
 // Allows a player in a game to make their elemental move.
 
-import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
+import ElementalStrikers from 0xf8d6e0586b0a20c7
 
 transaction(gameId: UInt64, element: String) {
 

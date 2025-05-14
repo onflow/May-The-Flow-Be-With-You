@@ -1,7 +1,10 @@
 // transactions/setup_account.cdc
 // Sets up a user's account to interact with the ElementalStrikers contract.
 
-import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
+import FungibleToken from 0xee82856bf20e2aa6
+import NonFungibleToken from 0xf8d6e0586b0a20c7
+import MetadataViews from 0xf8d6e0586b0a20c7
+import ElementalStrikers from 0xf8d6e0586b0a20c7
 
 transaction {
 

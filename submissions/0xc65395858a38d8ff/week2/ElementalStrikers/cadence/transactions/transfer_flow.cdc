@@ -1,8 +1,8 @@
 // transactions/transfer_flow.cdc
 // A simple transaction to transfer FLOW tokens.
 
-import FungibleToken from 0xee82856bf20e2aa6 // FungibleToken address for Emulator
-import FlowToken from 0x0ae53cb6e3f42a79     // FlowToken address for Emulator
+import FungibleToken from 0xee82856bf20e2aa6
+import FlowToken from 0x0ae53cb6e3f42a79
 
 transaction(amount: UFix64, to: Address) {
 

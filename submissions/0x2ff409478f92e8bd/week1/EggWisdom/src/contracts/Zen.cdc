@@ -58,7 +58,7 @@ contract Zen: FungibleToken{
     
     // Event that is emitted when a new minter resource is created
     access(all)
-    event MinterCreated(allowedAmount: UFix64)
+    event MinterCreated()
     
     // Event that is emitted when a new burner resource is created
     access(all)
@@ -246,9 +246,9 @@ contract Zen: FungibleToken{
         // Function that creates and returns a new minter resource
         //
         access(AdministratorEntitlement)
-        fun createNewMinter(allowedAmount: UFix64): @Minter{ 
-            emit MinterCreated(allowedAmount: allowedAmount)
-            return <-create Minter(allowedAmount: allowedAmount)
+        fun createNewMinter(): @Minter{ 
+            emit MinterCreated()
+            return <-create Minter()
         }
         
         // createNewBurner
@@ -269,9 +269,7 @@ contract Zen: FungibleToken{
     access(all)
     resource Minter{ 
         
-        // the amount of tokens that the minter is allowed to mint
-        access(all)
-        var allowedAmount: UFix64
+        // the amount of tokens that the minter is allowed to min
         
         // mintTokens
         //
@@ -283,17 +281,15 @@ contract Zen: FungibleToken{
             pre{ 
                 amount > 0.0:
                     "Amount minted must be greater than zero"
-                amount <= self.allowedAmount:
-                    "Amount minted must be less than the allowed amount"
             }
             Zen.totalSupply = Zen.totalSupply + amount
-            self.allowedAmount = self.allowedAmount - amount
+
             emit TokensMinted(amount: amount)
             return <-create Vault(balance: amount)
         }
         
-        init(allowedAmount: UFix64){ 
-            self.allowedAmount = allowedAmount
+        init(){ 
+
         }
     }
     
@@ -348,7 +344,7 @@ contract Zen: FungibleToken{
         let admin <- create Administrator()
         self.account.storage.save(<-admin, to: self.AdminStoragePath)
         // create a Minter resource and store it
-        let minter <- create Minter(allowedAmount: 350_000_000.0)
+        let minter <- create Minter()
         self.account.storage.save(<-minter, to: self.TokenMinterStoragePath)
         
         // Emit an event that shows that the contract was initialized

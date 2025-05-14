@@ -22,7 +22,7 @@ func main() {
 
 	color.Green("")
 
-	// Create a new Artist struct
+	// Admin creates a new phrases for free
 	o.Tx("admin/create_phrase",
 		WithSigner("account"),
 		WithArg("phrase", "ALL THE ZEN"),
@@ -33,13 +33,90 @@ func main() {
 	)
 	// Fetch phrases
 	o.Script("get_all_phrases")
-	// Mint an NFT into Bob's account
-	o.Tx("mint_phrase",
+	o.Tx("admin/create_phrase",
+		WithSigner("account"),
+		WithArg("phrase", "Happy Birthday!"),
+		WithArg("base64Img", "THIS NOT your Birthday really"),
+		WithArg("namesOnScreen", `["Axlocity", "Joolzs"]`),
+		WithArg("catsOnScreen", `["Cat1", "Cat45"]`),
+		WithArg("background", "Break"),
+	)
+	// Fetch phrases
+	o.Script("get_all_phrases")
+	// Bob will buy a couple of Eggs
+	o.Tx("buy_eggs",
 		WithSigner("bob"),
-		WithArg("phrase", "ALL THE ZEN"),
+		WithArg("amount", "3"),
+	)
+	// Bob will open a couple of Eggs
+	o.Tx("reveal_phrases",
+		WithSigner("bob"),
+		WithArg("amount", "3"),
 	)
 	// Fetch Bob's owned NFTs
 	o.Script("get_owned_nfts",
 		WithArg("account", "bob"),
+	)
+	// Check the contract's balance
+	o.Script("get_balance",
+		WithArg("address", "bob"),
+	)
+	// Bob will upload a couple of phrases
+	o.Tx("create_phrase",
+		WithSigner("bob"),
+		WithArg("phrase", "Flow-powered and Feline-ready"),
+		WithArg("base64Img", "THIS WAS BY BOB"),
+		WithArg("namesOnScreen", `["Axlocity", "KittyCatRightMeow", "Noahoverflow"]`),
+		WithArg("catsOnScreen", `["Pride", "Prince", "Page"]`),
+		WithArg("background", "Dawn"),
+	)
+
+	// Alice will buy a couple of Eggs
+	o.Tx("buy_eggs",
+		WithSigner("account"),
+		WithArg("amount", "5"),
+	)
+	// Alice will open a couple of Eggs
+	o.Tx("reveal_phrases",
+		WithSigner("account"),
+		WithArg("amount", "5"),
+	)
+	// Fetch Alice's owned NFTs
+	o.Script("get_owned_nfts",
+		WithArg("account", "account"),
+	)
+	// Check the contract's balance
+	o.Script("get_balance",
+		WithArg("address", "account"),
+	)
+	// Check bob's balance
+	o.Script("get_balance",
+		WithArg("address", "bob"),
+	)
+	// Mint a wisdom egg
+	o.Tx("mint_wisdom_egg",
+		WithSigner("account"),
+	)
+	// Fetch wisdom egg
+	o.Script("get_wisdom")
+	// Pet the wisdom egg
+	o.Tx("pet_egg",
+		WithSigner("account"),
+	)
+	// Fetch wisdom egg
+	o.Script("get_wisdom")
+	// Pet the wisdom egg
+	o.Tx("pet_egg",
+		WithSigner("account"),
+	)
+	// Fetch wisdom egg
+	o.Script("get_wisdom")
+	// Get Zen balance
+	o.Script("get_zen",
+		WithArg("address", "account"),
+	)
+	// Get Zen balance
+	o.Script("get_zen",
+		WithArg("address", "bob"),
 	)
 }

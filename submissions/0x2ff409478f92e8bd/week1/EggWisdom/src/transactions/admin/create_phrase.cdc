@@ -1,4 +1,5 @@
 import "EggWisdom"
+import "Zen"
 
 // This transaction is for the admin to create a new phrase struct
 // and store it in the EggWisdom smart contract
@@ -10,9 +11,9 @@ transaction(
     catsOnScreen: [String],
     background: String) {
 
-    let Admin: &EggWisdom.Admin
+    let Admin: &EggWisdom.Admin 
 
-    prepare(admin: auth(BorrowValue) &Account) {
+    prepare(admin: auth(BorrowValue, SaveValue) &Account) {
         self.Admin = admin.storage.borrow<&EggWisdom.Admin>(from: EggWisdom.AdministratorStoragePath)!
     }
     execute {

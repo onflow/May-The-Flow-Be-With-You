@@ -1,7 +1,7 @@
 {
 	"contracts": {
-		"Counter": {
-			"source": "cadence/contracts/Counter.cdc",
+		"OnchainCraps": {
+			"source": "cadence/contracts/Craps.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
@@ -49,6 +49,13 @@
 				"type": "file",
 				"location": "emulator-account.pkey"
 			}
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"OnchainCraps"
+			]
 		}
 	}
 }

@@ -1,17 +1,19 @@
 import "FungibleToken"
 
-access(all) contract OnchainDice {
+access(all) contract OnchainCraps {
 
   access(all) let CrapsAdminStoragePath: StoragePath
+  access(all) let GameStoragePath: StoragePath
 
-  access(all) let userGames: {Address : OnchainDice.Game}
+  access(all) let userGames: {Address : UInt64} //map of addresses to Game Ids
 
-  access(all) let allowedBets: {OnchainDice.GameState : [String]}
+  access(all) let allowedBets: {OnchainCraps.GameState : [String]}
 
   //an dictionary of fungible token vaults to hold multiple tokens.
   access(all) var tokenVaults: @{String : {FungibleToken.Vault}}
+  access(all) var nextGameId: UInt64
 
-  //tbd implement: access (all) let userInfo: { Address : String }
+  //tbd implement: access (all) let userInfo: { Address : String } - probably best to store in Game
 
   access(all) enum GameState: UInt8 {
     access(all) case NOBETS /// No Bets currently
@@ -30,15 +32,26 @@ access(all) contract OnchainDice {
     }
   }
 
-  access (all) struct Game {
-    access(all) var state: OnchainDice.GameState
+  access (all) resource Game {
+    access(all) var state: OnchainCraps.GameState
     access(all) var point: Int? 
     access(all) var pointAmount: UFix64?
     access(all) var come: Int?
     access(all) var bets: { String : Bet }
+    access(all) let id: UInt64
+
+    //add overall userInfo here instead of above
+
+    access (all) fun rollDice() { //could change this to access (all), but account is more granular
+      //use VRF here
+      log("rolling dice you dirty bastard")
+    }
 
     init() {
-      self.state = OnchainDice.GameState.COMEOUT //we will need to change this to the enum
+      self.id = OnchainCraps.nextGameId
+      OnchainCraps.nextGameId = OnchainCraps.nextGameId + 1
+
+      self.state = OnchainCraps.GameState.COMEOUT //we will need to change this to the enum
       self.point = nil
       self.pointAmount = nil
       self.come = nil
@@ -46,11 +59,13 @@ access(all) contract OnchainDice {
     }
   }
 
-  //add a key resource
+  access (all) fun createDiceGame() : @Game {
+    return <- create OnchainCraps.Game()
+  } 
 
   access (all) resource CrapsAdmin {
     //functions to add:
-    
+
     //transfer coins out of the Craps Vault
     //ability to add new token vaults
     //add new bets
@@ -58,14 +73,18 @@ access(all) contract OnchainDice {
 
   init(){
     self.allowedBets = {
-      OnchainDice.GameState.COMEOUT:["PASS", "FIELD"],
-      OnchainDice.GameState.POINT:["COME", "FIELD", "CRAPS", "YO", "2", "3", "4", "5", "6", "8", "9", "10", "11", "12", "Odds"]
+      OnchainCraps.GameState.COMEOUT:["PASS", "FIELD"],
+      OnchainCraps.GameState.POINT:["COME", "FIELD", "CRAPS", "YO", "2", "3", "4", "5", "6", "8", "9", "10", "11", "12", "Odds"]
     }
     self.userGames = {}
     self.tokenVaults <- {} //add aiSportsJuice
 
+    self.nextGameId = 1
+
     // Set the named paths
     self.CrapsAdminStoragePath = /storage/CrapsAdmin
+    self.GameStoragePath = /storage/OnchainCraps
+
     self.account.storage.save(<-create CrapsAdmin(), to: self.CrapsAdminStoragePath)
   }
 

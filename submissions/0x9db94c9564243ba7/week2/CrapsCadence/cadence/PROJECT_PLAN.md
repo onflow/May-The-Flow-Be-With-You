@@ -62,8 +62,7 @@ This project implements a craps game as a smart contract in Cadence. The game lo
 ---
 
 ## Next Steps
-- Define contract structure and resources for bets and game state
-- Implement bet placement logic
 - Implement dice roll and outcome resolution
+- Implement bet placement logic
 - Implement payout and reset logic
 - Add support for additional bet types 

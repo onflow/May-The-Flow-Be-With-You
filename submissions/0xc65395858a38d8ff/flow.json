@@ -1,6 +1,12 @@
 {
 	"contracts": {
-		"ElementalStrikers": "week2/ElementalStrikers/cadence/contracts/ElementalStrikers.cdc"
+		"ElementalStrikers": {
+			"source": "week2/ElementalStrikers/cadence/contracts/ElementalStrikers.cdc",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"testnet": "0xbeb2f48c3293e514"
+			}
+		}
 	},
 	"dependencies": {
 		"Burner": {
@@ -188,13 +194,20 @@
 			}
 		},
 		"player2-account": {
-			"address": "179b6b1cb6755e31",
-			"key": "a99619b69698c5c7150b5e03b8935a99618384a0be7305aae14c9d67d4ca1e6f"
+			"address": "0xad7388f34dd6bdef"
+		},
+		"testnet-deployer": {
+			"address": "0xbeb2f48c3293e514"
 		}
 	},
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
+				"ElementalStrikers"
+			]
+		},
+		"testnet": {
+			"testnet-deployer": [
 				"ElementalStrikers"
 			]
 		}

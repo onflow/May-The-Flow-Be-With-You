@@ -1,9 +1,9 @@
 // ElementalStrikers.cdc
 
 // Standard Flow contract imports
-import FungibleToken from "FungibleToken"
-import FlowToken from "FlowToken"
-import RandomBeaconHistory from "RandomBeaconHistory"
+import FungibleToken from 0x9a0766d93b6608b7
+import FlowToken from 0x7e60df042a9c0868
+import RandomBeaconHistory from 0x8c5303eaa26202d6
 
 // TODO: Import or define a PRNG like Xorshift128plus
 // For now, we'll use a very simple placeholder.
@@ -232,6 +232,25 @@ access(all) contract ElementalStrikers {
 
             emit DoubleOffered(gameId: self.gameId, offeredBy: offererAddress, newTotalStakePerPlayer: newTotalStakePerPlayer)
             log("Player ".concat(offererAddress.toString()).concat(" offered to double the stake for game ").concat(self.gameId.toString()).concat(". New potential stake per player if accepted: ").concat(newTotalStakePerPlayer.toString()))
+        }
+
+        // Setters for Double or Nothing feature
+        access(contract) fun setCurrentStakeAmount(newAmount: UFix64) {
+            self.currentStakeAmount = newAmount
+        }
+
+        access(contract) fun setCurrentMaxWins(newMaxWins: UInt64) {
+            self.currentMaxWins = newMaxWins
+        }
+
+        access(contract) fun setPlayer1ExtraStakeVault(vault: @{FungibleToken.Vault}?) {
+            let oldVault <- self.player1ExtraStakeVault <- vault
+            destroy oldVault
+        }
+
+        access(contract) fun setPlayer2ExtraStakeVault(vault: @{FungibleToken.Vault}?) {
+            let oldVault <- self.player2ExtraStakeVault <- vault
+            destroy oldVault
         }
 
         access(all) fun addPlayer2(player2: Address, player2StakeVault: @{FungibleToken.Vault}) {
@@ -467,6 +486,51 @@ access(all) contract ElementalStrikers {
             self.committedBlockHeight = getCurrentBlock().height
             self.status = GameStatus.awaitingRandomness
             emit GameCommittedToRandomness(gameId: self.gameId, commitBlockHeight: self.committedBlockHeight!)
+        }
+
+        // This function should be part of the Game resource
+        access(all) fun respondToDoubleOfferInternal(responderAddress: Address, accept: Bool) {
+            pre {
+                // We are inside the Game resource, so self.doubleOfferedBy is correct.
+                self.doubleOfferedBy != nil : "Internal error: doubleOfferedBy should not be nil here."
+            }
+
+            let offerer = self.doubleOfferedBy! 
+
+            if accept {
+                // TODO: Properly implement the accept path with vault handling for SDK testing.
+                self.setCurrentStakeAmount(newAmount: self.currentStakeAmount * 2.0)
+                self.setCurrentMaxWins(newMaxWins: self.currentMaxWins + 1)
+                // TODO: Vault handling for player1ExtraStakeVault and player2ExtraStakeVault
+                // This would involve taking vault resources as parameters for this function
+                // or having another mechanism to deposit them based on player actions.
+
+                self.setDoubleOfferedBy(offerer: nil)
+                self.advanceRound() // advanceRound sets status to awaitingMoves
+                emit DoubleOfferResponded(gameId: self.gameId, accepted: true, newTotalStakePerPlayer: self.currentStakeAmount)
+                log("Player ".concat(responderAddress.toString()).concat(" accepted the double offer for game ".concat(self.gameId.toString())).concat(". New stake per player: ".concat(self.currentStakeAmount.toString())).concat(". New max wins: ".concat(self.currentMaxWins.toString()).concat(". Advancing to round: ".concat(self.currentRound.toString()))))
+            } else { // Player rejected the offer
+                let winnerAddress = responderAddress 
+                let loserAddress = offerer          
+                
+                let totalWinnings = self.currentStakeAmount * 2.0 
+
+                emit GameForfeitedByRejectingDouble(gameId: self.gameId, winner: winnerAddress, loser: loserAddress, winnings: totalWinnings)
+
+                self.finalizeResolution(
+                    environmentalModifier: self.finalEnvironmentalModifier ?? "N/A_Reject",
+                    criticalHitTypeP1: self.finalCriticalHitTypePlayer1 ?? "N/A_Reject",
+                    criticalHitTypeP2OrComputer: self.finalCriticalHitTypeP2OrComputer ?? "N/A_Reject",
+                    winnerAddress: winnerAddress,
+                    loserAddress: loserAddress,
+                    winningsToWinner: totalWinnings,
+                    computerGeneratedMove: self.computerMove 
+                )
+                
+                log("Player ".concat(responderAddress.toString()).concat(" rejected the double offer for game ".concat(self.gameId.toString())).concat(". Player ".concat(loserAddress.toString()).concat(" forfeits. Winner: ".concat(winnerAddress.toString()).concat(". Winnings: ".concat(totalWinnings.toString())))))
+                
+                self.setDoubleOfferedBy(offerer: nil) 
+            }
         }
     }
 
@@ -838,6 +902,28 @@ access(all) contract ElementalStrikers {
     // Needed for transactions like offerDouble and respondToDoubleOffer to modify game state.
     access(all) fun borrowGame(gameId: UInt64): &Game? {
         return &self.games[gameId] as &Game?
+    }
+
+    // Contract level function to call the internal one
+    access(all) fun respondToDoubleOffer(gameId: UInt64, responderAddress: Address, accept: Bool) {
+        let gameRef = self.borrowGame(gameId: gameId)
+            ?? panic("Game not found when trying to respond to double offer")
+
+        // Pre-assertions for calling the internal function
+        assert(gameRef.status == GameStatus.awaitingDoubleResponse,
+               message: "Game is not awaiting a response to a double offer.")
+        assert(gameRef.doubleOfferedBy != nil, 
+               message: "No double offer is currently active for this game.")
+        assert(responderAddress != gameRef.doubleOfferedBy!,
+               message: "The player who offered to double cannot respond to their own offer.")
+        let offerer = gameRef.doubleOfferedBy!
+        let player1 = gameRef.player1
+        let player2 = gameRef.player2
+        assert( (offerer == player1 && responderAddress == player2) || 
+                (offerer == player2 && responderAddress == player1),
+                message: "Responder is not a valid player for this game's double offer.")
+
+        gameRef.respondToDoubleOfferInternal(responderAddress: responderAddress, accept: accept)
     }
 
     //-----------------------------------------------------------------------

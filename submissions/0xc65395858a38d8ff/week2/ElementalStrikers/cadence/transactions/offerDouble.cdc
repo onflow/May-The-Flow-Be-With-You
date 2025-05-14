@@ -1,6 +1,6 @@
 import FungibleToken from "FungibleToken"
 import FlowToken from "FlowToken"
-import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
+import ElementalStrikers from 0xElementalStrikers_ADDRESS
 
 transaction(gameId: UInt64) {
 
@@ -8,7 +8,7 @@ transaction(gameId: UInt64) {
     let angebotenVonAddress: Address
     let requiredBalance: UFix64
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: auth(BorrowValue) &Account) {
         self.angebotenVonAddress = signer.address
 
         let game: &ElementalStrikers.Game = ElementalStrikers.borrowGame(gameId: gameId)
@@ -24,7 +24,7 @@ transaction(gameId: UInt64) {
 
         self.requiredBalance = self.gameRef!.currentStakeAmount 
 
-        let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+        let vaultRef = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
             ?? panic("Could not borrow reference to the signer's FlowToken vault")
 
         assert(vaultRef.balance >= self.requiredBalance,

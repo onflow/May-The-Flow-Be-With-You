@@ -1,10 +1,11 @@
 // transactions/setup_account.cdc
 // Sets up a user's account to interact with the ElementalStrikers contract.
 
-import FungibleToken from 0xee82856bf20e2aa6
-import NonFungibleToken from 0xf8d6e0586b0a20c7
-import MetadataViews from 0xf8d6e0586b0a20c7
-import ElementalStrikers from 0xf8d6e0586b0a20c7
+import FungibleToken from "FungibleToken" // Will be replaced by replaceImportAddresses
+import NonFungibleToken from "NonFungibleToken" // Will be replaced by replaceImportAddresses
+import MetadataViews from "MetadataViews" // Will be replaced by replaceImportAddresses
+import ElementalStrikers from 0xElementalStrikers_ADDRESS // Will be replaced by FCL config
+// import FlowToken from "FlowToken" // Uncomment if direct FlowToken features are needed
 
 transaction {
 

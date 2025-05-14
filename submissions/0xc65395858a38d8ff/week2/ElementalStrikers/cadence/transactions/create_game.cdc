@@ -1,10 +1,10 @@
 // transactions/create_game.cdc
 // Allows a player to create a new game in ElementalStrikers by staking FLOW.
 
-import FungibleToken from 0xee82856bf20e2aa6 
-import FlowToken from 0x0ae53cb6e3f42a79
-import NonFungibleToken from 0xf8d6e0586b0a20c7
-import ElementalStrikers from 0xf8d6e0586b0a20c7
+import FungibleToken from "FungibleToken" 
+import FlowToken from "FlowToken"
+import NonFungibleToken from "NonFungibleToken"
+import ElementalStrikers from 0xElementalStrikers_ADDRESS
 
 transaction(stakeAmount: UFix64, totalRounds: UInt64) {
 

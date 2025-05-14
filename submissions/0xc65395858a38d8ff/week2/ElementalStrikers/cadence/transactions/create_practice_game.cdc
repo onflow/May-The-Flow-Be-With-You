@@ -1,7 +1,7 @@
 // transactions/create_practice_game.cdc
 // Allows a player to create a new PvE (practice) game in ElementalStrikers.
 
-import ElementalStrikers from "../contracts/ElementalStrikers.cdc"
+import ElementalStrikers from 0xElementalStrikers_ADDRESS
 
 transaction(player1Choice: String) {
 

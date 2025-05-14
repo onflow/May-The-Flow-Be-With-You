@@ -74,12 +74,15 @@ transaction(gameId: UInt64, accept: Bool, offererAdditionalVault: @{FungibleToke
                 self.gameRef.player1ExtraStakeVault <-! responderAdditionalVault
             }
 
+            // Increment currentMaxWins as per new requirement
+            self.gameRef.currentMaxWins = self.gameRef.currentMaxWins + 1
+
             self.gameRef.doubleOfferedBy = nil // Clear the offer
             self.gameRef.status = ElementalStrikers.GameStatus.awaitingMoves
             self.gameRef.advanceRound() // Advances to the next round, resets moves, etc.
 
             emit ElementalStrikers.DoubleOfferResponded(gameId: gameId, accepted: true, newTotalStakePerPlayer: self.gameRef.currentStakeAmount)
-            log("Player ".concat(self.responderAddress.toString()).concat(" accepted the double offer for game ".concat(gameId.toString()).concat(". New stake per player: ").concat(self.gameRef.currentStakeAmount.toString()))
+            log("Player ".concat(self.responderAddress.toString()).concat(" accepted the double offer for game ".concat(gameId.toString()).concat(". New stake per player: ").concat(self.gameRef.currentStakeAmount.toString()).concat(". New max wins: ").concat(self.gameRef.currentMaxWins.toString()))
         } else {
             // Double offer rejected. Game ends. Offerer (last round loser) loses the game.
             // Responder (last round winner) wins the original stake.

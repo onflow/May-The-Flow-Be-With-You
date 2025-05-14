@@ -186,10 +186,6 @@
 				"type": "file",
 				"location": "emulator-account.pkey"
 			}
-		},
-		"player2-account": {
-			"address": "179b6b1cb6755e31",
-			"key": "fcd7a06d8577f854c4008840bd9f56158caed585c414233cdc4e8e8602c3e575"
 		}
 	},
 	"deployments": {

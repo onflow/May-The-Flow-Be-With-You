@@ -128,7 +128,8 @@ access(all) contract ElementalStrikers {
         access(all) var finalWinner: Address? 
 
         // New fields for multi-round games
-        access(all) let totalRounds: UInt64 // Total rounds to play (e.g., 3 for best of 3)
+        access(all) let initialMaxWins: UInt64 // Max wins needed initially
+        access(all) var currentMaxWins: UInt64 // Max wins needed currently (can increase)
         access(all) var currentRound: UInt64 // The current round number (starts at 1)
         access(all) var player1Score: UInt64 // Player 1's score
         access(all) var player2Score: UInt64 // Player 2's score
@@ -138,7 +139,7 @@ access(all) contract ElementalStrikers {
         access(all) var lastRoundWinner: Address?
         access(all) var lastRoundLoser: Address?
 
-        init(gameId: UInt64, mode: GameMode, player1: Address, player1StakeVault: @{FungibleToken.Vault}?, initialStakeAmount: UFix64, player1InitialMove: String?, totalRounds: UInt64) { // Added totalRounds
+        init(gameId: UInt64, mode: GameMode, player1: Address, player1StakeVault: @{FungibleToken.Vault}?, initialStakeAmount: UFix64, player1InitialMove: String?, initialMaxWins: UInt64) { // Renamed totalRounds to initialMaxWins
             self.gameId = gameId
             self.mode = mode
             self.player1 = player1
@@ -158,7 +159,8 @@ access(all) contract ElementalStrikers {
             self.player2Move = nil // Inicialización añadida
             
             // Initialize new fields
-            self.totalRounds = totalRounds
+            self.initialMaxWins = initialMaxWins // Store initial max wins
+            self.currentMaxWins = initialMaxWins // Set current max wins to initial
             self.currentRound = 1
             self.player1Score = 0
             self.player2Score = 0
@@ -195,6 +197,20 @@ access(all) contract ElementalStrikers {
             self.player2Move = nil // Reset moves for next round
             self.committedBlockHeight = nil // Reset commitment for next round
             self.status = GameStatus.awaitingMoves // Go back to awaiting moves
+            // DO NOT reset currentMaxWins here
+        }
+
+        // Add setter methods for fields that need to be modified
+        access(contract) fun setLastRoundWinner(winner: Address?) {
+            self.lastRoundWinner = winner
+        }
+
+        access(contract) fun setLastRoundLoser(loser: Address?) {
+            self.lastRoundLoser = loser
+        }
+
+        access(contract) fun setStatus(newStatus: GameStatus) {
+            self.status = newStatus
         }
 
         access(all) fun addPlayer2(player2: Address, player2StakeVault: @{FungibleToken.Vault}) {
@@ -257,80 +273,147 @@ access(all) contract ElementalStrikers {
 
             if self.mode == GameMode.PvPStaked {
                 // Payout logic only for PvPStaked games
-                // Extraer los vaults a variables locales usando el operador de intercambio
-                var p1Vault <- self.player1Vault <- nil
-                var p2Vault <- self.player2Vault <- nil
-                var p1ExtraVault <- self.player1ExtraStakeVault <- nil
-                var p2ExtraVault <- self.player2ExtraStakeVault <- nil
-                
+                // Handle resources one by one to avoid resource loss
+
                 if winnerAddress == self.player1 {
                     let winnerReceiver = getAccount(self.player1).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
                         ?? panic("Cannot borrow receiver for player 1")
                     
-                    if p1Vault != nil { let unwrappedP1Vault <- p1Vault!; winnerReceiver.deposit(from: <-unwrappedP1Vault) } else { destroy p1Vault }
-                    if p2Vault != nil { let unwrappedP2Vault <- p2Vault!; winnerReceiver.deposit(from: <-unwrappedP2Vault) } else { destroy p2Vault }
-                    if p1ExtraVault != nil { let unwrappedP1ExtraVault <- p1ExtraVault!; winnerReceiver.deposit(from: <-unwrappedP1ExtraVault) } else { destroy p1ExtraVault }
-                    if p2ExtraVault != nil { let unwrappedP2ExtraVault <- p2ExtraVault!; winnerReceiver.deposit(from: <-unwrappedP2ExtraVault) } else { destroy p2ExtraVault }
+                    // Handle player1Vault
+                    if self.player1Vault != nil {
+                        let movedVault <- self.player1Vault <- nil
+                        let vault <- movedVault!
+                        winnerReceiver.deposit(from: <-vault)
+                    }
+                    
+                    // Handle player2Vault
+                    if self.player2Vault != nil {
+                        let movedVault <- self.player2Vault <- nil
+                        let vault <- movedVault!
+                        winnerReceiver.deposit(from: <-vault)
+                    }
+                    
+                    // Handle player1ExtraStakeVault
+                    if self.player1ExtraStakeVault != nil {
+                        let movedVault <- self.player1ExtraStakeVault <- nil
+                        let vault <- movedVault!
+                        winnerReceiver.deposit(from: <-vault)
+                    }
+                    
+                    // Handle player2ExtraStakeVault
+                    if self.player2ExtraStakeVault != nil {
+                        let movedVault <- self.player2ExtraStakeVault <- nil
+                        let vault <- movedVault!
+                        winnerReceiver.deposit(from: <-vault)
+                    }
 
                 } else if winnerAddress == self.player2 && self.player2 != nil {
                     let winnerReceiver = getAccount(self.player2!).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
                         ?? panic("Cannot borrow receiver for player 2")
 
-                    if p1Vault != nil { let unwrappedP1Vault <- p1Vault!; winnerReceiver.deposit(from: <-unwrappedP1Vault) } else { destroy p1Vault }
-                    if p2Vault != nil { let unwrappedP2Vault <- p2Vault!; winnerReceiver.deposit(from: <-unwrappedP2Vault) } else { destroy p2Vault }
-                    if p1ExtraVault != nil { let unwrappedP1ExtraVault <- p1ExtraVault!; winnerReceiver.deposit(from: <-unwrappedP1ExtraVault) } else { destroy p1ExtraVault }
-                    if p2ExtraVault != nil { let unwrappedP2ExtraVault <- p2ExtraVault!; winnerReceiver.deposit(from: <-unwrappedP2ExtraVault) } else { destroy p2ExtraVault }
-
-                } else { // Draw - cada jugador recibe su stake (base + extra) de vuelta
-                    if p1Vault != nil {
-                        let p1Receiver = getAccount(self.player1).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-                            ?? panic("Cannot borrow receiver for player 1 on draw")
-                        let unwrappedP1Vault <- p1Vault!
-                        p1Receiver.deposit(from: <-unwrappedP1Vault)
-                        emit StakeReturned(player: self.player1, amount: unwrappedP1Vault.balance) // Emitting the actual returned amount
-                    } else {
-                        destroy p1Vault
-                    }
-                    if p1ExtraVault != nil {
-                        let p1Receiver = getAccount(self.player1).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-                            ?? panic("Cannot borrow receiver for player 1 (extra stake) on draw")
-                        let unwrappedP1ExtraVault <- p1ExtraVault!
-                        p1Receiver.deposit(from: <-unwrappedP1ExtraVault)
-                        // Optionally emit another StakeReturned event or sum it up
-                    } else {
-                        destroy p1ExtraVault
+                    // Handle player1Vault
+                    if self.player1Vault != nil {
+                        let movedVault <- self.player1Vault <- nil
+                        let vault <- movedVault!
+                        winnerReceiver.deposit(from: <-vault)
                     }
                     
+                    // Handle player2Vault
+                    if self.player2Vault != nil {
+                        let movedVault <- self.player2Vault <- nil
+                        let vault <- movedVault!
+                        winnerReceiver.deposit(from: <-vault)
+                    }
+                    
+                    // Handle player1ExtraStakeVault
+                    if self.player1ExtraStakeVault != nil {
+                        let movedVault <- self.player1ExtraStakeVault <- nil
+                        let vault <- movedVault!
+                        winnerReceiver.deposit(from: <-vault)
+                    }
+                    
+                    // Handle player2ExtraStakeVault
+                    if self.player2ExtraStakeVault != nil {
+                        let movedVault <- self.player2ExtraStakeVault <- nil
+                        let vault <- movedVault!
+                        winnerReceiver.deposit(from: <-vault)
+                    }
+                } else { // Draw - cada jugador recibe su stake (base + extra) de vuelta
+                    // Handle player1Vault
+                    if self.player1Vault != nil {
+                        let p1Receiver = getAccount(self.player1).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                            ?? panic("Cannot borrow receiver for player 1 on draw")
+                        
+                        let movedVault <- self.player1Vault <- nil
+                        let vault <- movedVault!
+                        let amount = vault.balance
+                        p1Receiver.deposit(from: <-vault)
+                        emit StakeReturned(player: self.player1, amount: amount)
+                    }
+                    
+                    // Handle player1ExtraStakeVault
+                    if self.player1ExtraStakeVault != nil {
+                        let p1Receiver = getAccount(self.player1).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                            ?? panic("Cannot borrow receiver for player 1 (extra stake) on draw")
+                        
+                        let movedVault <- self.player1ExtraStakeVault <- nil
+                        let vault <- movedVault!
+                        p1Receiver.deposit(from: <-vault)
+                    }
+                    
+                    // Handle player2 vaults if player2 exists
                     if self.player2 != nil {
-                        if p2Vault != nil {
+                        // Handle player2Vault
+                        if self.player2Vault != nil {
                             let p2Receiver = getAccount(self.player2!).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
                                 ?? panic("Cannot borrow receiver for player 2 on draw")
-                            let unwrappedP2Vault <- p2Vault!
-                            p2Receiver.deposit(from: <-unwrappedP2Vault)
-                            emit StakeReturned(player: self.player2!, amount: unwrappedP2Vault.balance)
-                        } else {
-                            destroy p2Vault
+                            
+                            let movedVault <- self.player2Vault <- nil
+                            let vault <- movedVault!
+                            let amount = vault.balance
+                            p2Receiver.deposit(from: <-vault)
+                            emit StakeReturned(player: self.player2!, amount: amount)
                         }
-                        if p2ExtraVault != nil {
+                        
+                        // Handle player2ExtraStakeVault
+                        if self.player2ExtraStakeVault != nil {
                             let p2Receiver = getAccount(self.player2!).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
                                 ?? panic("Cannot borrow receiver for player 2 (extra stake) on draw")
-                            let unwrappedP2ExtraVault <- p2ExtraVault!
-                            p2Receiver.deposit(from: <-unwrappedP2ExtraVault)
-                        } else {
-                            destroy p2ExtraVault
+                            
+                            let movedVault <- self.player2ExtraStakeVault <- nil
+                            let vault <- movedVault!
+                            p2Receiver.deposit(from: <-vault)
                         }
                     }
                 }
-            } else { // PvEPractice - extraer y destruir vaults si existieran (including extra vaults)
-                var p1Vault <- self.player1Vault <- nil
-                var p2Vault <- self.player2Vault <- nil
-                var p1ExtraVault <- self.player1ExtraStakeVault <- nil
-                var p2ExtraVault <- self.player2ExtraStakeVault <- nil
-
-                if p1Vault != nil { let v <- p1Vault!; destroy v } else { destroy p1Vault }
-                if p2Vault != nil { let v <- p2Vault!; destroy v } else { destroy p2Vault }
-                if p1ExtraVault != nil { let v <- p1ExtraVault!; destroy v } else { destroy p1ExtraVault }
-                if p2ExtraVault != nil { let v <- p2ExtraVault!; destroy v } else { destroy p2ExtraVault }
+            } else { // PvEPractice - destroy all vaults if they exist
+                // Handle player1Vault
+                if self.player1Vault != nil {
+                    let movedVault <- self.player1Vault <- nil
+                    let vault <- movedVault!
+                    destroy vault
+                }
+                
+                // Handle player2Vault
+                if self.player2Vault != nil {
+                    let movedVault <- self.player2Vault <- nil
+                    let vault <- movedVault!
+                    destroy vault
+                }
+                
+                // Handle player1ExtraStakeVault
+                if self.player1ExtraStakeVault != nil {
+                    let movedVault <- self.player1ExtraStakeVault <- nil
+                    let vault <- movedVault!
+                    destroy vault
+                }
+                
+                // Handle player2ExtraStakeVault
+                if self.player2ExtraStakeVault != nil {
+                    let movedVault <- self.player2ExtraStakeVault <- nil
+                    let vault <- movedVault!
+                    destroy vault
+                }
             }
             
             var resolvedPlayerOrComputerMove = ""
@@ -399,6 +482,7 @@ access(all) contract ElementalStrikers {
         access(all) let criticalHitTypeP2OrComputer: String?
         access(all) let winner: Address?
         access(all) var doubleOfferedBy: Address? // Who offered to double
+        access(all) let maxWins: UInt64 // Current max wins for the game
 
         init(gameRef: &Game) {
             self.gameId = gameRef.gameId
@@ -417,6 +501,7 @@ access(all) contract ElementalStrikers {
             self.winner = gameRef.finalWinner
             self.mode = gameRef.mode
             self.doubleOfferedBy = gameRef.doubleOfferedBy // Add double offered by
+            self.maxWins = gameRef.currentMaxWins // Reflect current max wins
         }
     }
 
@@ -427,8 +512,7 @@ access(all) contract ElementalStrikers {
         init(account: &Account) { self.ownerAddress = account.address } // Use passed account to get address
 
         access(all) fun getGameDetails(gameId: UInt64): GameDetails? {
-            if let gameRef = &ElementalStrikers.games[gameId] as &Game? {
-                // Allow anyone to see game details for now, or restrict to players
+            if let gameRef = ElementalStrikers.borrowGame(gameId: gameId) { // Use borrowGame
                 return GameDetails(gameRef: gameRef)
             }
             return nil
@@ -469,10 +553,10 @@ access(all) contract ElementalStrikers {
     }
 
 
-    access(all) fun createGame(player1Address: Address, player1StakeVault: @{FungibleToken.Vault}, initialStakeAmount: UFix64, totalRounds: UInt64): UInt64 { // Added totalRounds parameter
+    access(all) fun createGame(player1Address: Address, player1StakeVault: @{FungibleToken.Vault}, initialStakeAmount: UFix64, initialMaxWins: UInt64): UInt64 { // Renamed totalRounds parameter
         pre {
             player1StakeVault.balance == initialStakeAmount : "Initial stake amount does not match vault balance."
-            totalRounds > 0 : "Total rounds must be greater than zero." // Add a check
+            initialMaxWins > 0 : "Initial max wins must be greater than zero." // Updated check
         }
         
         // No longer needed as player1Address is a parameter:
@@ -487,7 +571,7 @@ access(all) contract ElementalStrikers {
             player1StakeVault: <-player1StakeVault,
             initialStakeAmount: initialStakeAmount,
             player1InitialMove: nil,
-            totalRounds: totalRounds // Pass the parameter to the constructor
+            initialMaxWins: initialMaxWins // Pass the new parameter to the constructor
         )
 
         let oldGame <- self.games[gameId] <- newGame
@@ -515,7 +599,7 @@ access(all) contract ElementalStrikers {
             player1StakeVault: nil, // No stake for practice games
             initialStakeAmount: 0.0, // No stake amount
             player1InitialMove: player1Choice, // Player 1's move is set at creation
-            totalRounds: 3 // Assuming a default value, actual implementation should handle this
+            initialMaxWins: 1 // For PvE, let's default to 1 win needed. Max wins concept is less relevant for current PvE.
         )
 
         // Immediately commit to randomness for practice games as Player 2 (computer) move is derived from it.
@@ -619,7 +703,7 @@ access(all) contract ElementalStrikers {
         }
 
         // Check if the match is over ("Best of N" logic)
-        let winningScore = game.totalRounds / 2 + game.totalRounds % 2 // e.g., Best of 3 (totalRounds=3) needs 3/2+3%2 = 1+1 = 2 wins
+        let winningScore = game.currentMaxWins // Corrected logic: winning score is simply currentMaxWins
         let isGameOver = game.player1Score >= winningScore || game.player2Score >= winningScore
 
         // Emit RoundResolved event
@@ -656,12 +740,11 @@ access(all) contract ElementalStrikers {
                 // Use currentStakeAmount for winnings
                  totalWinnings = game.mode == GameMode.PvPStaked ? game.currentStakeAmount * 2.0 : 0.0
             } else { // Draw overall match - return stakes in PvP
-                 finalWinnerAddress = nil // No winner in draw
-                 finalLoserAddress = nil
-                 // Each player gets their current stake back
-                 totalWinnings = game.mode == GameMode.PvPStaked ? game.currentStakeAmount : 0.0 // This is per player in case of draw
+                finalWinnerAddress = nil // No winner in draw
+                finalLoserAddress = nil
+                // Each player gets their current stake back
+                totalWinnings = game.mode == GameMode.PvPStaked ? game.currentStakeAmount : 0.0 // This is per player in case of draw
             }
-
 
             game.finalizeResolution(
                 environmentalModifier: environmentalModifier, // Using last round's modifiers for event, could store all
@@ -678,16 +761,16 @@ access(all) contract ElementalStrikers {
         } else {
             // Match is NOT over
             // Set last round winner and loser for double or nothing offer
-            game.lastRoundWinner = roundWinnerAddress
+            game.setLastRoundWinner(winner: roundWinnerAddress)
             if roundWinnerAddress == game.player1 {
-                game.lastRoundLoser = game.player2
+                game.setLastRoundLoser(loser: game.player2)
             } else if roundWinnerAddress == game.player2 {
-                game.lastRoundLoser = game.player1
+                game.setLastRoundLoser(loser: game.player1)
             } else { // Draw round, either player can technically offer, or we can disallow doubling on a draw.
                      // For now, let's assume no one is explicitly the "loser" to offer double on a draw.
                      // The game will proceed to the next round without a double offer phase.
-                game.lastRoundWinner = nil
-                game.lastRoundLoser = nil
+                game.setLastRoundWinner(winner: nil)
+                game.setLastRoundLoser(loser: nil)
                 game.advanceRound() // Use helper function
                 log("Game ID: ".concat(gameId.toString()).concat(" - Round ").concat((game.currentRound - 1).toString()).concat(" was a draw. Moving to Round ").concat(game.currentRound.toString()).concat(". Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString()))
                 return // Exit early as we are not going to awaitingDoubleOffer
@@ -695,13 +778,13 @@ access(all) contract ElementalStrikers {
 
             // If there was a winner for the round, proceed to awaitingDoubleOffer
             if game.lastRoundLoser != nil { // lastRoundLoser is set only if there's a round winner
-                game.status = GameStatus.awaitingDoubleOffer
+                game.setStatus(newStatus: GameStatus.awaitingDoubleOffer)
                 log("Game ID: ".concat(gameId.toString()).concat(" - Round ").concat(game.currentRound.toString()).concat(" resolved. Player ").concat(game.lastRoundLoser!.toString()).concat(" can offer to double. Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString()))
             } else {
                  // This case should ideally not be reached if the draw logic is correct above.
                  // If somehow it is, advance round to prevent game getting stuck.
                 game.advanceRound()
-                log("Game ID: ".concat(gameId.toString()).concat(" - Round ".concat((game.currentRound - 1).toString()).concat(" resolved (unexpected state). Moving to Round ").concat(game.currentRound.toString()).concat(". Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString()))
+                log("Game ID: ".concat(gameId.toString()).concat(" - Round ".concat((game.currentRound - 1).toString()).concat(" resolved (unexpected state). Moving to Round ").concat(game.currentRound.toString()).concat(". Score: P1 ").concat(game.player1Score.toString()).concat(" - P2 ").concat(game.player2Score.toString())))
             }
         }
     }
@@ -723,7 +806,7 @@ access(all) contract ElementalStrikers {
 
     // Add this new public function:
     access(all) fun getGamePublicDetails(gameId: UInt64): GameDetails? {
-        if let gameRef = &self.games[gameId] as &Game? {
+        if let gameRef = ElementalStrikers.borrowGame(gameId: gameId) { // Use borrowGame
             return GameDetails(gameRef: gameRef)
         }
         return nil

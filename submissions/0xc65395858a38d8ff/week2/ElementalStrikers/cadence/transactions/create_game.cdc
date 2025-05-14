@@ -42,8 +42,8 @@ transaction(stakeAmount: UFix64, totalRounds: UInt64) {
             player1Address: self.playerAddress, // Pass the signer's address
             player1StakeVault: <-self.stakeVault,
             initialStakeAmount: stakeAmount,
-            totalRounds: totalRounds // Pass totalRounds to the contract function
+            initialMaxWins: totalRounds // Changed label from totalRounds to initialMaxWins
         )
-        log("Game created with ID: ".concat(gameId.toString()).concat(" with stake: ").concat(stakeAmount.toString()).concat(" for ").concat(totalRounds.toString()).concat(" rounds."))
+        log("Game created with ID: ".concat(gameId.toString()).concat(" with stake: ").concat(stakeAmount.toString()).concat(" for ").concat(totalRounds.toString()).concat(" initial max wins.")) // Updated log message for clarity
     }
 } 

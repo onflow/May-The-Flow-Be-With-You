@@ -42,9 +42,22 @@ access(all) contract OnchainCraps {
 
     //add overall userInfo here instead of above
 
-    access (all) fun rollDice() { //could change this to access (all), but account is more granular
-      //use VRF here
-      log("rolling dice you dirty bastard")
+    access (all) fun rollDice(newBets: {String:Bet}? ) { //could change this to access (all), but account is more granular
+
+      // Generate first & seconde dice roll (1-6)
+      let firstRoll = revertibleRandom<UInt8>(modulo: 6) + 1
+      let secondRoll = revertibleRandom<UInt8>(modulo: 6) + 1
+
+      if(self.state == OnchainCraps.GameState.COMEOUT){
+
+        //assert that there is at least 1 bet on the board & bet must be PASS or Field
+        assert(newBets != nil && newBets!.length > 1, message: "Come out rolls need a bet placed")
+
+        //loop through bets and update the state of this game
+        
+
+      }
+
     }
 
     init() {

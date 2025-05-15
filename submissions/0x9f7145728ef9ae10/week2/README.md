@@ -2,9 +2,12 @@
 
 ## Flow Address
 0x9f7145728ef9ae10 (FLOW)
+<br>
 0x000000000000000000000002A01c2368336B105C (FLOW EVM)
 
 ## Purpose
+
+![ezgif-8a53a3a85716e7 (1)](https://github.com/user-attachments/assets/d6fefacb-82ea-443e-87f8-b77857dd7b05)
 
 This is a Doodles-themed on-chain memory card game that adds a chaotic twist to the traditional version by using on-chain randomness to trigger unexpected traps.
 
@@ -20,5 +23,5 @@ Here’s a link to the live version — feel free to give it a quick try: [Start
 
 If you'd like to host your own version or build on top of it (always encouraged!), keep in mind that you’ll need to redeploy the smart contracts and include your private key in the .env file for NFT minting functionality.
 
-Since this project uses RainbowKit, you’ll also need to obtain a Reown project key (here)[https://cloud.reown.com/sign-in] to complete the setup.
+Since this project uses RainbowKit, you’ll also need to obtain a Reown project key [here](https://cloud.reown.com/sign-in) to complete the setup.
 

@@ -15,18 +15,17 @@
 
 ### Next Steps
 
-1. **Admin Resource Implementation**
+1. **Bet Management**
+   - Implement bet validation
+   - Add bet resolution rules
+   - Create payout calculation logic
+
+2. **Admin Resource Implementation**
    - Implement CrapsAdmin functions:
      - Transfer coins from Craps Vault
      - Add new token vaults
      - Add new bet types
    - Complete access control implementation
-
-2. **Core Game Functions**
-   - Implement placeBet function
-   - Add rollDice function with randomness
-   - Create bet resolution logic
-   - Add game state transition logic
 
 3. **User Info Storage**
    - Implement commented userInfo storage
@@ -35,12 +34,7 @@
      - Balance history
      - Game history
 
-4. **Bet Management**
-   - Implement bet validation
-   - Add bet resolution rules
-   - Create payout calculation logic
-
-5. **Testing & Validation**
+4. **Testing & Validation**
    - Create test cases for all game states
    - Implement bet validation tests
    - Add integration tests

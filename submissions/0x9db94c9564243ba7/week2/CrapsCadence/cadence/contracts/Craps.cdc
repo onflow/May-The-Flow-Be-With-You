@@ -35,18 +35,19 @@ access(all) contract OnchainCraps {
   access (all) resource Game {
     access(all) var state: OnchainCraps.GameState
     access(all) var point: Int? 
-    access(all) var pointAmount: UFix64?
+    //access(all) var pointAmount: UFix64?
     access(all) var come: Int?
     access(all) var bets: { String : Bet }
     access(all) let id: UInt64
 
     //add overall userInfo here instead of above
 
-    access (all) fun rollDice(newBets: {String:Bet}? ) { //could change this to access (all), but account is more granular
+    access (all) fun rollDice(userAddress: Address, newBets: {String:Bet}? ) { //could change this to access (all), but account is more granular
 
       // Generate first & seconde dice roll (1-6)
       let firstRoll = revertibleRandom<UInt8>(modulo: 6) + 1
       let secondRoll = revertibleRandom<UInt8>(modulo: 6) + 1
+      let diceTotal = firstRoll + secondRoll
 
       if(self.state == OnchainCraps.GameState.COMEOUT){
 
@@ -54,7 +55,29 @@ access(all) contract OnchainCraps {
         assert(newBets != nil && newBets!.length > 1, message: "Come out rolls need a bet placed")
 
         //loop through bets and update the state of this game
-        
+        for bet in newBets?.keys! {
+
+            //make sure newBets only cointains keys "PASS" and "FIELD
+            assert(bet == "PASS" || bet == "FIELD", message: "Come out rolls can only have PASS or FIELD bets")
+
+            if bet == "PASS" {
+              //set the point
+              self.point = Int(diceTotal)
+              
+              if diceTotal == 7 {
+              //payout the user 1:1
+              let userPayout = self.bets["PASS"]!.amount 
+
+              //need to get users account to send
+              let userRef = getAccount(userAddress)
+
+              //send the userPayout to the user - NEXT STEP
+          
+        }
+
+
+            }
+        }
 
       }
 
@@ -66,7 +89,7 @@ access(all) contract OnchainCraps {
 
       self.state = OnchainCraps.GameState.COMEOUT //we will need to change this to the enum
       self.point = nil
-      self.pointAmount = nil
+      //self.pointAmount = nil
       self.come = nil
       self.bets = {}
     }

@@ -5,8 +5,7 @@
 This project is part of the "May the Flow be with You" hackathon, focusing on creating innovative applications on the Flow blockchain.
 
 ## Team
-- Developer: [Your Name]
-- Flow Address: 0xd10Af01D4f617974726eeeC717FBC642df69CB58
+
 
 ## Motivation
 The goal of this project is to explore and leverage the Flow blockchain's capabilities to create engaging applications that align with the weekly themes of the hackathon:

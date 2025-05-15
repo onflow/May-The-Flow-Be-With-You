@@ -1,6 +1,6 @@
 # Click to Moon 🚀
 
-A blockchain-based clicker game built on Flow blockchain where players click a rocket to generate thrust points and purchase upgrades.
+A blockchain-based clicker game built on Flow blockchain where players click a rocket to generate thrust points and purchase upgrades. [similar to cookie clicker]
 
 ## Features
 

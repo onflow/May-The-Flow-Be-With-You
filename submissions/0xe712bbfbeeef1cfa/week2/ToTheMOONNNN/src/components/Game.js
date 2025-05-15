@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const SPACE_BG = process.env.PUBLIC_URL + '/space-bg.png';
 const ROCKET = process.env.PUBLIC_URL + '/rocket.png';
@@ -7,12 +7,17 @@ const PLANETS = [
   process.env.PUBLIC_URL + '/moon.png',
   process.env.PUBLIC_URL + '/mars.png',
 ];
+const BG_MUSIC = process.env.PUBLIC_URL + '/sound_effects.mp3';
+const LASER_SOUND = process.env.PUBLIC_URL + '/laser.mp3';
+const ALIEN_IMG = process.env.PUBLIC_URL + '/alien.png';
 
 const BOOSTER_COST = 10;
 const AUTO_THRUSTER_COST = 50;
 const GOAL_THRUST = 100; // Goal thrust points to reach 100%
 const COMBO_TIMEOUT = 1000; // 1 second to maintain combo
 const PARTICLE_COUNT = 20; // Number of particles during launch
+const AIM_ALIENS = 10;
+const AIM_TIME = 1000; // ms to click each alien
 
 const Game = () => {
   const [thrustPoints, setThrustPoints] = useState(0);
@@ -25,6 +30,38 @@ const Game = () => {
   const [lastClickTime, setLastClickTime] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
   const [planetIndex, setPlanetIndex] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const audioRef = useRef(null);
+  const laserRef = useRef(null);
+  const [missionActive, setMissionActive] = useState(false);
+  const [alienIndex, setAlienIndex] = useState(0);
+  const [alienPos, setAlienPos] = useState({ x: 50, y: 50 });
+  const [alienVisible, setAlienVisible] = useState(false);
+  const [missionFailed, setMissionFailed] = useState(false);
+  const alienTimeout = useRef(null);
+
+  // Play background music on first user interaction
+  useEffect(() => {
+    const startMusic = () => {
+      if (audioRef.current) {
+        audioRef.current.volume = 0.5;
+        audioRef.current.play().catch(() => {});
+      }
+      window.removeEventListener('pointerdown', startMusic);
+    };
+    window.addEventListener('pointerdown', startMusic);
+    return () => window.removeEventListener('pointerdown', startMusic);
+  }, []);
+
+  // Mute/unmute effect
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = muted;
+    }
+    if (laserRef.current) {
+      laserRef.current.muted = muted;
+    }
+  }, [muted]);
 
   // Create particles for launch effect
   const createParticles = () => {
@@ -120,17 +157,69 @@ const Game = () => {
 
   // Check if goal is reached
   useEffect(() => {
-    if (thrustPoints >= GOAL_THRUST && !isLaunching) {
+    if (thrustPoints >= GOAL_THRUST && !isLaunching && !missionActive) {
+      setMissionActive(true);
+      setAlienIndex(0);
+      setMissionFailed(false);
+    }
+  }, [thrustPoints, isLaunching, missionActive]);
+
+  // Handle mission logic
+  useEffect(() => {
+    if (!missionActive) return;
+    if (missionFailed) return;
+    if (alienIndex >= AIM_ALIENS) {
+      // Mission success: proceed to takeoff
+      setMissionActive(false);
       setIsLaunching(true);
       createParticles();
       setTimeout(() => {
         setThrustPoints(0);
         setIsLaunching(false);
         setParticles([]);
-        setPlanetIndex(idx => (idx + 1) % PLANETS.length); // Rotate planet
+        setPlanetIndex(idx => (idx + 1) % PLANETS.length);
       }, 2000);
+      return;
     }
-  }, [thrustPoints, isLaunching]);
+    // Show next alien
+    const x = 10 + Math.random() * 80; // 10% to 90%
+    const y = 20 + Math.random() * 60; // 20% to 80%
+    setAlienPos({ x, y });
+    setAlienVisible(true);
+    if (alienTimeout.current) clearTimeout(alienTimeout.current);
+    alienTimeout.current = setTimeout(() => {
+      setAlienVisible(false);
+      setMissionFailed(true);
+    }, AIM_TIME);
+    // Cleanup on unmount
+    return () => {
+      if (alienTimeout.current) clearTimeout(alienTimeout.current);
+    };
+  }, [alienIndex, missionActive, missionFailed]);
+
+  // Handle alien click
+  const handleAlienClick = () => {
+    // Play laser sound
+    if (laserRef.current) {
+      laserRef.current.currentTime = 0;
+      laserRef.current.play().catch(() => {});
+    }
+    setAlienVisible(false);
+    setAlienIndex(idx => idx + 1);
+    if (alienTimeout.current) clearTimeout(alienTimeout.current);
+  };
+
+  // Reset mission on fail
+  useEffect(() => {
+    if (missionFailed) {
+      setTimeout(() => {
+        setMissionActive(false);
+        setAlienIndex(0);
+        setAlienVisible(false);
+        setMissionFailed(false);
+      }, 1500);
+    }
+  }, [missionFailed]);
 
   // Update particles
   useEffect(() => {
@@ -166,6 +255,22 @@ const Game = () => {
         backgroundPosition: 'center',
       }}
     >
+      {/* Background music */}
+      <audio ref={audioRef} src={BG_MUSIC} loop style={{ display: 'none' }} />
+      {/* Laser sound effect */}
+      <audio ref={laserRef} src={LASER_SOUND} style={{ display: 'none' }} />
+      <button
+        onClick={() => setMuted(m => !m)}
+        className="absolute top-4 right-4 z-20 bg-gray-800 bg-opacity-70 rounded-full p-2 hover:bg-gray-700 transition-colors"
+        aria-label={muted ? 'Unmute background music' : 'Mute background music'}
+      >
+        {muted ? (
+          <span role="img" aria-label="Unmute">🔈</span>
+        ) : (
+          <span role="img" aria-label="Mute">🔇</span>
+        )}
+      </button>
+
       {/* Rotating planet at the top center */}
       <img
         src={PLANETS[planetIndex]}
@@ -268,6 +373,41 @@ const Game = () => {
           </button>
         </div>
       </div>
+
+      {/* Mission Aim Mini-game Overlay */}
+      {missionActive && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 z-30">
+          <div className="text-3xl mb-8">Aim Practice! {missionFailed ? 'Mission Failed!' : `Alien ${alienIndex + 1} / ${AIM_ALIENS}`}</div>
+          {alienVisible && !missionFailed && (
+            <button
+              onClick={handleAlienClick}
+              className="absolute"
+              style={{
+                left: `${alienPos.x}%`,
+                top: `${alienPos.y}%`,
+                width: 80,
+                height: 80,
+                transform: 'translate(-50%, -50%)',
+                transition: 'left 0.2s, top 0.2s',
+                zIndex: 40,
+                padding: 0,
+                background: 'none',
+                border: 'none',
+              }}
+              aria-label="Alien"
+            >
+              <img
+                src={ALIEN_IMG}
+                alt="Alien"
+                style={{ width: 80, height: 80, imageRendering: 'pixelated', pointerEvents: 'none' }}
+              />
+            </button>
+          )}
+          {missionFailed && (
+            <div className="text-xl text-red-400 mt-8">You missed! Try again next launch.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

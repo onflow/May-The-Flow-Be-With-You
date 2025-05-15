@@ -1,0 +1,25 @@
+{
+    "networks": {
+      "emulator": "127.0.0.1:3569",
+      "mainnet": "access.mainnet.nodes.onflow.org:9000",
+      "testnet": "access.devnet.nodes.onflow.org:9000"
+    },
+    "contracts": {
+      "ClickToMoon": "./cadence/contracts/ClickToMoon.cdc"
+    },
+    "accounts": {
+      "testnet-account": {
+        "address": "0x243ec34873434f50",
+        "key": {
+          "type": "file",
+          "location": "testnet-account.pkey"
+        }
+      }
+    },
+    "deployments": {
+      "testnet": {
+        "testnet-account": ["ClickToMoon"]
+      }
+    }
+}
+  

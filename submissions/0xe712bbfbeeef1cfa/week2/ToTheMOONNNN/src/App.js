@@ -1,5 +1,4 @@
 import React from 'react';
-import './config';
 import Game from './components/Game';
 
 function App() {

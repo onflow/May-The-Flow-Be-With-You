@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import * as fcl from '@onflow/fcl';
-import { getPlayerData, createPlayer, generateThrust, purchaseBooster, purchaseAutoThruster, setupPlayerStorage } from '../flow/transactions';
 
 const SPACE_BG = process.env.PUBLIC_URL + '/space-bg.png';
 const ROCKET = process.env.PUBLIC_URL + '/rocket.png';
@@ -19,7 +17,7 @@ const GOAL_THRUST = 100; // Goal thrust points to reach 100%
 const COMBO_TIMEOUT = 1000; // 1 second to maintain combo
 const PARTICLE_COUNT = 20; // Number of particles during launch
 const AIM_ALIENS = 10;
-const AIM_TIME = 1000; // ms to click each alien
+const AIM_TIME = 1000;
 
 const Game = () => {
   const [thrustPoints, setThrustPoints] = useState(0);
@@ -41,72 +39,6 @@ const Game = () => {
   const [alienVisible, setAlienVisible] = useState(false);
   const [missionFailed, setMissionFailed] = useState(false);
   const alienTimeout = useRef(null);
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Initialize Flow user
-  useEffect(() => {
-    const unsubscribe = fcl.currentUser.subscribe(setUser);
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
-
-  // Load player data from blockchain
-  useEffect(() => {
-    const loadPlayerData = async () => {
-      if (!user?.addr) return;
-      
-      // Ensure PlayerStorage is set up
-      await setupPlayerStorage();
-      try {
-        const data = await getPlayerData(user.addr);
-        if (data) {
-          setThrustPoints(Number(data.thrustPoints));
-          setClickMultiplier(Number(data.clickMultiplier));
-          setAutoThrusters(Number(data.autoThrusters));
-        } else {
-          // Create new player if none exists
-          const success = await createPlayer();
-          if (success) {
-            // Reload data after creation
-            const newData = await getPlayerData(user.addr);
-            if (newData) {
-              setThrustPoints(Number(newData.thrustPoints));
-              setClickMultiplier(Number(newData.clickMultiplier));
-              setAutoThrusters(Number(newData.autoThrusters));
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error loading player data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadPlayerData();
-  }, [user?.addr]);
-
-  // Refresh player data periodically
-  useEffect(() => {
-    if (!user?.addr) return;
-
-    const refreshInterval = setInterval(async () => {
-      try {
-        const data = await getPlayerData(user.addr);
-        if (data) {
-          setThrustPoints(Number(data.thrustPoints));
-          setClickMultiplier(Number(data.clickMultiplier));
-          setAutoThrusters(Number(data.autoThrusters));
-        }
-      } catch (error) {
-        console.error('Error refreshing player data:', error);
-      }
-    }, 2000); // Refresh every 2 seconds
-
-    return () => clearInterval(refreshInterval);
-  }, [user?.addr]);
 
   // Play background music on first user interaction
   useEffect(() => {
@@ -146,12 +78,7 @@ const Game = () => {
   };
 
   // Handle click with combo system
-  const handleClick = async () => {
-    if (!user?.addr) {
-      alert('Please connect your wallet first!');
-      return;
-    }
-
+  const handleClick = () => {
     const now = Date.now();
     const timeSinceLastClick = now - lastClickTime;
     setLastClickTime(now);
@@ -163,84 +90,44 @@ const Game = () => {
       setCombo(1);
     }
 
-    try {
-      await generateThrust();
-      // Refresh data after transaction
-      const data = await getPlayerData(user.addr);
-      if (data) {
-        setThrustPoints(Number(data.thrustPoints));
-        setClickMultiplier(Number(data.clickMultiplier));
-        setAutoThrusters(Number(data.autoThrusters));
-      }
+    // Add thrust points
+    setThrustPoints(tp => tp + clickMultiplier);
 
-      // Add floating text with combo info
-      const angle = Math.random() * 2 * Math.PI;
-      const radius = Math.random() * 30;
-      const left = 50 + radius * Math.cos(angle);
-      const top = 50 + radius * Math.sin(angle);
-      setFloatingTexts(prev => [...prev, {
-        id: Date.now(),
-        text: `+${clickMultiplier.toFixed(1)}${combo > 1 ? ` (${combo}x)` : ''}`,
-        isAuto: false,
-        left,
-        top,
-      }]);
+    // Add floating text with combo info
+    const angle = Math.random() * 2 * Math.PI;
+    const radius = Math.random() * 30;
+    const left = 50 + radius * Math.cos(angle);
+    const top = 50 + radius * Math.sin(angle);
+    setFloatingTexts(prev => [...prev, {
+      id: Date.now(),
+      text: `+${clickMultiplier.toFixed(1)}${combo > 1 ? ` (${combo}x)` : ''}`,
+      isAuto: false,
+      left,
+      top,
+    }]);
 
-      // Visual feedback
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 100);
-    } catch (error) {
-      console.error('Error generating thrust:', error);
-    }
+    // Visual feedback
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 100);
   };
 
   // Purchase booster with visual feedback
-  const handlePurchaseBooster = async () => {
-    if (!user?.addr) {
-      alert('Please connect your wallet first!');
-      return;
-    }
-
+  const handlePurchaseBooster = () => {
     if (thrustPoints >= BOOSTER_COST) {
-      try {
-        await purchaseBooster();
-        // Refresh data after transaction
-        const data = await getPlayerData(user.addr);
-        if (data) {
-          setThrustPoints(Number(data.thrustPoints));
-          setClickMultiplier(Number(data.clickMultiplier));
-          setAutoThrusters(Number(data.autoThrusters));
-        }
-        setIsShaking(true);
-        setTimeout(() => setIsShaking(false), 200);
-      } catch (error) {
-        console.error('Error purchasing booster:', error);
-      }
+      setThrustPoints(tp => tp - BOOSTER_COST);
+      setClickMultiplier(cm => cm + 1);
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 200);
     }
   };
 
   // Purchase auto-thruster with visual feedback
-  const handlePurchaseAutoThruster = async () => {
-    if (!user?.addr) {
-      alert('Please connect your wallet first!');
-      return;
-    }
-
+  const handlePurchaseAutoThruster = () => {
     if (thrustPoints >= AUTO_THRUSTER_COST) {
-      try {
-        await purchaseAutoThruster();
-        // Refresh data after transaction
-        const data = await getPlayerData(user.addr);
-        if (data) {
-          setThrustPoints(Number(data.thrustPoints));
-          setClickMultiplier(Number(data.clickMultiplier));
-          setAutoThrusters(Number(data.autoThrusters));
-        }
-        setIsShaking(true);
-        setTimeout(() => setIsShaking(false), 200);
-      } catch (error) {
-        console.error('Error purchasing auto-thruster:', error);
-      }
+      setThrustPoints(tp => tp - AUTO_THRUSTER_COST);
+      setAutoThrusters(at => at + 1);
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 200);
     }
   };
 
@@ -355,19 +242,6 @@ const Game = () => {
   }, []);
 
   const progress = Math.min((thrustPoints / GOAL_THRUST) * 100, 100);
-
-  if (isLoading) {
-    return <div className="loading">Loading game data...</div>;
-  }
-
-  if (!user?.addr) {
-    return (
-      <div className="connect-wallet">
-        <h2>Connect your wallet to play!</h2>
-        <button onClick={() => fcl.authenticate()}>Connect Wallet</button>
-      </div>
-    );
-  }
 
   return (
     <div

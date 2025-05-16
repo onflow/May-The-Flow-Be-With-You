@@ -1,27 +1,26 @@
 # Click to Moon 🚀
 
-A blockchain-based clicker game built on Flow blockchain where players click a rocket to generate thrust points and purchase upgrades. [similar to cookie clicker]
+A fun clicker game where players click a rocket to generate thrust points and purchase upgrades. [similar to cookie clicker]
 
 ## Features
 
 - Click to generate thrust points
 - Purchase boosters to increase points per click
 - Buy auto-thrusters for passive income
-- All progress stored on-chain using Flow blockchain
+- Aim practice mini-game when reaching 100 thrust points
 - Modern UI with Tailwind CSS
+- Sound effects and visual feedback
 
 ## Prerequisites
 
 - Node.js 14+ and npm
-- Flow CLI (for contract deployment)
-- A Flow wallet (like Blocto or Lilico)
 
 ## Setup
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/click-to-moon.git
-cd click-to-moon
+git clone https://github.com/yourusername/ToTheMOONNNN.git
+cd ToTheMOONNNN
 ```
 
 2. Install dependencies:
@@ -29,42 +28,23 @@ cd click-to-moon
 npm install
 ```
 
-3. Deploy the smart contract:
-```bash
-flow deploy
-```
-
-4. Update the contract address in `src/config.js` with your deployed contract address.
-
-5. Start the development server:
+3. Start the development server:
 ```bash
 npm start
 ```
 
-## Smart Contract
+## Game Features
 
-The game's core logic is implemented in Cadence (Flow's smart contract language) and includes:
-
-- Player resource for storing game state
-- Thrust point generation
+The game includes:
+- Click mechanics with combo system
 - Upgrade system (boosters and auto-thrusters)
-- Event emission for tracking game progress
+- Aim practice mini-game
+- Visual effects and particles
+- Background music and sound effects
 
 ## Frontend
 
 The React frontend uses:
-- Flow Client Library (FCL) for blockchain interaction
+- React for the UI
 - Tailwind CSS for styling
-- Custom hooks for wallet integration
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- Custom animations and effects

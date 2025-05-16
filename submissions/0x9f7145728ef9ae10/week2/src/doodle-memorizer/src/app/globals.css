@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FEF6F0; /* Add your custom background color variable */
+}
+
+body {
+  background-color: var(--background); /* Apply the custom background color */
+}
+
+.perspective {
+  perspective: 1000px;
+}
+.transform-style-preserve-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Rainbow Effect */
+
+.rainbow-spiral-shadow::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 1rem;
+  background: conic-gradient(
+    from 0deg,
+    hsla(0, 80%, 75%, 0.8),
+    hsla(30, 80%, 75%, 0.8),
+    hsla(60, 80%, 75%, 0.8),
+    hsla(120, 80%, 75%, 0.8),
+    hsla(180, 80%, 75%, 0.8),
+    hsla(240, 80%, 75%, 0.8),
+    hsla(300, 80%, 75%, 0.8),
+    hsla(360, 80%, 75%, 0.8)
+  );
+  z-index: -5;
+  filter: blur(10px) brightness(1.1);
+}
+
+/* Toast */
+@keyframes progressBar {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+.animate-progress {
+  animation-name: progressBar;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards; /* Ensures the animation stops at 100% */
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+
+  10% {
+    transform: translateX(2px);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  30% {
+    transform: translateX(2px);
+  }
+  40% {
+    transform: translateX(-2px);
+  }
+  50% {
+    transform: translateX(1px);
+  }
+  60% {
+    transform: translateX(-1px);
+  }
+
+  /* Rest of the cycle is calm */
+  61% to 100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes enterFromRight {
+  0% { transform: translateX(100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes exitToRight {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+.animate-shake {
+   animation: shake 1.5s ease-in-out infinite;
+}
+
+.animate-enter {
+  animation: enterFromRight 0.4s ease-out forwards;
+}
+
+.animate-leave {
+  animation: exitToRight 0.3s ease-in forwards;
+}

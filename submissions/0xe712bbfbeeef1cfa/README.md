@@ -26,15 +26,14 @@ Building a deterministic reward system on-chain without access to true randomnes
 
 **Theme:** Actually Fun Games
 
-For Week 2, I built **Click-to-Moon**, a meme-infused on-chain clicker game where players generate *thrust points* by clicking a rocket button. Players can upgrade their boosters, automate thrust generation, and race to reach the Moon — all while progress is stored securely on the Flow blockchain.
+For Week 2, I built **Click-to-Moon**, a meme-infused clicker game where players generate *thrust points* by clicking a rocket. Players can upgrade their boosters, automate thrust generation, and race to reach the Moon.
 
-- ✅ Smart contract deployed to Flow Testnet: ``
 - ✅ Frontend built in React with animated rocket and real-time thrust counter
 - ✅ Players can upgrade boosters to increase thrust per click
-- 🔄 Auto-thrust upgrades and milestone-based NFT rewards in progress
+- Planning to include a feature such that players progress are saved on-chain
 
 🧠 **Key learning from Week 2:**  
-Balancing on-chain state management with fun gameplay mechanics, optimizing Cadence resource logic for repeated player interactions, and creating a gameplay loop that is simple but addictive.
+Balancing state management with fun gameplay mechanics and creating a gameplay loop that is simple but addictive.
 
 ---
 

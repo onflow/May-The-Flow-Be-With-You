@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Number Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"
+        type="application/javascript"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Random Number Generator</h1>
+        <div class="input-group">
+            <label for="min">Minimum Number:</label>
+            <input type="number" id="min" value="1" min="0">
+        </div>
+        <div class="input-group">
+            <label for="max">Maximum Number:</label>
+            <input type="number" id="max" value="100" min="0">
+        </div>
+        <button onclick="getRandomNumber()">Generate Random Number</button>
+        <div id="result">Result will appear here...</div>
+        <div id="debug"
+            style="margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 4px; font-family: monospace; font-size: 12px;">
+        </div>
+    </div>
+
+    <script>
+        // Wait for the page to load
+        window.addEventListener('load', function () {
+            // Check if ethers is loaded
+            if (typeof ethers === 'undefined') {
+                document.getElementById('result').textContent = 'Error: ethers.js library failed to load. Please refresh the page.';
+                return;
+            }
+
+            // Using the deployed contract address from makefile
+            const contractAddress = "0xf8c73bCd64b1c4fB92fB4BDB8A5e74c3ef7C7eDe";
+            const contractABI = [
+                {
+                    "inputs": [
+                        {
+                            "internalType": "uint64",
+                            "name": "min",
+                            "type": "uint64"
+                        },
+                        {
+                            "internalType": "uint64",
+                            "name": "max",
+                            "type": "uint64"
+                        }
+                    ],
+                    "name": "getRandomInRange",
+                    "outputs": [
+                        {
+                            "internalType": "uint64",
+                            "name": "",
+                            "type": "uint64"
+                        }
+                    ],
+                    "stateMutability": "view",
+                    "type": "function"
+                }
+            ];
+
+            // Connect to Flow testnet
+            const provider = new ethers.providers.JsonRpcProvider("https://testnet.evm.nodes.onflow.org");
+            const contract = new ethers.Contract(contractAddress, contractABI, provider);
+
+            // Debug function to log information
+            function debugLog(message) {
+                const debugDiv = document.getElementById('debug');
+                debugDiv.innerHTML += message + '<br>';
+                console.log(message);
+            }
+
+            // Make getRandomNumber available globally
+            window.getRandomNumber = async function () {
+                const min = document.getElementById('min').value;
+                const max = document.getElementById('max').value;
+                const resultDiv = document.getElementById('result');
+                const debugDiv = document.getElementById('debug');
+                debugDiv.innerHTML = ''; // Clear previous debug messages
+
+                try {
+                    debugLog(`Attempting to call getRandomInRange with min=${min}, max=${max}`);
+                    debugLog(`Contract address: ${contractAddress}`);
+                    debugLog(`Provider URL: ${provider.connection.url}`);
+
+                    resultDiv.textContent = "Generating random number...";
+
+                    // Validate inputs
+                    if (min >= max) {
+                        throw new Error("Minimum number must be less than maximum number");
+                    }
+                    if (min < 0 || max < 0) {
+                        throw new Error("Numbers must be positive");
+                    }
+
+                    // Convert inputs to BigNumber
+                    const minBN = ethers.BigNumber.from(min);
+                    const maxBN = ethers.BigNumber.from(max);
+
+                    debugLog(`Calling contract with BigNumber values: min=${minBN.toString()}, max=${maxBN.toString()}`);
+
+                    // Try to get the contract code first to verify it exists
+                    const code = await provider.getCode(contractAddress);
+                    debugLog(`Contract code exists: ${code !== '0x'}`);
+
+                    const randomNumber = await contract.getRandomInRange(minBN, maxBN);
+                    debugLog(`Success! Random number: ${randomNumber.toString()}`);
+                    resultDiv.textContent = `Random number between ${min} and ${max}: ${randomNumber.toString()}`;
+                } catch (error) {
+                    debugLog(`Error details: ${error.message}`);
+                    if (error.data) {
+                        debugLog(`Error data: ${error.data}`);
+                    }
+                    resultDiv.textContent = `Error: ${error.message}`;
+                    console.error("Error:", error);
+                }
+            };
+        });
+    </script>
+</body>
+
+</html>

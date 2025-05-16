@@ -16,7 +16,6 @@ access(all) contract OnchainCraps {
   //tbd implement: access (all) let userInfo: { Address : String } - probably best to store in Game
 
   access(all) enum GameState: UInt8 {
-    access(all) case NOBETS /// No Bets currently
     access(all) case COMEOUT /// COMEOUT Bets
     access(all) case POINT /// POINT Bets
     access(all) case RESOLVED /// TBD State
@@ -32,6 +31,16 @@ access(all) contract OnchainCraps {
     }
   }
 
+  access(all) struct RollResult {
+    access(all) let message: String
+    access(all) let value: UInt8
+
+    init(message: String, value: UInt8) {
+        self.message = message
+        self.value = value
+    }
+}
+
   access (all) resource Game {
     access(all) var state: OnchainCraps.GameState
     access(all) var point: Int? 
@@ -42,7 +51,7 @@ access(all) contract OnchainCraps {
 
     //add overall userInfo here instead of above
 
-    access (all) fun rollDice(userAddress: Address, newBets: {String:Bet}? ) { //could change this to access (all), but account is more granular
+    access (all) fun rollDice(userAddress: Address, newBets: {String:Bet}? ) : RollResult {
 
       // Generate first & seconde dice roll (1-6)
       let firstRoll = revertibleRandom<UInt8>(modulo: 6) + 1
@@ -57,29 +66,43 @@ access(all) contract OnchainCraps {
         //loop through bets and update the state of this game
         for bet in newBets?.keys! {
 
-            //make sure newBets only cointains keys "PASS" and "FIELD
-            assert(bet == "PASS" || bet == "FIELD", message: "Come out rolls can only have PASS or FIELD bets")
+          //make sure newBets only cointains keys "PASS" and "FIELD
+          assert(bet == "PASS" || bet == "FIELD", message: "Come out rolls can only have PASS or FIELD bets")
 
-            if bet == "PASS" {
-              //set the point
-              self.point = Int(diceTotal)
+          if bet == "PASS" {
+            // Check for craps (lose) first
+            if diceTotal == 2 || diceTotal == 3 || diceTotal == 12 {
               
-              if diceTotal == 7 {
+              //send coins to the admin account - payment todo
+              
+              return OnchainCraps.RollResult( message: "LOSE", value: diceTotal)
+            }
+            
+            // Check for natural win (7 or 11)
+            if diceTotal == 7 || diceTotal == 11 {
               //payout the user 1:1
               let userPayout = self.bets["PASS"]!.amount 
 
               //need to get users account to send
               let userRef = getAccount(userAddress)
-
-              //send the userPayout to the user - NEXT STEP
-          
-        }
-
-
+              //send the userPayout to the user - payment todo
+              
+            } 
+            
+            // If we get here, it's a valid point number (4,5,6,8,9,10)
+            if diceTotal == 4 || diceTotal == 5 || diceTotal == 6 || 
+                diceTotal == 8 || diceTotal == 9 || diceTotal == 10 {
+              //set the point
+              self.point = Int(diceTotal)
+              self.state = OnchainCraps.GameState.POINT
+              return OnchainCraps.RollResult(message: "NONE", value: diceTotal)
             }
+          }
         }
-
       }
+
+      //we will probably take this out
+      return OnchainCraps.RollResult( message: "NORESOLVE", value: diceTotal)
 
     }
 

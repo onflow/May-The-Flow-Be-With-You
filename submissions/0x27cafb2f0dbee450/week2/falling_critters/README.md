@@ -9,28 +9,26 @@ A fun browser-based game where you need to catch falling animals before they hit
 3. Each caught animal gives you 10 points
 4. The game ends if any animal touches the ground
 5. The animals fall faster as time progresses
-6. Try to get the highest score possible!
 
 ## Game Features
 
 - Random animal spawns
 - Increasing difficulty (faster falling speed)
 - Score tracking
-- Game over screen with final score
-- Restart functionality
+- Fun surprise when you reach a thrershold score
 
 ## Required Files
 
 Make sure you have the following animal images in the `images` directory:
-- cat.png
-- dog.png
-- rabbit.png
-- hamster.png
-- bird.png
+- fox.png
+- wolf.png
+- owl.png
+- deer.png
+- frog.png
 
 ## Setup
 
-1. Place all animal PNG files in the `images` directory
+1. (Place all animal PNG files in the `images` directory)
 2. Open `index.html` in a modern web browser
 3. Start playing!
 

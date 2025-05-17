@@ -99,7 +99,7 @@ class FallingCrittersGame {
             this.scoreElement.textContent = this.score;
             
             // Check if score reached 200
-            if (this.score === 100) {
+            if (this.score === 150) {
                 // Open Flow developers website in a new tab
                 window.open('https://developers.flow.com/', '_blank');
                 // End the game with victory

@@ -1,20 +1,23 @@
 import "OnchainCraps"
 
-transaction {
+transaction(betName: String, amount: UFix64) {
 
     var crapsGameRef: &OnchainCraps.Game?
+    let accountAddress: Address
 
     prepare(acct: auth(BorrowValue, SaveValue) &Account) {
         self.crapsGameRef = acct.storage.borrow<&OnchainCraps.Game>(from: OnchainCraps.GameStoragePath)
+        self.accountAddress = acct.address
 
         if(self.crapsGameRef == nil) {
-            log("new account")
             acct.storage.save(<-OnchainCraps.createDiceGame(), to: OnchainCraps.GameStoragePath)
             self.crapsGameRef = acct.storage.borrow<&OnchainCraps.Game>(from: OnchainCraps.GameStoragePath)
         }
     }
 
     execute {
-        self.crapsGameRef?.rollDice() ?? panic("cannot access onchain dice resource")
+        let bets = { betName : amount}
+        let result = self.crapsGameRef?.rollDice(userAddress: self.accountAddress, newBets: bets ) ?? panic("cannot access onchain dice resource")
+        log(result)
     }
 }

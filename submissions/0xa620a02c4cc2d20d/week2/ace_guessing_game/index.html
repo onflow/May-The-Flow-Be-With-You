@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess Next Card Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"
+        type="application/javascript"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding: 0 20px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            color: #34495e;
+            font-size: 1.2em;
+            margin: 10px 0 0;
+        }
+
+        .button-container {
+            position: relative;
+            width: 300px;
+            margin-left: 20px;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 50px;
+            margin: 20px 0;
+            padding: 20px;
+            max-width: 2000px;
+            margin: 0 auto;
+        }
+
+        .card {
+            aspect-ratio: 2.5/3.5;
+            background-color: #fff;
+            border: 4px solid #ddd;
+            border-radius: 25px;
+            padding: 90px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            max-width: 900px;
+            margin: 0 auto;
+            overflow: hidden;
+            font-family: "Baskerville", "Times New Roman", serif;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f8f8 100%);
+            animation: cardAppear 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-15px) rotate(2deg);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card.selected {
+            border-color: #1976D2;
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 12px 24px rgba(25, 118, 210, 0.3);
+            animation: selectedPulse 2s infinite;
+        }
+
+        .card.selected::before {
+            background:
+                linear-gradient(45deg, transparent 48%, rgba(25, 118, 210, 0.1) 49%, rgba(25, 118, 210, 0.1) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, rgba(25, 118, 210, 0.1) 49%, rgba(25, 118, 210, 0.1) 51%, transparent 52%);
+            background-size: 30px 30px;
+            opacity: 0.5;
+        }
+
+        .card.selected .card-corner .value,
+        .card.selected .card-corner .suit,
+        .card.selected .card-center {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .card.selected.hearts,
+        .card.selected.diamonds {
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+        }
+
+        .card.selected.spades,
+        .card.selected.clubs {
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+        }
+
+        @keyframes selectedPulse {
+            0% {
+                box-shadow: 0 12px 24px rgba(25, 118, 210, 0.3);
+                transform: translateY(-5px) scale(1.05);
+                background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            }
+
+            50% {
+                box-shadow: 0 12px 24px rgba(25, 118, 210, 0.5);
+                transform: translateY(-5px) scale(1.08);
+                background: linear-gradient(135deg, #BBDEFB 0%, #E3F2FD 100%);
+            }
+
+            100% {
+                box-shadow: 0 12px 24px rgba(25, 118, 210, 0.3);
+                transform: translateY(-5px) scale(1.05);
+                background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            }
+        }
+
+        .card.correct {
+            border-color: #00C853;
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            animation: correctPulse 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 30px rgba(0, 200, 83, 0.8);
+        }
+
+        .card.correct::before {
+            background:
+                linear-gradient(45deg, transparent 48%, rgba(0, 200, 83, 0.1) 49%, rgba(0, 200, 83, 0.1) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, rgba(0, 200, 83, 0.1) 49%, rgba(0, 200, 83, 0.1) 51%, transparent 52%);
+            background-size: 30px 30px;
+            opacity: 0.5;
+        }
+
+        .card.correct .card-corner .value,
+        .card.correct .card-corner .suit,
+        .card.correct .card-center {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .card.correct.hearts,
+        .card.correct.diamonds {
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+        }
+
+        .card.correct.spades,
+        .card.correct.clubs {
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+        }
+
+        @keyframes correctPulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 30px rgba(0, 200, 83, 0.8);
+                background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            }
+
+            50% {
+                transform: scale(1.15);
+                box-shadow: 0 0 40px rgba(0, 200, 83, 1);
+                background: linear-gradient(135deg, #C8E6C9 0%, #E8F5E9 100%);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 30px rgba(0, 200, 83, 0.8);
+                background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            }
+        }
+
+        .card.wrong {
+            border-color: #D50000;
+            background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+            animation: wrongShake 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 30px rgba(213, 0, 0, 0.8);
+        }
+
+        .card.wrong::before {
+            background:
+                linear-gradient(45deg, transparent 48%, rgba(213, 0, 0, 0.1) 49%, rgba(213, 0, 0, 0.1) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, rgba(213, 0, 0, 0.1) 49%, rgba(213, 0, 0, 0.1) 51%, transparent 52%);
+            background-size: 30px 30px;
+            opacity: 0.5;
+        }
+
+        .card.wrong .card-corner .value,
+        .card.wrong .card-corner .suit,
+        .card.wrong .card-center {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .card.wrong.hearts,
+        .card.wrong.diamonds {
+            background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+        }
+
+        .card.wrong.spades,
+        .card.wrong.clubs {
+            background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+        }
+
+        @keyframes wrongShake {
+
+            0%,
+            100% {
+                transform: translateX(0) rotate(0);
+                box-shadow: 0 0 30px rgba(213, 0, 0, 0.8);
+                background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+            }
+
+            25% {
+                transform: translateX(-15px) rotate(-5deg);
+                box-shadow: 0 0 40px rgba(213, 0, 0, 1);
+                background: linear-gradient(135deg, #FFCDD2 0%, #FFEBEE 100%);
+            }
+
+            75% {
+                transform: translateX(15px) rotate(5deg);
+                box-shadow: 0 0 40px rgba(213, 0, 0, 1);
+                background: linear-gradient(135deg, #FFCDD2 0%, #FFEBEE 100%);
+            }
+        }
+
+        .card.hearts,
+        .card.diamonds {
+            color: #D50000;
+            border-color: #D50000;
+            background: linear-gradient(135deg, #ffffff 0%, #ffebee 100%);
+        }
+
+        .card.spades,
+        .card.clubs {
+            color: #000000;
+            border-color: #000000;
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+        }
+
+        .card-corner {
+            position: absolute;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.2;
+            width: 80px;
+            padding: 5px;
+        }
+
+        .card-corner .value {
+            font-size: 2em;
+            font-weight: 900;
+            margin-bottom: 5px;
+            display: block;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-corner .suit {
+            font-size: 1.8em;
+            display: block;
+            margin-top: 2px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-corner.top-left {
+            top: 20px;
+            left: 20px;
+            text-align: left;
+        }
+
+        .card-corner.bottom-right {
+            bottom: 10px;
+            right: -30px;
+            transform: rotate(180deg);
+            text-align: right;
+            align-items: flex-end;
+            width: 80px;
+        }
+
+        .card-corner.bottom-right .value,
+        .card-corner.bottom-right .suit {
+            transform: rotate(180deg);
+        }
+
+        .card-center {
+            font-size: 4em;
+            text-align: center;
+            margin: auto;
+            line-height: 1;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.03) 49%, rgba(0, 0, 0, 0.03) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, rgba(0, 0, 0, 0.03) 49%, rgba(0, 0, 0, 0.03) 51%, transparent 52%);
+            background-size: 30px 30px;
+            pointer-events: none;
+        }
+
+        .card.hearts::before,
+        .card.diamonds::before {
+            background:
+                linear-gradient(45deg, transparent 48%, rgba(212, 0, 0, 0.03) 49%, rgba(212, 0, 0, 0.03) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, rgba(212, 0, 0, 0.03) 49%, rgba(212, 0, 0, 0.03) 51%, transparent 52%);
+            background-size: 30px 30px;
+        }
+
+        .card.spades::before,
+        .card.clubs::before {
+            background:
+                linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.03) 49%, rgba(0, 0, 0, 0.03) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, rgba(0, 0, 0, 0.03) 49%, rgba(0, 0, 0, 0.03) 51%, transparent 52%);
+            background-size: 30px 30px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(25, 118, 210, 0.4);
+            font-weight: bold;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(25, 118, 210, 0.6);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 2px 10px rgba(25, 118, 210, 0.4);
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            position: relative;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.2) 50%,
+                    rgba(255, 255, 255, 0) 100%);
+            animation: shimmer 1.5s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shimmer {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 200%;
+            }
+        }
+
+        .button-text {
+            position: relative;
+            z-index: 1;
+            display: inline-block;
+        }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        @keyframes spin {
+            0% {
+                transform: translateY(-50%) rotate(0deg);
+            }
+
+            100% {
+                transform: translateY(-50%) rotate(360deg);
+            }
+        }
+
+        button.loading .spinner {
+            display: block;
+        }
+
+        button.loading .button-text {
+            padding-right: 40px;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .success {
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            color: #00C853;
+            border: 3px solid #00C853;
+            box-shadow: 0 0 30px rgba(0, 200, 83, 0.5);
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+        .failure {
+            background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+            color: #D50000;
+            border: 3px solid #D50000;
+            box-shadow: 0 0 30px rgba(213, 0, 0, 0.5);
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+        #debug {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-text">
+                <h1>Guess Next Ace</h1>
+                <p>Select an Ace and try to guess if the next card will match your selection!</p>
+            </div>
+            <div class="button-container">
+                <button id="generateButton" onclick="generateRandomCard()" disabled>
+                    <span class="button-text">Gues Next Ace</span>
+                    <div class="spinner"></div>
+                </button>
+            </div>
+        </div>
+
+        <div class="card-grid" id="cardGrid">
+            <!-- Cards will be inserted here by JavaScript -->
+        </div>
+
+        <div id="result"></div>
+        <div id="debug"></div>
+    </div>
+
+    <script>
+        // Wait for the page to load
+        window.addEventListener('load', function () {
+            if (typeof ethers === 'undefined') {
+                document.getElementById('result').textContent = 'Error: ethers.js library failed to load. Please refresh the page.';
+                return;
+            }
+
+            const contractAddress = "0xf8c73bCd64b1c4fB92fB4BDB8A5e74c3ef7C7eDe";
+            const contractABI = [
+                {
+                    "inputs": [
+                        {
+                            "internalType": "uint64",
+                            "name": "min",
+                            "type": "uint64"
+                        },
+                        {
+                            "internalType": "uint64",
+                            "name": "max",
+                            "type": "uint64"
+                        }
+                    ],
+                    "name": "getRandomInRange",
+                    "outputs": [
+                        {
+                            "internalType": "uint64",
+                            "name": "",
+                            "type": "uint64"
+                        }
+                    ],
+                    "stateMutability": "view",
+                    "type": "function"
+                }
+            ];
+
+            const provider = new ethers.providers.JsonRpcProvider("https://testnet.evm.nodes.onflow.org");
+            const contract = new ethers.Contract(contractAddress, contractABI, provider);
+
+            // Card definitions - 4 cards total
+            const cards = [
+                { value: 1, name: 'A', suit: '♥', class: 'hearts' },
+                { value: 2, name: 'A', suit: '♦', class: 'diamonds' },
+                { value: 3, name: 'A', suit: '♣', class: 'clubs' },
+                { value: 4, name: 'A', suit: '♠', class: 'spades' }
+            ];
+
+            let selectedCard = null;
+            let cardElements = [];
+            let selectedCardElement = null;
+
+            // Create card elements
+            const cardGrid = document.getElementById('cardGrid');
+            cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = `card ${card.class}`;
+                cardElement.innerHTML = `
+                    <div class="card-corner top-left">
+                        <span class="value">${card.name}</span>
+                        <span class="suit">${card.suit}</span>
+                    </div>
+                    <div class="card-center">${card.suit}</div>
+                    <div class="card-corner bottom-right">
+                        <span class="value">${card.name}</span>
+                        <span class="suit">${card.suit}</span>
+                    </div>
+                `;
+                cardElement.dataset.value = card.value;
+                cardElement.onclick = () => selectCard(cardElement, card);
+                cardGrid.appendChild(cardElement);
+                cardElements.push(cardElement);
+            });
+
+            function selectCard(element, card) {
+                if (!card) return; // Add safety check
+                // Remove selection from all cards
+                document.querySelectorAll('.card').forEach(c => {
+                    c.classList.remove('selected', 'generated', 'correct', 'wrong');
+                });
+                // Add selection to clicked card
+                element.classList.add('selected');
+                selectedCard = card;
+                selectedCardElement = element;
+                document.getElementById('generateButton').disabled = false;
+            }
+
+            function debugLog(message) {
+                const debugDiv = document.getElementById('debug');
+                debugDiv.innerHTML += message + '<br>';
+                console.log(message);
+            }
+
+            window.generateRandomCard = async function () {
+                if (!selectedCard) {
+                    alert('Please select a card first!');
+                    return;
+                }
+
+                const button = document.getElementById('generateButton');
+                const buttonText = button.querySelector('.button-text');
+                const resultDiv = document.getElementById('result');
+                const debugDiv = document.getElementById('debug');
+                debugDiv.innerHTML = '';
+
+                try {
+                    // Set loading state
+                    button.disabled = true;
+                    button.classList.add('loading');
+                    buttonText.textContent = 'Generating...';
+                    resultDiv.textContent = '';
+
+                    debugLog('Generating random card...');
+                    const randomNumber = await contract.getRandomInRange(1, 4); // Updated to match 4 cards
+                    const randomCard = cards[randomNumber.toNumber() - 1];
+
+                    if (!randomCard) {
+                        throw new Error('Invalid card generated');
+                    }
+
+                    debugLog(`Generated card: ${randomCard.name}${randomCard.suit} (${randomCard.value})`);
+                    debugLog(`Selected card: ${selectedCard.name}${selectedCard.suit} (${selectedCard.value})`);
+
+                    // Remove previous highlights
+                    cardElements.forEach(el => {
+                        el.classList.remove('generated', 'correct', 'wrong');
+                    });
+
+                    // Highlight the generated card
+                    const generatedCardElement = cardElements[randomNumber.toNumber() - 1];
+                    if (generatedCardElement) {
+                        generatedCardElement.classList.add('generated');
+                    }
+
+                    let resultMessage = '';
+                    if (randomCard.value === selectedCard.value) {
+                        resultMessage = `Congratulations! You guessed correctly! The next card was ${randomCard.name}${randomCard.suit}!`;
+                        resultDiv.className = 'success';
+                        generatedCardElement.classList.add('correct');
+                        selectedCardElement.classList.add('correct');
+                    } else {
+                        resultMessage = `Wrong guess! The next card was ${randomCard.name}${randomCard.suit}, not ${selectedCard.name}${selectedCard.suit}!`;
+                        resultDiv.className = 'failure';
+                        generatedCardElement.classList.add('wrong');
+                        selectedCardElement.classList.add('wrong');
+                    }
+
+                    resultDiv.textContent = resultMessage;
+                } catch (error) {
+                    debugLog(`Error: ${error.message}`);
+                    resultDiv.textContent = `Error: ${error.message}`;
+                    resultDiv.className = 'failure';
+                } finally {
+                    // Reset button state
+                    button.disabled = false;
+                    button.classList.remove('loading');
+                    buttonText.textContent = 'Generate Next Card';
+                }
+            };
+        });
+    </script>
+</body>
+
+</html>

@@ -19,11 +19,11 @@ A **decentralized trivia game** built on Flow EVM ., powered by Flow’s secure 
 
 ### 1. Clone the Repository  
 ```bash
-git clone https://github.com/[your-repo]/Flow-Hackathon-Week2-Thrivia.git
+git clone https://github.com/Josh0007-sunday/FlowThriviaGame.git
 ```
 ### 2. Change Redirectory  
 ```bash
-cd Flow-Hackathon-Week2-Thrivia
+cd FlowThriviaGame
 ```
 ### 3. Install Package  
 ```bash

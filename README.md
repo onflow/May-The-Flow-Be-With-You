@@ -36,9 +36,12 @@ Useful Links:
 ### Week 2: Actually Fun Games (May 11-17)
 - Twitter Space: May 14 (Wed) @ 4:00 PM PST - "How to Build Fun Games"
 - Winners announced: May 19
-- End of Week 1 will be May 17th, 11:59pm PST
+- End of Week 2 will be May 17th, 11:59pm PST
 
-### Week 3: To be announced (May 18-24)
+### Week 3: Generative Art and Worlds (May 18-24)
+- Twitter Space: May 21 (Wed) @ 4:00 PM PST - "Generative Composiblity: Turning Products into Platforms"
+- Winners announced: May 26
+- End of Week 3 will be May 24th, 11:59pm PST
 
 ### Week 4: To be announced (May 25-31)
 

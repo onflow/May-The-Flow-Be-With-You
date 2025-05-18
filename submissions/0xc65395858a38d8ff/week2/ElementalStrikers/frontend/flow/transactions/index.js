@@ -64,8 +64,17 @@ export const setupAccount = async () => {
 
 // Transacción para crear un juego PvE (práctica)
 export const createPracticeGame = async (playerChoice) => {
-  if (!playerChoice || !["Fuego", "Agua", "Planta"].includes(playerChoice)) {
-    throw new Error("Elección inválida. Debe ser 'Fuego', 'Agua' o 'Planta'");
+  // Mapa para convertir nombres de elementos en inglés a español para la blockchain
+  const elementMap = {
+    "Fire": "Fuego",
+    "Water": "Agua",
+    "Plant": "Planta"
+  };
+  
+  const translatedChoice = elementMap[playerChoice] || playerChoice;
+  
+  if (!translatedChoice || !["Fuego", "Agua", "Planta"].includes(translatedChoice)) {
+    throw new Error("Invalid choice. Must be 'Fire', 'Water', or 'Plant'");
   }
 
   const transactionId = await fcl.mutate({
@@ -98,7 +107,7 @@ export const createPracticeGame = async (playerChoice) => {
       }
     `,
     args: (arg, t) => [
-      arg(playerChoice, t.String)
+      arg(translatedChoice, t.String)
     ],
     proposer: fcl.authz,
     payer: fcl.authz,
@@ -155,20 +164,31 @@ export const revealOutcome = async (gameId) => {
     limit: 100
   });
 
+  // Mapa para convertir nombres de elementos del español al inglés
+  const elementMapReverse = {
+    "Fuego": "Fire",
+    "Agua": "Water",
+    "Planta": "Plant"
+  };
+
   // Para fines de demostración, simulamos un resultado 
   // En un sistema real, obtendrías los detalles del juego desde la blockchain después de la transacción
+  const randomSpanishElement = () => ["Fuego", "Agua", "Planta"][Math.floor(Math.random() * 3)];
+  const player1Move = randomSpanishElement();
+  const computerMove = randomSpanishElement();
+  
   const simulatedResult = {
     gameId: safeGameId,
     mode: "PvEPractice",
-    player1Move: ["Fuego", "Agua", "Planta"][Math.floor(Math.random() * 3)],
-    computerMove: ["Fuego", "Agua", "Planta"][Math.floor(Math.random() * 3)],
-    environmentalModifier: ["None", "Día Soleado", "Lluvia Torrencial", "Tierra Fértil"][Math.floor(Math.random() * 4)],
+    player1Move: elementMapReverse[player1Move] || player1Move,
+    computerMove: elementMapReverse[computerMove] || computerMove,
+    environmentalModifier: ["None", "Sunny Day", "Heavy Rain", "Fertile Ground"][Math.floor(Math.random() * 4)],
     criticalHitTypePlayer1: ["None", "Critical", "Partial"][Math.floor(Math.random() * 3)],
     criticalHitTypeP2OrComputer: ["None", "Critical", "Partial"][Math.floor(Math.random() * 3)],
   };
 
   // Determinar ganador (lógica simplificada)
-  const elements = {"Fuego": "Planta", "Planta": "Agua", "Agua": "Fuego"};
+  const elements = {"Fire": "Plant", "Plant": "Water", "Water": "Fire"};
   if (simulatedResult.player1Move === simulatedResult.computerMove) {
     // Empate
     simulatedResult.winner = null;

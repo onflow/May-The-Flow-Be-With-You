@@ -84,29 +84,29 @@ export default function PvEGame() {
   }, []);
 
   const elementInfo: ElementsMap = {
-    Fuego: {
-      name: 'Fuego',
+    Fire: {
+      name: 'Fire',
       color: 'red.500',
-      image: '/assets/icons/lorc/fire-spell-cast.png',
-      strongAgainst: 'Planta',
-      weakAgainst: 'Agua',
-      description: 'El poder ardiente consume todo a su paso'
+      image: '/assets/icons/lorc/sword-spin.png',
+      strongAgainst: 'Plant',
+      weakAgainst: 'Water',
+      description: 'The burning power that consumes everything in its path'
     },
-    Agua: {
-      name: 'Agua',
+    Water: {
+      name: 'Water',
       color: 'blue.500',
-      image: '/assets/icons/lorc/water-splash.png',
-      strongAgainst: 'Fuego',
-      weakAgainst: 'Planta',
-      description: 'El flujo constante que erosiona cualquier obstáculo'
+      image: '/assets/icons/lorc/vortex.png',
+      strongAgainst: 'Fire',
+      weakAgainst: 'Plant',
+      description: 'The constant flow that erodes any obstacle'
     },
-    Planta: {
-      name: 'Planta',
+    Plant: {
+      name: 'Plant',
       color: 'green.500',
-      image: '/assets/icons/lorc/vine-leaf.png',
-      strongAgainst: 'Agua',
-      weakAgainst: 'Fuego',
-      description: 'La vida que prospera y se fortalece con el tiempo'
+      image: '/assets/icons/lorc/thorny-vine.png',
+      strongAgainst: 'Water',
+      weakAgainst: 'Fire',
+      description: 'Life that thrives and strengthens over time'
     }
   };
 
@@ -174,7 +174,7 @@ export default function PvEGame() {
   const renderElementSelection = () => (
     <Box mt={8}>
       <Heading size="xl" textAlign="center" mb={6}>
-        Elige tu Elemento
+        Choose Your Element
       </Heading>
       <SimpleGrid columns={{ base: 1, md: 3 }} gap={8} maxW="container.lg" mx="auto">
         {Object.keys(elementInfo).map((element) => (
@@ -204,17 +204,17 @@ export default function PvEGame() {
               <Heading size="lg" mt={2}>{elementInfo[element].name}</Heading>
             </Box>
             <Box p={4}>
-              <Text textAlign="center">{elementInfo[element].description}</Text>
+              <Text textAlign="center" color="gray.800">{elementInfo[element].description}</Text>
               <Box h="1px" bg="gray.200" my={3} />
               <Box>
                 <Stack direction="row" justify="center" mb={2}>
-                  <Text fontWeight="bold">Fuerte contra:</Text>
+                  <Text fontWeight="bold" color="gray.800">Strong against:</Text>
                   <Badge colorScheme={elementInfo[elementInfo[element].strongAgainst].color.split('.')[0]}>
                     {elementInfo[element].strongAgainst}
                   </Badge>
                 </Stack>
                 <Stack direction="row" justify="center">
-                  <Text fontWeight="bold">Débil contra:</Text>
+                  <Text fontWeight="bold" color="gray.800">Weak against:</Text>
                   <Badge colorScheme={elementInfo[elementInfo[element].weakAgainst].color.split('.')[0]}>
                     {elementInfo[element].weakAgainst}
                   </Badge>
@@ -233,7 +233,7 @@ export default function PvEGame() {
           disabled={!selectedElement}
           px={10}
         >
-          ¡Comenzar Batalla!
+          Start Battle!
         </Button>
       </Flex>
     </Box>
@@ -243,7 +243,7 @@ export default function PvEGame() {
   const renderLoading = () => (
     <Container centerContent py={20}>
       <Stack direction="column" gap={8} align="center">
-        <Heading>Preparando Batalla...</Heading>
+        <Heading>Preparing Battle...</Heading>
         <Box w="100%" maxW="500px" bg="gray.200" h="10px" borderRadius="full">
           <Box 
             w="40%" 
@@ -253,7 +253,7 @@ export default function PvEGame() {
             animation="progress 1.5s ease-in-out infinite"
           />
         </Box>
-        <Text fontSize="lg">Tu {selectedElement} se está preparando para el combate</Text>
+        <Text fontSize="lg">Your {selectedElement} is preparing for combat</Text>
         
         <Box
           animation="spin 2s linear infinite"
@@ -303,7 +303,7 @@ export default function PvEGame() {
           position="relative"
         >
           <Heading textAlign="center" fontSize="2xl" mb={4}>
-            {isWinner ? "¡Victoria!" : isDraw ? "¡Empate!" : "¡Derrota!"}
+            {isWinner ? "Victory!" : isDraw ? "Draw!" : "Defeat!"}
           </Heading>
           <Button 
             position="absolute" 
@@ -316,24 +316,24 @@ export default function PvEGame() {
           </Button>
           
           <Stack direction="column" gap={6}>
-            <Text fontSize="lg" textAlign="center">
+            <Text fontSize="lg" textAlign="center" fontWeight="bold">
               {isWinner 
-                ? "¡Has derrotado a tu oponente!" 
+                ? "You defeated your opponent!" 
                 : isDraw 
-                  ? "¡Una batalla reñida que termina en empate!" 
-                  : "¡Tu oponente te ha vencido esta vez!"}
+                  ? "A fierce battle that ends in a draw!" 
+                  : "Your opponent has defeated you this time!"}
             </Text>
             
             <Stack direction="row" gap={10} justify="center" width="100%">
               <Stack direction="column" align="center">
-                <Text fontWeight="bold">Tú</Text>
+                <Text fontWeight="bold">You</Text>
                 <Image 
                   src={elementInfo[gameResult.player1Move]?.image}
                   alt={gameResult.player1Move}
                   boxSize="80px"
                   filter="brightness(0) invert(1)"
                 />
-                <Badge colorScheme={gameResult.player1Move === "Fuego" ? "red" : gameResult.player1Move === "Agua" ? "blue" : "green"}>
+                <Badge colorScheme={gameResult.player1Move === "Fire" ? "red" : gameResult.player1Move === "Water" ? "blue" : "green"}>
                   {gameResult.player1Move}
                 </Badge>
               </Stack>
@@ -341,41 +341,41 @@ export default function PvEGame() {
               <Text fontSize="3xl">VS</Text>
               
               <Stack direction="column" align="center">
-                <Text fontWeight="bold">Oponente</Text>
+                <Text fontWeight="bold">Opponent</Text>
                 <Image 
                   src={elementInfo[gameResult.computerMove]?.image}
                   alt={gameResult.computerMove}
                   boxSize="80px"
                   filter="brightness(0) invert(1)"
                 />
-                <Badge colorScheme={gameResult.computerMove === "Fuego" ? "red" : gameResult.computerMove === "Agua" ? "blue" : "green"}>
+                <Badge colorScheme={gameResult.computerMove === "Fire" ? "red" : gameResult.computerMove === "Water" ? "blue" : "green"}>
                   {gameResult.computerMove}
                 </Badge>
               </Stack>
             </Stack>
             
             {gameResult.environmentalModifier !== "None" && (
-              <Box p={3} bg="whiteAlpha.200" borderRadius="md" width="100%">
-                <Text fontWeight="bold" textAlign="center" mb={1}>Modificador ambiental:</Text>
-                <Text textAlign="center">{gameResult.environmentalModifier}</Text>
+              <Box p={3} bg="whiteAlpha.300" borderRadius="md" width="100%">
+                <Text fontWeight="bold" textAlign="center" mb={1}>Environmental Modifier:</Text>
+                <Text textAlign="center" fontWeight="semibold">{gameResult.environmentalModifier}</Text>
               </Box>
             )}
             
             {(gameResult.criticalHitTypePlayer1 !== "None" || gameResult.criticalHitTypeP2OrComputer !== "None") && (
-              <Box p={3} bg="whiteAlpha.200" borderRadius="md" width="100%">
-                <Text fontWeight="bold" textAlign="center" mb={1}>Golpes críticos:</Text>
+              <Box p={3} bg="whiteAlpha.300" borderRadius="md" width="100%">
+                <Text fontWeight="bold" textAlign="center" mb={1}>Critical Hits:</Text>
                 {gameResult.criticalHitTypePlayer1 !== "None" && (
-                  <Text textAlign="center">¡Tu ataque fue crítico! ({gameResult.criticalHitTypePlayer1})</Text>
+                  <Text textAlign="center" fontWeight="semibold">Your attack was critical! ({gameResult.criticalHitTypePlayer1})</Text>
                 )}
                 {gameResult.criticalHitTypeP2OrComputer !== "None" && (
-                  <Text textAlign="center">¡El oponente logró un golpe crítico! ({gameResult.criticalHitTypeP2OrComputer})</Text>
+                  <Text textAlign="center" fontWeight="semibold">The opponent landed a critical hit! ({gameResult.criticalHitTypeP2OrComputer})</Text>
                 )}
               </Box>
             )}
             
             <Flex justify="center">
               <Button colorScheme="teal" onClick={playAgain} size="lg">
-                Jugar de nuevo
+                Play Again
               </Button>
             </Flex>
           </Stack>
@@ -390,10 +390,10 @@ export default function PvEGame() {
         <Stack direction="column" gap={6} align="stretch">
           {/* Encabezado */}
           <Box textAlign="center" mb={4}>
-            <Badge colorScheme="green" p={2} fontSize="md">Modo Práctica (PvE)</Badge>
-            <Heading size="xl" mt={2}>Batalla contra la IA</Heading>
-            <Text fontSize="lg" mt={2} color="gray.500">
-              Pon a prueba tus habilidades elementales contra un oponente controlado por IA
+            <Badge colorScheme="green" p={2} fontSize="md">Practice Mode (PvE)</Badge>
+            <Heading size="xl" mt={2}>Battle Against AI</Heading>
+            <Text fontSize="lg" mt={2} color="gray.300">
+              Test your elemental skills against an AI opponent
             </Text>
           </Box>
           

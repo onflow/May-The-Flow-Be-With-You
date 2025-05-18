@@ -27,30 +27,54 @@ body {
 
 /* Animación de giro para la imagen del vortex */
 @keyframes spin {
-  0% { 
-    transform: rotate(0deg) scale(1); 
-    opacity: 0.9;
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
   }
-  25% {
-    transform: rotate(90deg) scale(1.02);
-    opacity: 0.95;
-  }
-  50% {
-    transform: rotate(180deg) scale(1.05);
-    opacity: 1;
-  }
-  75% {
-    transform: rotate(270deg) scale(1.02);
-    opacity: 0.95;
-  }
-  100% { 
-    transform: rotate(360deg) scale(1); 
-    opacity: 0.9;
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 
 /* Solo para la animación de giro */
 .spinning-image {
-  animation: spin 60s linear infinite;
+  animation: spin 2s linear infinite;
   transform-origin: center center;
+}
+
+/* Animaciones para el triángulo de elementos */
+@keyframes elementHover {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes flowPath {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes pulsate {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+@keyframes glowing {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5)); }
+  50% { filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.8)); }
+}
+
+.element-symbol {
+  animation: pulsate 2s ease-in-out infinite;
+}
+
+.element-path {
+  stroke-dasharray: 5, 3;
+  animation: flowPath 3s linear infinite;
+}
+
+.element-badge {
+  animation: glowing 2s ease-in-out infinite;
+}
+
+.element-emblem {
+  animation: pulsate 4s ease-in-out infinite;
 }

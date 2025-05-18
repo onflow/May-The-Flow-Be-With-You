@@ -165,17 +165,19 @@ export default function HomePage() {
               A strategic elemental battle game built on the Flow blockchain
             </Text>
             <HStack gap={4}>
-              <Button 
-                colorScheme="teal" 
-                size="lg"
-                _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
-                transition="all 0.2s ease"
-              >
-                <Flex align="center">
-                  <Box as={FiPlay} mr={2} />
-                  Play Now
-                </Flex>
-              </Button>
+              <Link href="/pve">
+                <Button 
+                  colorScheme="teal" 
+                  size="lg"
+                  _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
+                  transition="all 0.2s ease"
+                >
+                  <Flex align="center">
+                    <Box as={FiPlay} mr={2} />
+                    Jugar PvE
+                  </Flex>
+                </Button>
+              </Link>
               <Button 
                 variant="outline" 
                 colorScheme="white"
@@ -233,10 +235,50 @@ export default function HomePage() {
         {/* Elements Section */}
         <Heading textAlign="center" size="lg" mb={8}>The Elements</Heading>
         
-        {/* Triangular arrangement - Container */}
-        <Box position="relative" height="500px" mb={16}>
-          {/* Fire element - top center */}
-          <Box position="absolute" top="0" left="50%" transform="translateX(-50%)" width="300px">
+        {/* Triangular arrangement - Creative interactive version */}
+        <Box position="relative" height="600px" mb={16}>
+          {/* Central emblem */}
+          <Box
+            position="absolute"
+            top="50%"
+            left="50%"
+            transform="translate(-50%, -50%)"
+            width="150px"
+            height="150px"
+            borderRadius="full"
+            bgGradient="radial(gray.700, gray.900)"
+            border="3px solid"
+            borderColor="gray.500"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex={1}
+            boxShadow="0 0 30px rgba(0,0,0,0.5)"
+          >
+            <Text
+              fontSize="xl"
+              fontWeight="bold"
+              color="white"
+              textAlign="center"
+            >
+              Elemental<br/>Triangle
+            </Text>
+          </Box>
+          
+          {/* Fire element - top */}
+          <Box 
+            position="absolute" 
+            top="0" 
+            left="50%" 
+            transform="translateX(-50%)" 
+            width="250px"
+            _hover={{
+              transform: "translateX(-50%) translateY(-10px)",
+              transition: "transform 0.3s ease"
+            }}
+            transition="all 0.3s ease"
+            zIndex={2}
+          >
             <ElementCard 
               element="Fire" 
               color={elementColors.fuego}
@@ -247,7 +289,18 @@ export default function HomePage() {
           </Box>
           
           {/* Water element - bottom left */}
-          <Box position="absolute" bottom="0" left="20%" transform="translateX(-50%)" width="300px">
+          <Box 
+            position="absolute" 
+            bottom="50px" 
+            left="10%" 
+            width="250px"
+            _hover={{
+              transform: "translateY(-10px)",
+              transition: "transform 0.3s ease"
+            }}
+            transition="all 0.3s ease"
+            zIndex={2}
+          >
             <ElementCard 
               element="Water" 
               color={elementColors.agua}
@@ -258,7 +311,18 @@ export default function HomePage() {
           </Box>
           
           {/* Plant element - bottom right */}
-          <Box position="absolute" bottom="0" right="20%" transform="translateX(50%)" width="300px">
+          <Box 
+            position="absolute" 
+            bottom="50px" 
+            right="10%" 
+            width="250px"
+            _hover={{
+              transform: "translateY(-10px)",
+              transition: "transform 0.3s ease"
+            }}
+            transition="all 0.3s ease"
+            zIndex={2}
+          >
             <ElementCard 
               element="Plant" 
               color={elementColors.planta}
@@ -268,7 +332,20 @@ export default function HomePage() {
             />
           </Box>
           
-          {/* Connecting lines showing relationship (optional) */}
+          {/* Element relation indicators */}
+          <Box position="absolute" top="42%" left="67%" transform="rotate(30deg)" zIndex={1}>
+            <Badge colorScheme="red" p={2} fontSize="sm" borderRadius="full">Defeats</Badge>
+          </Box>
+          
+          <Box position="absolute" bottom="37%" left="50%" transform="translateX(-50%)" zIndex={1}>
+            <Badge colorScheme="green" p={2} fontSize="sm" borderRadius="full">Defeats</Badge>
+          </Box>
+          
+          <Box position="absolute" top="42%" left="33%" transform="rotate(-30deg)" zIndex={1}>
+            <Badge colorScheme="blue" p={2} fontSize="sm" borderRadius="full">Defeats</Badge>
+          </Box>
+          
+          {/* Connecting energy lines */}
           <svg 
             width="100%" 
             height="100%" 
@@ -276,32 +353,40 @@ export default function HomePage() {
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
           >
-            {/* Line from Fire to Plant (Fire beats Plant) */}
-            <line 
-              x1="50" y1="20" 
-              x2="75" y2="80" 
+            {/* Decorative Circle */}
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#333" strokeWidth="0.5" strokeDasharray="1,1" />
+            
+            {/* Fire to Plant Line (Fire beats Plant) */}
+            <path 
+              d="M50,20 Q65,40 75,80" 
+              fill="none"
               stroke={elementColors.fuego} 
-              strokeWidth="1.5" 
+              strokeWidth="2" 
               strokeDasharray="5,3"
             />
             
-            {/* Line from Plant to Water (Plant beats Water) */}
-            <line 
-              x1="75" y1="80" 
-              x2="25" y2="80" 
+            {/* Plant to Water Line (Plant beats Water) */}
+            <path 
+              d="M75,80 Q60,85 25,80" 
+              fill="none"
               stroke={elementColors.planta} 
-              strokeWidth="1.5" 
+              strokeWidth="2" 
               strokeDasharray="5,3"
             />
             
-            {/* Line from Water to Fire (Water beats Fire) */}
-            <line 
-              x1="25" y1="80" 
-              x2="50" y2="20" 
+            {/* Water to Fire Line (Water beats Fire) */}
+            <path 
+              d="M25,80 Q40,40 50,20" 
+              fill="none"
               stroke={elementColors.agua} 
-              strokeWidth="1.5" 
+              strokeWidth="2" 
               strokeDasharray="5,3"
             />
+            
+            {/* Decorative Element Symbols */}
+            <circle cx="50" cy="20" r="2" fill={elementColors.fuego} opacity="0.8" />
+            <circle cx="75" cy="80" r="2" fill={elementColors.planta} opacity="0.8" />
+            <circle cx="25" cy="80" r="2" fill={elementColors.agua} opacity="0.8" />
           </svg>
         </Box>
 

@@ -17,9 +17,9 @@ export const metadata: Metadata = {
     siteName: "Elemental Strikers",
     images: [
       {
-        url: "/assets/icons/lorc/spiral-tentacle.png",
-        width: 800,
-        height: 800,
+        url: "/assets/opengraph-image.png",
+        width: 1200,
+        height: 630,
         alt: "Elemental Strikers - Flow blockchain game with elemental powers",
       }
     ],
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Elemental Strikers | Strategic Elemental Battles",
     description: "Join the elemental combat arena on Flow blockchain",
-    images: ["/assets/icons/lorc/spiral-tentacle.png"],
+    images: ["/assets/opengraph-image.png"],
   },
 };
 

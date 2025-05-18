@@ -11,7 +11,7 @@ A **decentralized trivia game** built on Flow EVM ., powered by Flow’s secure 
 - **Frontend:** Vite React (or your framework)   
 
 🎮 **[Live Demo](#)** *https://flow-thrivia-game.vercel.app/*  
-📜 **[Smart Contract on FlowScan](#)** *(link pending)*  
+📜 **[Smart Contract on FlowScan](#)** *https://testnet.flowscan.io/contract/A.6749ea8e0a268f1a.TriviaGame*  
 
 ---
 

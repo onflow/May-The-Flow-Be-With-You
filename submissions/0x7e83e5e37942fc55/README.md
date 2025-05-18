@@ -21,5 +21,8 @@ The goal of this project is to explore and leverage the **Flow blockchain's capa
 ## Weekly Progress  
 Check each weekly folder for daily submissions and updates:  
 
+📂 **Week 1**:   
 📂 **Week 2**: Actually Fun Games  
+📂 **Week 3**: (Upcoming)  
+📂 **Week 4**: (Upcoming)  
  

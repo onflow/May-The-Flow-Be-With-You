@@ -9,11 +9,16 @@ Looking to form a team for one of the weekly challenges or stay ontop of the lat
 Welcome to the "May the Flow be with You" campaign - a month-long vibe coding challenge on Flow! Starting May 4th, participants will build exciting projects across four themed weeks, competing for weekly prizes and a major end-of-month jackpot.
 
 ## Campaign Details
+
 - **Duration**: May 4-31, 2025
 - **Total Prize Pool**: Over 10,000 FLOW
   - Weekly: 1750 FLOW distributed to 7 winners each week (~250 FLOW each)
   - Hundreds in building in public rewards
   - Final Jackpot: 2500 FLOW
+
+## Leaderboard
+
+You can check out the **[Leaderboard](https://onflow.github.io/May-The-Flow-Be-With-You/)** to see the top engaged participants.
 
 ## Weekly Themes
 
@@ -28,7 +33,10 @@ Useful Links:
 - [Live app](https://randoms.wtf/) built using Flow random and coresponding [GitHub](https://github.com/Aliserag/random.wtf)
 - Implement [Randomness with Solidity](https://developers.flow.com/evm/guides/vrf ) in 3 min
 
-### Week 2: To be announced (May 11-17)
+### Week 2: Actually Fun Games (May 11-17)
+- Twitter Space: May 14 (Wed) @ 4:00 PM PST - "How to Build Fun Games"
+- Winners announced: May 19
+- End of Week 1 will be May 17th, 11:59pm PST
 
 ### Week 3: To be announced (May 18-24)
 

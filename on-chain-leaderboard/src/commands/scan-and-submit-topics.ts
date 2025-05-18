@@ -214,6 +214,7 @@ async function main() {
             periodAlias,
             topicNames,
         );
+        console.log(statusList);
 
         let filtered = 0;
         for (const status of statusList) {

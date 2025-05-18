@@ -1,47 +1,215 @@
 {
-    "version": "1.10.0",
-    "emulator": {
-        "serviceAccount": "emulator-account"
-    },
-    "accounts": {
-        "emulator-account": {
-            "address": "0xf8d6e0586b0a20c7",
-            "keys": "e691b31855087c8680365f63955130ae6120fb5fa57be0d9c0146eb6380c59f4"
-        },
-        "elemental-strikers-admin": {
-            "address": "0xf8d6e0586b0a20c7",
-            "keys": "e691b31855087c8680365f63955130ae6120fb5fa57be0d9c0146eb6380c59f4"
-        }
-    },
-    "contracts": {
-        "FungibleToken": {
-            "source": "",
-            "aliases": {
-                "emulator": "0xee82856bf20e2aa6"
-            }
-        },
-        "FlowToken": {
-            "source": "",
-            "aliases": {
-                "emulator": "0x0ae53cb6e3f42a79"
-            }
-        },
-        "ElementalStrikers": {
-            "source": "week1/ElementalStrikers/cadence/contracts/ElementalStrikers.cdc",
-            "aliases": {
-                "emulator": "0x01cf0e2f2f715450"
-            }
-        }
-    },
-    "deployments": {
-        "emulator": {
-            "emulator-account": [],
-            "elemental-strikers-admin": [
-                "ElementalStrikers"
-            ]
-        }
-    },
-    "networks": {
-        "emulator": "127.0.0.1:3569"
-    }
-} 
+	"contracts": {
+		"ElementalStrikers": {
+			"source": "week2/ElementalStrikers/cadence/contracts/ElementalStrikers.cdc",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"testnet": "0xbeb2f48c3293e514"
+			}
+		}
+	},
+	"dependencies": {
+		"Burner": {
+			"source": "mainnet://f233dcee88fe0abe.Burner",
+			"hash": "71af18e227984cd434a3ad00bb2f3618b76482842bae920ee55662c37c8bf331",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"EVM": {
+			"source": "mainnet://e467b9dd11fa00df.EVM",
+			"hash": "df2065d3eebc1e690e0b52a3f293bdf6c22780c7a9e7ef48a708a651b87abdf0",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "e467b9dd11fa00df",
+				"testnet": "8c5303eaa26202d6"
+			}
+		},
+		"FlowClusterQC": {
+			"source": "mainnet://8624b52f9ddcd04a.FlowClusterQC",
+			"hash": "5fd45018af7e3b7606caf437dd0b6be72f698556313754c12308b8d5b174051d",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "8624b52f9ddcd04a",
+				"testnet": "9eca2b38b18b5dfe"
+			}
+		},
+		"FlowDKG": {
+			"source": "mainnet://8624b52f9ddcd04a.FlowDKG",
+			"hash": "90b4397f0dba0b3d3ef9935b59aeef19790cfd8a6c9d96c42121ce723b2d5c2b",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "8624b52f9ddcd04a",
+				"testnet": "9eca2b38b18b5dfe"
+			}
+		},
+		"FlowEpoch": {
+			"source": "mainnet://8624b52f9ddcd04a.FlowEpoch",
+			"hash": "9184449afbfb33e85e3e445b16e05f40cbb6e16c11a91db9515f82759977b867",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "8624b52f9ddcd04a",
+				"testnet": "9eca2b38b18b5dfe"
+			}
+		},
+		"FlowExecutionParameters": {
+			"source": "mainnet://f426ff57ee8f6110.FlowExecutionParameters",
+			"hash": "3da857aae3c518f607a5d85c76afc524c4cc55ad0a8774924632709ed9270ff4",
+			"aliases": {
+				"mainnet": "f426ff57ee8f6110"
+			}
+		},
+		"FlowFees": {
+			"source": "mainnet://f919ee77447b7497.FlowFees",
+			"hash": "d02bc8295c0434cf2b0a96a77d992f49f52e7865debda84e7a21e176e163a680",
+			"aliases": {
+				"emulator": "e5a8b7f23e8b548f",
+				"mainnet": "f919ee77447b7497",
+				"testnet": "912d5440f7e3769e"
+			}
+		},
+		"FlowIDTableStaking": {
+			"source": "mainnet://8624b52f9ddcd04a.FlowIDTableStaking",
+			"hash": "d0c96b89bd34ca820216ddd340b4748184cd03235e7949fa934db9b8b6100705",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "8624b52f9ddcd04a",
+				"testnet": "9eca2b38b18b5dfe"
+			}
+		},
+		"FlowServiceAccount": {
+			"source": "mainnet://e467b9dd11fa00df.FlowServiceAccount",
+			"hash": "ff3a4ddf18a94541d655d2913553ef486bd0c98628c303ec49cde9f47bc40e36",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "e467b9dd11fa00df",
+				"testnet": "8c5303eaa26202d6"
+			}
+		},
+		"FlowStorageFees": {
+			"source": "mainnet://e467b9dd11fa00df.FlowStorageFees",
+			"hash": "e38d8a95f6518b8ff46ce57dfa37b4b850b3638f33d16333096bc625b6d9b51a",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "e467b9dd11fa00df",
+				"testnet": "8c5303eaa26202d6"
+			}
+		},
+		"FlowToken": {
+			"source": "mainnet://1654653399040a61.FlowToken",
+			"hash": "cefb25fd19d9fc80ce02896267eb6157a6b0df7b1935caa8641421fe34c0e67a",
+			"aliases": {
+				"emulator": "0ae53cb6e3f42a79",
+				"mainnet": "1654653399040a61",
+				"testnet": "7e60df042a9c0868"
+			}
+		},
+		"FungibleToken": {
+			"source": "mainnet://f233dcee88fe0abe.FungibleToken",
+			"hash": "23c1159cf99b2b039b6b868d782d57ae39b8d784045d81597f100a4782f0285b",
+			"aliases": {
+				"emulator": "ee82856bf20e2aa6",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"FungibleTokenMetadataViews": {
+			"source": "mainnet://f233dcee88fe0abe.FungibleTokenMetadataViews",
+			"hash": "dff704a6e3da83997ed48bcd244aaa3eac0733156759a37c76a58ab08863016a",
+			"aliases": {
+				"emulator": "ee82856bf20e2aa6",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"FungibleTokenSwitchboard": {
+			"source": "mainnet://f233dcee88fe0abe.FungibleTokenSwitchboard",
+			"hash": "10f94fe8803bd1c2878f2323bf26c311fb4fb2beadba9f431efdb1c7fa46c695",
+			"aliases": {
+				"emulator": "ee82856bf20e2aa6",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"MetadataViews": {
+			"source": "mainnet://1d7e57aa55817448.MetadataViews",
+			"hash": "10a239cc26e825077de6c8b424409ae173e78e8391df62750b6ba19ffd048f51",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "1d7e57aa55817448",
+				"testnet": "631e88ae7f1d7c20"
+			}
+		},
+		"NodeVersionBeacon": {
+			"source": "mainnet://e467b9dd11fa00df.NodeVersionBeacon",
+			"hash": "5f0ce4a8754dcb77bc747536baa3d9e1dd804932124061c390dfa812947ee5b1",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "e467b9dd11fa00df",
+				"testnet": "8c5303eaa26202d6"
+			}
+		},
+		"NonFungibleToken": {
+			"source": "mainnet://1d7e57aa55817448.NonFungibleToken",
+			"hash": "b63f10e00d1a814492822652dac7c0574428a200e4c26cb3c832c4829e2778f0",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "1d7e57aa55817448",
+				"testnet": "631e88ae7f1d7c20"
+			}
+		},
+		"RandomBeaconHistory": {
+			"source": "mainnet://e467b9dd11fa00df.RandomBeaconHistory",
+			"hash": "fe7f11c46dd54446bd60d88015ffe5057d7245c4b77374e11db2adf0a8156167",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "e467b9dd11fa00df",
+				"testnet": "8c5303eaa26202d6"
+			}
+		},
+		"ViewResolver": {
+			"source": "mainnet://1d7e57aa55817448.ViewResolver",
+			"hash": "374a1994046bac9f6228b4843cb32393ef40554df9bd9907a702d098a2987bde",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "1d7e57aa55817448",
+				"testnet": "631e88ae7f1d7c20"
+			}
+		}
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testing": "127.0.0.1:3569",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": {
+				"type": "file",
+				"location": "emulator-account.pkey"
+			}
+		},
+		"player2-account": {
+			"address": "0xad7388f34dd6bdef"
+		},
+		"testnet-deployer": {
+			"address": "0xbeb2f48c3293e514"
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"ElementalStrikers"
+			]
+		},
+		"testnet": {
+			"testnet-deployer": [
+				"ElementalStrikers"
+			]
+		}
+	}
+}

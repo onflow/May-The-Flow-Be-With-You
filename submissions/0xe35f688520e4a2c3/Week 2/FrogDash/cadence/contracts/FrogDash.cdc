@@ -1,5 +1,5 @@
-// import FungibleToken from 0x9a0766d93b6608b7
-// import FlowToken from 0x7e60df042a9c0868
+import FungibleToken from 0x9a0766d93b6608b7
+import FlowToken from 0x7e60df042a9c0868
 
 access(all) contract FrogDash {
 
@@ -7,6 +7,7 @@ access(all) contract FrogDash {
     access(all) event FrogDahs__GameEnded(user:Address, id:UInt64, lilyPoints:UInt64)
     access(all) event FrogDahs__EmeraldBurned(user:Address, lilyPoints: UInt64)
     access(all) event FrogDahs__NewGameCreated(id:UInt64)
+    access(all) event FrogDahs__RewardClaimed(id: UInt64, address: Address, amount: UFix64)
     access(all) event FrogDahs__ContractInitialized()
 
     access(all) var total_games:UInt64
@@ -44,14 +45,14 @@ access(all) contract FrogDash {
         access(all) let id:UInt64
         access(all) var start_time: UFix64
         access(all) var total_time: UFix64
-        // access(mapping Identity) let game_vault: @FlowToken.Vault
+        access(mapping Identity) let game_vault: @FlowToken.Vault
         access(all) var user_score_board: {Address: UserScoreBoard}
         access(all) var top_scorer: Address
         init(){
             self.id = self.uuid
             self.start_time = getCurrentBlock().timestamp
             self.total_time = 86400.0 //24 hours
-            // self.game_vault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+            self.game_vault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
             self.user_score_board = {}
             self.top_scorer = 0x0
         }
@@ -62,11 +63,14 @@ access(all) contract FrogDash {
             }
         }
 
-        access(contract) fun _start_game(userAddr: Address) {
+        access(contract) fun _start_game(userAddr: Address, amount: @FlowToken.Vault) {
             pre {
+                amount.balance == UFix64(UInt64(amount.balance)): "Must be a whole number"
+                amount.balance >= 10.0: "Required at lest 10.0 FLOW"
                 self.user_score_board[userAddr]!.turn_count < FrogDash.MAX_CHANCE: "You have only 3 chances"
                 self._get_current_time() < self._get_end_time() : "Time is up!!!"
             }
+            self.game_vault.deposit(from: <- amount)
             var board: FrogDash.UserScoreBoard = self.user_score_board[userAddr] ?? panic("User board not found!!!")
             board.update_has_paid(paid:true)
             emit FrogDahs__GameStarted(user:userAddr, id:self.uuid)
@@ -114,6 +118,20 @@ access(all) contract FrogDash {
 
         view access(all) fun _get_end_time():UFix64{
             return self.start_time + self.total_time
+        }
+
+        access(all) fun _claim_reward(id:UInt64, addr:Address){
+            pre{
+                self._get_current_time() - self.start_time > self.total_time : "Game is still on!!!"
+                self.top_scorer == addr : "Wrong Address"
+                self.id == id : "Wrong ID"
+            }
+            let balance = self.game_vault.balance
+            let user = self.top_scorer
+            let reward <- self.game_vault.withdraw(amount: balance)
+            let claim = getAccount(user).capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver) ?? panic("Could not borrow receiver reference")
+            claim.deposit(from: <- reward)
+            emit FrogDahs__RewardClaimed(id: self.uuid, address: user, amount: balance)
         }
 
         access(all) fun _get_topScorer(){
@@ -182,10 +200,15 @@ access(all) contract FrogDash {
         return self.borrow_admin().borrow_game(id: id) ?? panic("Game Not Found!!!")
     }
 
-    access(all) fun start_game(id:UInt64, addr:Address) {
+    access(all) fun start_game(id:UInt64, addr:Address, amount: @FlowToken.Vault) {
         let borrowGame = self.borrow_game(id: id)
         borrowGame._add_user(userAddr: addr)
-        borrowGame._start_game(userAddr: addr)
+        borrowGame._start_game(userAddr: addr, amount: <- amount)
+    }
+
+    access(all) fun claim_reward(id:UInt64, addr:Address){
+        let borrowGame = self.borrow_game(id: id)
+        borrowGame._claim_reward(id: id, addr: addr)
     }
 
     access(all) fun end_game(id:UInt64, addr:Address, lilyCount:UInt64, emeraldCount:UInt64) {

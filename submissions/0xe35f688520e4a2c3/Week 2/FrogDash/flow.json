@@ -20,7 +20,7 @@
       }
     },
     "testnet": {
-      "address": "TESTNET_ADDRESS",
+      "address": "0x33fbabd18734ed44",
       "key": "PRIVATE_KEY"
     }
   },

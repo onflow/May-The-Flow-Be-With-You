@@ -1,4 +1,4 @@
-import FrogDash from 0x34a43e3b12517b72
+import FrogDash from 0x33fbabd18734ed44
 
 transaction() {
     let adminRef: &FrogDash.Admin

@@ -1,4 +1,6 @@
-Flow Hackathon Project: Meta Maze Explorer
+Flow Hackathon Project: 
+
+Meta Maze Explorer
 "May the Flow Be With You"
 Project Overview
 Meta Maze Explorer is an on-chain scavenger hunt game where players navigate a dynamic maze, discover hidden treasures, and compete for rewards—all secured by Flow’s VRF for fair, verifiable randomness.

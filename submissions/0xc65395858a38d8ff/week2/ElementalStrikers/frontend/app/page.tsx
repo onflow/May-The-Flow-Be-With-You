@@ -174,7 +174,20 @@ export default function HomePage() {
                 >
                   <Flex align="center">
                     <Box as={FiPlay} mr={2} />
-                    Jugar PvE
+                    Play PvE
+                  </Flex>
+                </Button>
+              </Link>
+              <Link href="/pvp">
+                <Button 
+                  colorScheme="purple" 
+                  size="lg"
+                  _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
+                  transition="all 0.2s ease"
+                >
+                  <Flex align="center">
+                    <Box as={FiPlay} mr={2} />
+                    Play PvP
                   </Flex>
                 </Button>
               </Link>

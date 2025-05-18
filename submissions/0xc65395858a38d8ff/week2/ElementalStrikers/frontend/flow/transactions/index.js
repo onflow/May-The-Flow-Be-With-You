@@ -203,15 +203,20 @@ export const revealOutcome = async (gameId) => {
   return simulatedResult;
 };
 
-// Transacción para crear un juego PvP con apuestas
-export const createPvPGame = async (stakeAmount) => {
+// Transacción para crear un juego PvP con apuestas y múltiples rondas
+export const createPvPGame = async (stakeAmount, rounds = 3) => {
+  // Validar el número de rondas
+  if (rounds < 1 || rounds > 10) {
+    throw new Error("Number of rounds must be between 1 and 10");
+  }
+
   const transactionId = await fcl.mutate({
     cadence: `
       import ElementalStrikers from 0xElementalStrikers
       import FungibleToken from 0xFungibleToken
       import FlowToken from 0xFlowToken
 
-      transaction(stakeAmount: UFix64) {
+      transaction(stakeAmount: UFix64, rounds: UInt64) {
         let flowVault: @FungibleToken.Vault
         
         prepare(signer: auth(BorrowValue) &Account) {
@@ -225,17 +230,64 @@ export const createPvPGame = async (stakeAmount) => {
         }
 
         execute {
-          // Create the game with the stake
+          // Create the game with the stake and rounds
           let gameId = ElementalStrikers.createGame(
             player1StakeVault: <-self.flowVault,
-            initialStakeAmount: stakeAmount
+            initialStakeAmount: stakeAmount,
+            numberOfRounds: rounds
           )
           
-          log("PvP game created with ID: ".concat(gameId.toString()).concat(" and stake amount: ").concat(stakeAmount.toString()))
+          log("PvP game created with ID: ".concat(gameId.toString()).concat(" stake amount: ").concat(stakeAmount.toString()).concat(" rounds: ").concat(rounds.toString()))
         }
       }
     `,
     args: (arg, t) => [
+      arg(stakeAmount.toString(), t.UFix64),
+      arg(rounds.toString(), t.UInt64)
+    ],
+    proposer: fcl.authz,
+    payer: fcl.authz,
+    authorizations: [fcl.authz],
+    limit: 100
+  });
+
+  return transactionId;
+};
+
+// Transacción para unirse a un juego existente
+export const joinGame = async (gameId, stakeAmount) => {
+  const transactionId = await fcl.mutate({
+    cadence: `
+      import ElementalStrikers from 0xElementalStrikers
+      import FungibleToken from 0xFungibleToken
+      import FlowToken from 0xFlowToken
+
+      transaction(gameId: UInt64, stakeAmount: UFix64) {
+        let flowVault: @FungibleToken.Vault
+        
+        prepare(signer: auth(BorrowValue) &Account) {
+          // Borrow a reference to the signer's FlowToken vault
+          let flowTokenVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+            from: /storage/flowTokenVault
+          ) ?? panic("Could not borrow a reference to the Flow Token vault")
+          
+          // Withdraw the stake amount
+          self.flowVault <- flowTokenVault.withdraw(amount: stakeAmount) as! @FlowToken.Vault
+        }
+
+        execute {
+          // Join the game with the stake
+          ElementalStrikers.joinGame(
+            gameId: gameId,
+            player2StakeVault: <-self.flowVault
+          )
+          
+          log("Joined game with ID: ".concat(gameId.toString()).concat(" with stake amount: ").concat(stakeAmount.toString()))
+        }
+      }
+    `,
+    args: (arg, t) => [
+      arg(gameId.toString(), t.UInt64),
       arg(stakeAmount.toString(), t.UFix64)
     ],
     proposer: fcl.authz,
@@ -245,4 +297,80 @@ export const createPvPGame = async (stakeAmount) => {
   });
 
   return transactionId;
+};
+
+// Transacción para realizar una jugada en un juego
+export const makeMove = async (gameId, elementChoice) => {
+  // Mapa para convertir nombres de elementos en inglés a español para la blockchain
+  const elementMap = {
+    "Fire": "Fuego",
+    "Water": "Agua",
+    "Plant": "Planta"
+  };
+  
+  const translatedChoice = elementMap[elementChoice] || elementChoice;
+  
+  if (!translatedChoice || !["Fuego", "Agua", "Planta"].includes(translatedChoice)) {
+    throw new Error("Invalid choice. Must be 'Fire', 'Water', or 'Plant'");
+  }
+
+  const transactionId = await fcl.mutate({
+    cadence: `
+      import ElementalStrikers from 0xElementalStrikers
+
+      transaction(gameId: UInt64, elementChoice: String) {
+        let playerAgentRef: &ElementalStrikers.PlayerAgent
+        
+        prepare(signer: auth(BorrowValue) &Account) {
+          self.playerAgentRef = signer.storage.borrow<&ElementalStrikers.PlayerAgent>(
+            from: ElementalStrikers.PlayerVaultStoragePath
+          ) ?? panic("Could not borrow a reference to PlayerAgent. Did you run setup_account.cdc?")
+        }
+
+        execute {
+          self.playerAgentRef.makeMove(gameId: gameId, elementChoice: elementChoice)
+          log("Made move in game with ID: ".concat(gameId.toString()).concat(" with element choice: ").concat(elementChoice))
+        }
+      }
+    `,
+    args: (arg, t) => [
+      arg(gameId.toString(), t.UInt64),
+      arg(translatedChoice, t.String)
+    ],
+    proposer: fcl.authz,
+    payer: fcl.authz,
+    authorizations: [fcl.authz],
+    limit: 100
+  });
+
+  return transactionId;
+};
+
+// Función para obtener una lista de juegos disponibles (simulada)
+export const getAvailableGames = async () => {
+  // En un caso real, llamaríamos a un script de Flow para obtener estos datos
+  // Pero para este ejemplo, simulamos los datos
+  return [
+    {
+      id: 1,
+      creator: "0x1234567890abcdef",
+      stake: "10.0",
+      rounds: 3,
+      status: "Waiting for opponent"
+    },
+    {
+      id: 2,
+      creator: "0x2345678901abcdef",
+      stake: "5.0",
+      rounds: 5,
+      status: "Waiting for opponent"
+    },
+    {
+      id: 3,
+      creator: "0x3456789012abcdef",
+      stake: "20.0",
+      rounds: 1,
+      status: "Waiting for opponent"
+    }
+  ];
 }; 

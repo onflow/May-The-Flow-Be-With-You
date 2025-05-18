@@ -38,6 +38,18 @@ interface TransactionResult {
   winner?: string | null;
 }
 
+// Definir tipo para usuario de Flow
+interface FlowUser {
+  addr: string;
+  loggedIn: boolean;
+  // Define propiedades específicas en lugar de 'any'
+  cid?: string;
+  expiresAt?: number;
+  f_type?: string;
+  f_vsn?: string;
+  services?: Record<string, unknown>;
+}
+
 // Definir el tipo para elementInfo
 interface ElementInfo {
   name: string;
@@ -56,13 +68,14 @@ export default function PvEGame() {
   const [userAddress, setUserAddress] = useState<string>('');
   const [selectedElement, setSelectedElement] = useState<string>('');
   const [gameState, setGameState] = useState<string>('select'); // select, loading, result
-  const [gameId, setGameId] = useState<number | null>(null);
+  // Usamos una constante para el gameId ya que actualmente no se usa el valor dinámico
+  const GAME_ID = 1; // ID fijo para el demo
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   const [showResult, setShowResult] = useState<boolean>(false);
   
   // Escuchar cambios en la autenticación
   useEffect(() => {
-    const unsub = fcl.currentUser.subscribe((user: any) => {
+    const unsub = fcl.currentUser.subscribe((user: FlowUser) => {
       if (user.addr) {
         setUserAddress(user.addr);
       }
@@ -113,14 +126,14 @@ export default function PvEGame() {
       setGameState('loading');
       
       // Crear juego PvE
-      const transactionId = await createPracticeGame(selectedElement);
+      await createPracticeGame(selectedElement);
       
       // Simular espera para la transacción
       // En producción, deberíamos suscribirnos a eventos de blockchain
       setTimeout(async () => {
         try {
           // Revelar el resultado
-          const result: TransactionResult = await revealOutcome(gameId);
+          const result: TransactionResult = await revealOutcome(GAME_ID);
           // Asegurarse de que el resultado tenga la propiedad winner
           const completeResult: GameResult = {
             gameId: result.gameId,

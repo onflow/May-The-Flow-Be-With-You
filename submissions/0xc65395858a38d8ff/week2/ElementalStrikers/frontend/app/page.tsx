@@ -197,7 +197,7 @@ export default function HomePage() {
           <Text fontSize="lg" color="gray.700" maxW="3xl" mx="auto">
             ElementalStrikers is a decentralized game where players engage in strategic elemental battles. 
             Inspired by classic rock-paper-scissors mechanics but with a creative twist, players choose an element 
-            (Fire, Water, or Plant) and stake Flow tokens to participate. The game leverages Flow's on-chain randomness 
+            (Fire, Water, or Plant) and stake Flow tokens to participate. The game leverages Flow&apos;s on-chain randomness 
             to introduce exciting unpredictable factors like environmental modifiers and critical hit chances.
           </Text>
         </Box>
@@ -414,7 +414,7 @@ export default function HomePage() {
           <Feature
             icon={FiDroplet}
             title="Random Modifiers"
-            text="Environmental effects like 'Sunny Day' boost Fire, 'Rainfall' enhances Water. These modifiers can turn losses into draws or amplify winnings."
+            text="Environmental effects like &apos;Sunny Day&apos; boost Fire, &apos;Rainfall&apos; enhances Water. These modifiers can turn losses into draws or amplify winnings."
             accentColor={elementColors.agua}
           />
           <Feature
@@ -470,7 +470,7 @@ export default function HomePage() {
                 </Box>
                 <Box p={3} bg="blue.100" borderRadius="md" w="100%">
                   <Text fontWeight="bold" color="gray.800">Environmental Modifier:</Text>
-                  <Text color="gray.800">'Sunny Day' appears! Fire gets +20% power</Text>
+                  <Text color="gray.800">&apos;Sunny Day&apos; appears! Fire gets +20% power</Text>
                 </Box>
                 <Box p={3} bg="blue.100" borderRadius="md" w="100%">
                   <Text fontWeight="bold" color="gray.800">Round 2:</Text>
@@ -502,8 +502,8 @@ export default function HomePage() {
         >
           <Heading size="lg" mb={4}>May The Flow Be With You Challenge</Heading>
           <Text fontSize="md" mb={4} color="gray.700">
-            ElementalStrikers was a Week 1 winner in the 'Randomness Revolution' category.
-            We are now expanding for Week 2: 'Actually Fun Games' with new PVE battles, 
+            ElementalStrikers was a Week 1 winner in the &apos;Randomness Revolution&apos; category.
+            We are now expanding for Week 2: &apos;Actually Fun Games&apos; with new PVE battles, 
             multi-turn mechanics, and an enhanced staking system.
           </Text>
           <Text fontSize="lg" fontWeight="bold" mb={4} color="gray.800">

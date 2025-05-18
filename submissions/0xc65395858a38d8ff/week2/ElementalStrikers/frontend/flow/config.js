@@ -3,7 +3,7 @@ import { config } from "@onflow/fcl";
 // Definir el contrato de ElementalStrikers según la red
 const contracts = {
   testnet: {
-    ElementalStrikers: "0x1234567890abcdef", // Reemplazar con el address real en la testnet
+    ElementalStrikers: "0xbeb2f48c3293e514", // Dirección real en testnet
     FungibleToken: "0x9a0766d93b6608b7",
     FlowToken: "0x7e60df042a9c0868",
     RandomBeaconHistory: "0xe467b9dd11fa00df",

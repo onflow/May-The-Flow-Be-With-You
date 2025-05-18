@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import * as fcl from '@onflow/fcl';
-import { Box, Heading, Text, Button, Container, Stack } from '@chakra-ui/react';
+import { Heading, Text, Button, Container, Stack } from '@chakra-ui/react';
 import { useRouter } from 'next/navigation';
 import PvEGame from '../../src/components/PvEGame';
 import { setupAccount } from '../../flow/transactions';

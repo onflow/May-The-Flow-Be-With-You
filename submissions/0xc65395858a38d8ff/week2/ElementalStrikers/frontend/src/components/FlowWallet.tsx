@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import * as fcl from '@onflow/fcl';
 import { 
   Button, 
-  Box, 
-  Text, 
   Flex
 } from '@chakra-ui/react';
 

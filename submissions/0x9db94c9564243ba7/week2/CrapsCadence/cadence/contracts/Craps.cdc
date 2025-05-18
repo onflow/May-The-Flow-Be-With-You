@@ -21,15 +21,29 @@ access(all) contract OnchainCraps {
     access(all) case RESOLVED /// TBD State
   }
 
+  access (all) struct BetResult {
+    access (all) let bet: String
+    access (all) let betAmount: UFix64
+    access (all) let status: String //WIN, LOSE, HOLD
+    access (all) let resultAmount: UFix64? //How much won/lost
+
+    init(bet: String, betAmount: UFix64, status: String, resultAmount: UFix64?) {
+        self.bet = bet
+        self.betAmount = betAmount
+        self.status = status
+        self.resultAmount = resultAmount != nil ? resultAmount : nil
+    }
+  }
+
   access(all) struct RollResult {
-    access(all) let message: String
-    access(all) let value: UInt8
+    access(all) let diceValue: UInt8
+    access (all) let rollResults: [BetResult]
     //WE MAY WANT TO ADD STATUS TO ROLL RESULT
 
-    init(message: String, value: UInt8) {
-        self.message = message
-        self.value = value
-    }
+    init(value: UInt8, rollResults: [BetResult]) {
+        self.diceValue = value
+        self.rollResults = rollResults
+    }   
 }
 
   access (all) resource Game {
@@ -49,6 +63,8 @@ access(all) contract OnchainCraps {
       let secondRoll = revertibleRandom<UInt8>(modulo: 6) + 1
       let diceTotal = firstRoll + secondRoll
 
+      let rollResult: [OnchainCraps.BetResult] = []
+
       if(self.state == OnchainCraps.GameState.COMEOUT){
 
         //assert that there is at least 1 bet on the board & bet must be PASS or Field
@@ -57,55 +73,56 @@ access(all) contract OnchainCraps {
         //loop through bets and update the state of this game
         for bet in newBets?.keys! {
 
+          let currentBet = newBets![bet]!
           //make sure newBets only cointains keys "PASS" and "FIELD
           assert(bet == "PASS" || bet == "FIELD", message: "Come out rolls can only have PASS or FIELD bets")
+          assert(currentBet >= 0.1, message: "Bet must be greater than 0.1")
+          
+          var betStatus: String = ""
+          var resultAmount: UFix64? = nil
 
           if bet == "FIELD" {
             //process and add field to roll result
           }
 
           if bet == "PASS" {
+            if self.bets["PASS"] != nil {
+              self.bets["PASS"] = currentBet + self.bets["PASS"]!
+            } else {
+              self.bets["PASS"] = currentBet
+            }
+
             // Check for craps (lose) first
             if diceTotal == 2 || diceTotal == 3 || diceTotal == 12 {
-              
-              //send coins to the admin account - payment todo
-              return OnchainCraps.RollResult( message: "LOSE", value: diceTotal) //TODO - we should't return until the end
-            }
-            
-            // Check for natural win (7 or 11)
-            if diceTotal == 7 || diceTotal == 11 {
-              //payout the user 1:1
-              let userPayout = self.bets["PASS"]! 
+
+              betStatus = "LOSE"
+              resultAmount = self.bets.remove(key: "PASS") //remove the bet
+
+              //send "betAmount" of coins to the admin account - payment todo
+
+
+            } else if diceTotal == 7 || diceTotal == 11 { // Check for natural win (7 or 11)
 
               //need to get users account to send
+              betStatus = "WIN"
+              resultAmount = self.bets["PASS"]
               let userRef = getAccount(userAddress)
+
               //send the userPayout to the user - payment todo
 
-              return OnchainCraps.RollResult( message: "WIN", value: diceTotal)  //TODO - we should't return until the end
-            } 
-            
-            // If we get here, it's a valid point number (4,5,6,8,9,10)
-            if diceTotal == 4 || diceTotal == 5 || diceTotal == 6 || 
-                diceTotal == 8 || diceTotal == 9 || diceTotal == 10 {
-              //set the point
+            } else { //if we get here, it's a valid point number (4,5,6,8,9,10)
+
               self.point = Int(diceTotal)
               self.state = OnchainCraps.GameState.POINT
-              
-              if self.bets.length < 1 { //self.bets > 0
-                self.bets = newBets!
-              } else {
-                // TODO - Merge Pass Line bets
-              }
-
-              return OnchainCraps.RollResult(message: "NONE", value: diceTotal)  //TODO - we should't return until the end
+              betStatus = "HOLD"
             }
+
+            rollResult.append(OnchainCraps.BetResult(bet: "PASS", betAmount: self.bets["PASS"]!, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
           }
         }
       }
 
-      //we will probably take this out
-      return OnchainCraps.RollResult( message: "NORESOLVE", value: diceTotal)
-
+      return OnchainCraps.RollResult(value: diceTotal, rollResults: rollResult)
     }
 
     init() {

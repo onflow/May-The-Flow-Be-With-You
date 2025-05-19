@@ -26,7 +26,8 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import Modal from "./modal";
 import { difficulty } from "@/config";
 import { startGame } from "@minesweeper";
-import { getRandomNumber } from "../app/utils/contracts";
+import { getRandomNumber, addRecord } from "../contracts/contracts";
+import * as fcl from '@onflow/fcl';
 // type Props = {};
 
 const ModalWin = () => {
@@ -35,7 +36,9 @@ const ModalWin = () => {
   const status = useAppSelector((store) => store.minesweeper.status);
   const level = useAppSelector((store) => store.userData.level);
   const latestRecord = useAppSelector((store) => store.userData.records[0]);
+  const userAddress = useAppSelector((store) => store.userData.userAddress);
   const [visible, setVisible] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const closeShareModal = () => {
     setVisible(false);
   };
@@ -44,12 +47,46 @@ const ModalWin = () => {
       setVisible(status == "win");
     }, 800);
   }, [status]);
-  const handleScreenshot = () => {
-    const btn = document.querySelector("#SCREEN_SHOOT_BUTTON") as HTMLButtonElement;
-    if (btn) {
+  const handleSaveScore = async () => {
+    try {
+      setIsSaving(true);
+
+      // Check if user is connected
+      const currentUser = await fcl.currentUser().snapshot();
+      if (!currentUser?.addr) {
+        alert('Please connect your Flow wallet first');
+        return;
+      }
+
+      // Verify the connected address matches the stored address
+      if (currentUser.addr !== userAddress) {
+        alert('Wallet connection mismatch. Please reconnect your wallet.');
+        return;
+      }
+
+      await addRecord(latestRecord.duration);
       closeShareModal();
-      btn.click();
+      const btn = document.querySelector("#SCREEN_SHOOT_BUTTON") as HTMLButtonElement;
+      if (btn) {
+        btn.click();
+      }
+    } catch (error) {
+      console.error('Failed to save score:', error);
+      alert('Failed to save score. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
+  };
+  const handleSaveNFT = async () => {
+    closeShareModal();
+    const randSeed = await getRandomNumber();
+    dispatch(
+      // @ts-ignore
+      startGame({
+        difficulty: difficulty[level],
+        randSeed
+      })
+    );
   };
   const handlePlayAgain = async () => {
     closeShareModal();
@@ -81,8 +118,16 @@ const ModalWin = () => {
           <div className="flex flex-col items-center gap-1">
             <h4>🎉 You have win the game!</h4>
             <div className="flex gap-3">
-              <button onClick={handleScreenshot}>Screenshot</button>
-              <button onClick={handlePlayAgain}>Play again</button>
+              <button type="button" onClick={handleSaveNFT}>Save as NFT</button>
+              <button
+                type="button"
+                onClick={handleSaveScore}
+                disabled={isSaving}
+                className={!userAddress ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                {isSaving ? 'Saving...' : 'Save Score onChain'}
+              </button>
+              <button type="button" onClick={handlePlayAgain}>Play again</button>
             </div>
             <fieldset className="mt-4">
               <legend className="m-auto">share it !</legend>

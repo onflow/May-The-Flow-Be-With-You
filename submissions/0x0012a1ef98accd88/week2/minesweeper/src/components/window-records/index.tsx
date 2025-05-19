@@ -15,7 +15,7 @@ import { useState } from "react";
 // type Props = {}
 // dayjs.extend(relativeTime);
 
-export const RecordWindowTitle = `Play Records`;
+export const RecordWindowTitle = `Leadership Board`;
 const RecordsWindow = () => {
   const dispatch = useAppDispatch();
   const [optTimestamp, setOptTimestamp] = useState<number | null>(null);

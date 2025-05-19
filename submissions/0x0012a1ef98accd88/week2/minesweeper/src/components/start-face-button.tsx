@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { GameStatus, startGame } from "@minesweeper";
 import React, { useEffect, useRef, useState } from "react";
 import Confirm from "./confirm";
-import { getRandomNumber } from "../app/utils/contracts";
+import { getRandomNumber } from "../contracts/contracts";
 
 // type Props = {
 //   startGame: () => void;

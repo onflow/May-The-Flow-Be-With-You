@@ -47,4 +47,5 @@ export interface UserData {
   cellSize: number;
   records: PlayRecord[];
   cellActive: boolean;
+  userAddress?: string;
 }

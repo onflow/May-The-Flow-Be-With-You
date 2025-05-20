@@ -65,7 +65,6 @@ const ModalWin = () => {
     try {
       setIsSaving(true);
       await saveScore(latestRecord.duration);
-      closeShareModal();
     } catch (error) {
       console.error('Failed to save score:', error);
       alert('Failed to save score. Please try again.');
@@ -75,12 +74,6 @@ const ModalWin = () => {
   };
 
   const handleSaveNFT = async () => {
-    // const btn = document.querySelector("#SCREEN_SHOOT_BUTTON") as HTMLButtonElement;
-
-    // if (btn) {
-    //   closeShareModal();
-    //   btn.click();
-    // }
     try {
       setIsSaving(true);
 
@@ -90,62 +83,56 @@ const ModalWin = () => {
         throw new Error('Screenshot area not found');
       }
 
-      // Capture the screenshot using html-to-image
-      // const canvas = await toCanvas(node, {
-      //   pixelRatio: window.devicePixelRatio * (isWebview() ? 2 : 1),
-      //   filter: (node) => {
-      //     return !node.classList.contains("html2img-ignore");
-      //   }
-      // });
-      html2canvas(node, {
+      const canvas = await html2canvas(node, {
         logging: process.env.NODE_ENV !== "production",
         allowTaint: true,
         useCORS: true,
-        // debug: process.env.NODE_ENV !== 'production',
         scale: window.devicePixelRatio * (isWebview() ? 2 : 1),
         onclone: (document) => {
           const node = document.querySelector("#SCREENSHOT_AREA .window-body") as HTMLElement;
           if (node) {
             node.style.margin = "0";
             node.style.padding = "8px";
-            // node.style.boxShadow = "none";
           }
         }
-      }).then((canvas) => {
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            const file = new File([blob], 'minesweeper-win.png', { type: 'image/png' });
-
-            // Upload to IPFS using Pinata
-            const { cid } = await pinata.upload.public.file(file);
-            const url = await pinata.gateways.public.convert(cid);
-            const metadata = {
-              name: `Minesweeper Win - ${level} Level`,
-              description: `I won Minesweeper in ${latestRecord.duration} seconds on ${level} mode!`,
-              image: url,
-              attributes: [
-                {
-                  trait_type: "Level",
-                  value: level
-                },
-                {
-                  trait_type: "Time",
-                  value: `${latestRecord.duration} seconds`
-                }
-              ]
-            };
-            const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
-            const metadataFile = new File([metadataBlob], 'metadata.json', { type: 'application/json' });
-            const { cid: metadataCid } = await pinata.upload.public.file(metadataFile);
-            const metadataUrl = await pinata.gateways.public.convert(metadataCid);
-            await saveNFT(metadataUrl);
-
-          }
-        }, "image/png");
-
       });
 
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+        }, "image/png");
+      });
+
+      const file = new File([blob], 'minesweeper-win.png', { type: 'image/png' });
+
+      // Upload to IPFS using Pinata
+      const { cid } = await pinata.upload.public.file(file);
+      const url = await pinata.gateways.public.convert(cid);
+
+      const metadata = {
+        name: `Minesweeper Win - ${level} Level`,
+        description: `I won Minesweeper in ${latestRecord.duration} seconds on ${level} mode!`,
+        image: url,
+        attributes: [
+          {
+            trait_type: "Level",
+            value: level
+          },
+          {
+            trait_type: "Time",
+            value: `${latestRecord.duration} seconds`
+          }
+        ]
+      };
+
+      const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+      const metadataFile = new File([metadataBlob], 'metadata.json', { type: 'application/json' });
+      const { cid: metadataCid } = await pinata.upload.public.file(metadataFile);
+      const metadataUrl = await pinata.gateways.public.convert(metadataCid);
+
+      await saveNFT(metadataUrl);
       alert('NFT minted successfully!');
+      // closeShareModal();
     } catch (error) {
       console.error('Failed to save NFT:', error);
       alert('Failed to save NFT. Please try again.');

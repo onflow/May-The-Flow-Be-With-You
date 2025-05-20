@@ -44,7 +44,7 @@ access(all) contract OnchainCraps {
         self.diceValue = value
         self.rollResults = rollResults
     }   
-}
+  }
 
   access (all) resource Game {
     access(all) var state: OnchainCraps.GameState
@@ -56,6 +56,30 @@ access(all) contract OnchainCraps {
 
     //add overall userInfo here instead of above
 
+
+    access (contract) fun fieldBet(diceTotal: UInt8, betAmount: UFix64) : OnchainCraps.BetResult {
+
+      var betStatus: String = ""
+      var resultAmount: UFix64? = nil
+
+      //process and add field to roll result
+      if diceTotal == 12 || diceTotal == 2 {
+        betStatus = "WIN"
+        resultAmount = betAmount * 2.0
+        //send resultAmount of coins to user
+
+      } else if diceTotal == 3 || diceTotal == 4 || diceTotal == 9 || diceTotal == 10 || diceTotal == 11 {
+        betStatus = "WIN"
+        resultAmount = betAmount
+        //send resultAmount of coins to user
+      } else {
+        betStatus = "LOSE"
+        resultAmount = betAmount
+      }
+      return OnchainCraps.BetResult(bet: "FIELD", betAmount: betAmount, status: betStatus, resultAmount: resultAmount )
+    }
+
+
     access (all) fun rollDice(userAddress: Address, newBets: { String : UFix64 }? ) : RollResult {
 
       // Generate first & seconde dice roll (1-6)
@@ -65,7 +89,7 @@ access(all) contract OnchainCraps {
 
       let rollResult: [OnchainCraps.BetResult] = []
 
-      if(self.state == OnchainCraps.GameState.COMEOUT){
+      if self.state == OnchainCraps.GameState.COMEOUT {
 
         //assert that there is at least 1 bet on the board & bet must be PASS or Field
         assert(newBets != nil && newBets!.length >= 1, message: "Come out rolls need a bet placed")
@@ -74,38 +98,26 @@ access(all) contract OnchainCraps {
         for bet in newBets?.keys! {
 
           let currentBet = newBets![bet]!
+          let allowedBets = OnchainCraps.allowedBets[OnchainCraps.GameState.COMEOUT]!
           //make sure newBets only cointains keys "PASS" and "FIELD
-          assert(bet == "PASS" || bet == "FIELD", message: "Come out rolls can only have PASS or FIELD bets")
+          assert(OnchainCraps.allowedBets[self.state]!.contains(bet), message: "Come out rolls can only have PASS or FIELD bets")
           assert(currentBet >= 0.1, message: "Bet must be greater than 0.1")
           
-          var betStatus: String = ""
-          var resultAmount: UFix64? = nil
-
-          if self.bets[bet] != nil {
-            self.bets[bet] = currentBet + self.bets[bet]!
-          } else {
-            self.bets[bet] = currentBet
-          }
-
           if bet == "FIELD" {
-            //process and add field to roll result
-            if diceTotal == 12 || diceTotal == 2 {
-              betStatus = "WIN"
-              resultAmount = self.bets["FIELD"]! * 2.0
-              //send resultAmount of coins to user
-
-            } else if diceTotal == 3 || diceTotal == 4 || diceTotal == 9 || diceTotal == 10 || diceTotal == 11 {
-              betStatus = "WIN"
-              resultAmount = self.bets["FIELD"]!
-              //send resultAmount of coins to user
-            } else {
-              betStatus = "LOSE"
-              resultAmount = self.bets.remove(key: "FIELD") //remove the bet
-            }
-            
-            rollResult.append(OnchainCraps.BetResult(bet: "PASS", betAmount: self.bets["PASS"]!, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
-
+            let fieldResult = self.fieldBet(diceTotal: diceTotal, betAmount: currentBet)
+            rollResult.append(fieldResult)
           } else if bet == "PASS" {
+
+            var betStatus: String = ""
+            var resultAmount: UFix64? = nil
+
+            if self.bets[bet] != nil {
+              self.bets[bet] = currentBet + self.bets[bet]!
+            } else {
+              self.bets[bet] = currentBet
+            }
+
+            let betAmount = self.bets[bet]!
 
             // Check for craps (lose) first
             if diceTotal == 2 || diceTotal == 3 || diceTotal == 12 {
@@ -132,10 +144,39 @@ access(all) contract OnchainCraps {
               betStatus = "HOLD"
             }
 
-            rollResult.append(OnchainCraps.BetResult(bet: "PASS", betAmount: self.bets["PASS"]!, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
+            rollResult.append(OnchainCraps.BetResult(bet: "PASS", betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
           }
         }
+      } else if self.state == OnchainCraps.GameState.POINT {
+
+        //loop through bets and update the state of this game
+        for bet in newBets?.keys! {
+          let currentBet = newBets![bet]!
+          assert(OnchainCraps.allowedBets[self.state]!.contains(bet), message: "This bet is not allowed during the POINT phase")
+
+          var betStatus: String = ""
+          var resultAmount: UFix64? = nil
+
+          if self.bets[bet] != nil {
+            self.bets[bet] = currentBet + self.bets[bet]!
+          } else {
+            self.bets[bet] = currentBet
+          }
+
+          let betAmount = self.bets[bet]!
+          
+          if bet == "FIELD" {
+            let fieldResult = self.fieldBet(diceTotal: diceTotal, betAmount: betAmount)
+            rollResult.append(fieldResult)
+          } else if bet == "CRAPS" { //2, 3, 12 - single bet
+
+          } else if bet == "YO" { //11 - single bet
+
+          }
+
+        }
       }
+
 
       return OnchainCraps.RollResult(value: diceTotal, rollResults: rollResult)
     }
@@ -167,7 +208,7 @@ access(all) contract OnchainCraps {
   init(){
     self.allowedBets = {
       OnchainCraps.GameState.COMEOUT:["PASS", "FIELD"],
-      OnchainCraps.GameState.POINT:["COME", "FIELD", "CRAPS", "YO", "2", "3", "4", "5", "6", "8", "9", "10", "11", "12", "Odds"]
+      OnchainCraps.GameState.POINT:["FIELD", "COME", "CRAPS", "YO", "4", "5", "6", "8", "9", "10", "Odds"]
     }
     self.userGames = {}
     self.tokenVaults <- {} //add aiSportsJuice

@@ -1,18 +1,28 @@
-import { useAppSelector } from "@/redux/hooks";
+// import { useAppSelector } from "@/redux/hooks";
 import { Level, PlayRecord } from "@/types";
 import { useEffect, useState } from "react";
+import { useGetRecords } from "./useContract";
+
 type Filter = {
   level: Level | "all";
   result: "win" | "lose" | "all";
   //   time: number | "";
 };
+
 export const defaultFilter: Filter = {
   level: "all",
   result: "all"
   // time: ""
 };
+
+interface OnChainRecord {
+  player: string;
+  timestamp: bigint;
+  timeTaken: bigint;
+}
+
 const useRecords = () => {
-  const records = useAppSelector((state) => state.userData.records);
+  const { records: onChainRecords, isPending, error } = useGetRecords();
   const [filteredRecords, setFilteredRecords] = useState<PlayRecord[]>([]);
   const [filter, setFilter] = useState<Filter>(defaultFilter);
   const [best, setBest] = useState<Record<Exclude<Level, "custom">, PlayRecord | null>>({
@@ -20,17 +30,28 @@ const useRecords = () => {
     intermediate: null,
     expert: null
   });
+
   useEffect(() => {
-    if (records.length > 0) {
-      const beginners = records
-        .filter((r) => r.level == "beginner" && r.status == "win")
+    if (onChainRecords && onChainRecords.length > 0) {
+      // Convert on-chain records to PlayRecord format
+      const convertedRecords: PlayRecord[] = onChainRecords.map((record: OnChainRecord) => ({
+        timestamp: Number(record.timestamp),
+        duration: Number(record.timeTaken),
+        level: "beginner", // Default to beginner since on-chain records don't store level
+        status: "win", // All on-chain records are wins
+        player: record.player
+      }));
+
+      const beginners = convertedRecords
+        .filter((r) => r.level === "beginner" && r.status === "win")
         .sort((a, b) => a.duration - b.duration);
-      const intermediates = records
-        .filter((r) => r.level == "intermediate" && r.status == "win")
+      const intermediates = convertedRecords
+        .filter((r) => r.level === "intermediate" && r.status === "win")
         .sort((a, b) => a.duration - b.duration);
-      const experts = records
-        .filter((r) => r.level == "expert" && r.status == "win")
+      const experts = convertedRecords
+        .filter((r) => r.level === "expert" && r.status === "win")
         .sort((a, b) => a.duration - b.duration);
+
       setBest((prev) => ({
         ...prev,
         beginner: beginners[0] ?? null,
@@ -38,14 +59,23 @@ const useRecords = () => {
         expert: experts[0] ?? null
       }));
     }
-  }, [records]);
+  }, [onChainRecords]);
+
   useEffect(() => {
-    if (records.length > 0) {
-      const filtered = records.filter((r) => {
-        if (filter.level !== "all" && r.level != filter.level) {
+    if (onChainRecords && onChainRecords.length > 0) {
+      const convertedRecords: PlayRecord[] = onChainRecords.map((record: OnChainRecord) => ({
+        timestamp: Number(record.timestamp),
+        duration: Number(record.timeTaken),
+        level: "beginner", // Default to beginner since on-chain records don't store level
+        status: "win", // All on-chain records are wins
+        player: record.player
+      }));
+
+      const filtered = convertedRecords.filter((r) => {
+        if (filter.level !== "all" && r.level !== filter.level) {
           return false;
         }
-        if (filter.result !== "all" && r.status != filter.result) {
+        if (filter.result !== "all" && r.status !== filter.result) {
           return false;
         }
         // if (filter.time && r.duration != filter.time) {
@@ -57,17 +87,21 @@ const useRecords = () => {
     } else {
       setFilteredRecords([]);
     }
-  }, [records, filter]);
+  }, [onChainRecords, filter]);
+
   const updateFilter = (filter: Partial<Filter>) => {
     setFilter((prev) => {
       return { ...prev, ...filter };
     });
   };
+
   return {
     records: filteredRecords,
     best,
     filter,
-    updateFilter
+    updateFilter,
+    isPending,
+    error
   };
 };
 

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useWindowSize } from "@uidotdev/usehooks";
 import Confetti from "react-confetti";
+import { toCanvas } from "html-to-image";
+import html2canvas from "html2canvas";
 import {
   FacebookShareButton,
   TwitterShareButton,
@@ -26,9 +28,16 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import Modal from "./modal";
 import { difficulty } from "@/config";
 import { startGame } from "@minesweeper";
-import { getRandomNumber, addRecord } from "../contracts/contracts";
-import * as fcl from '@onflow/fcl';
-// type Props = {};
+import { useSaveScore, useSaveNFT, useGetRandomNumber } from "../hooks/useContract";
+import { getRandomNumber } from "@/contracts/contracts";
+import { PinataSDK } from 'pinata';
+import { isWebview } from "@/utils";
+import saveAs from "file-saver";
+
+export const pinata = new PinataSDK({
+  pinataJwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJiNDAzOTJjZi01NTEyLTQzODMtOTE5Yy1jMTk5M2Y3MDI0NjEiLCJlbWFpbCI6InRhc25lZW1zaGVyaWYyM0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJGUkExIn0seyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiZGVjYmZhMDRmNGJjZGViYjQ4NWEiLCJzY29wZWRLZXlTZWNyZXQiOiJjZmRhYzExOWVhMDE5ODczMGE3MTJjMGRhODhjNTU0YzNjYjMwMzY3YzdkMjhhYmYyNzYxN2NiMTMwYjAyZTkzIiwiZXhwIjoxNzc5MjIwMTI4fQ.IsWI5Ei_jlnq1zzZam-tnovUqECt9kaoI4PtgMAHdVU",
+  pinataGateway: 'chocolate-historic-constrictor-297.mypinata.cloud'
+});
 
 const ModalWin = () => {
   const { width, height } = useWindowSize();
@@ -36,40 +45,27 @@ const ModalWin = () => {
   const status = useAppSelector((store) => store.minesweeper.status);
   const level = useAppSelector((store) => store.userData.level);
   const latestRecord = useAppSelector((store) => store.userData.records[0]);
-  const userAddress = useAppSelector((store) => store.userData.userAddress);
   const [visible, setVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const { saveScore, error: saveError } = useSaveScore();
+  const { saveNFT, error: mintError } = useSaveNFT();
+
   const closeShareModal = () => {
     setVisible(false);
   };
+
   useEffect(() => {
     setTimeout(() => {
-      setVisible(status == "win");
+      setVisible(status === "win");
     }, 800);
   }, [status]);
+
   const handleSaveScore = async () => {
     try {
       setIsSaving(true);
-
-      // Check if user is connected
-      const currentUser = await fcl.currentUser().snapshot();
-      if (!currentUser?.addr) {
-        alert('Please connect your Flow wallet first');
-        return;
-      }
-
-      // Verify the connected address matches the stored address
-      if (currentUser.addr !== userAddress) {
-        alert('Wallet connection mismatch. Please reconnect your wallet.');
-        return;
-      }
-
-      await addRecord(latestRecord.duration);
+      await saveScore(latestRecord.duration);
       closeShareModal();
-      const btn = document.querySelector("#SCREEN_SHOOT_BUTTON") as HTMLButtonElement;
-      if (btn) {
-        btn.click();
-      }
     } catch (error) {
       console.error('Failed to save score:', error);
       alert('Failed to save score. Please try again.');
@@ -77,17 +73,87 @@ const ModalWin = () => {
       setIsSaving(false);
     }
   };
+
   const handleSaveNFT = async () => {
-    closeShareModal();
-    const randSeed = await getRandomNumber();
-    dispatch(
-      // @ts-ignore
-      startGame({
-        difficulty: difficulty[level],
-        randSeed
-      })
-    );
+    // const btn = document.querySelector("#SCREEN_SHOOT_BUTTON") as HTMLButtonElement;
+
+    // if (btn) {
+    //   closeShareModal();
+    //   btn.click();
+    // }
+    try {
+      setIsSaving(true);
+
+      // Get the screenshot area element
+      const node = document.querySelector("#SCREEN_SHOOT_AREA") as HTMLElement;
+      if (!node) {
+        throw new Error('Screenshot area not found');
+      }
+
+      // Capture the screenshot using html-to-image
+      // const canvas = await toCanvas(node, {
+      //   pixelRatio: window.devicePixelRatio * (isWebview() ? 2 : 1),
+      //   filter: (node) => {
+      //     return !node.classList.contains("html2img-ignore");
+      //   }
+      // });
+      html2canvas(node, {
+        logging: process.env.NODE_ENV !== "production",
+        allowTaint: true,
+        useCORS: true,
+        // debug: process.env.NODE_ENV !== 'production',
+        scale: window.devicePixelRatio * (isWebview() ? 2 : 1),
+        onclone: (document) => {
+          const node = document.querySelector("#SCREENSHOT_AREA .window-body") as HTMLElement;
+          if (node) {
+            node.style.margin = "0";
+            node.style.padding = "8px";
+            // node.style.boxShadow = "none";
+          }
+        }
+      }).then((canvas) => {
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            const file = new File([blob], 'minesweeper-win.png', { type: 'image/png' });
+
+            // Upload to IPFS using Pinata
+            const { cid } = await pinata.upload.public.file(file);
+            const url = await pinata.gateways.public.convert(cid);
+            const metadata = {
+              name: `Minesweeper Win - ${level} Level`,
+              description: `I won Minesweeper in ${latestRecord.duration} seconds on ${level} mode!`,
+              image: url,
+              attributes: [
+                {
+                  trait_type: "Level",
+                  value: level
+                },
+                {
+                  trait_type: "Time",
+                  value: `${latestRecord.duration} seconds`
+                }
+              ]
+            };
+            const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+            const metadataFile = new File([metadataBlob], 'metadata.json', { type: 'application/json' });
+            const { cid: metadataCid } = await pinata.upload.public.file(metadataFile);
+            const metadataUrl = await pinata.gateways.public.convert(metadataCid);
+            await saveNFT(metadataUrl);
+
+          }
+        }, "image/png");
+
+      });
+
+      alert('NFT minted successfully!');
+    } catch (error) {
+      console.error('Failed to save NFT:', error);
+      alert('Failed to save NFT. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
   const handlePlayAgain = async () => {
     closeShareModal();
     const randSeed = await getRandomNumber();
@@ -99,9 +165,11 @@ const ModalWin = () => {
       })
     );
   };
+
   if (!visible) return null;
   const title = `I just beat #minesweeper in ${latestRecord.duration} seconds on ${level} mode!`;
   return (
+
     <>
       <Modal id="confetti-modal" mask={false}>
         <Confetti
@@ -118,16 +186,27 @@ const ModalWin = () => {
           <div className="flex flex-col items-center gap-1">
             <h4>🎉 You have win the game!</h4>
             <div className="flex gap-3">
-              <button type="button" onClick={handleSaveNFT}>Save as NFT</button>
+              <button
+                type="button"
+                onClick={handleSaveNFT}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save as NFT'}
+              </button>
               <button
                 type="button"
                 onClick={handleSaveScore}
                 disabled={isSaving}
-                className={!userAddress ? 'opacity-50 cursor-not-allowed' : ''}
               >
                 {isSaving ? 'Saving...' : 'Save Score onChain'}
               </button>
-              <button type="button" onClick={handlePlayAgain}>Play again</button>
+              <button
+                type="button"
+                onClick={handlePlayAgain}
+                disabled={isSaving}
+              >
+                Play again
+              </button>
             </div>
             <fieldset className="mt-4">
               <legend className="m-auto">share it !</legend>

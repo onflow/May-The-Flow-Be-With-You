@@ -87,12 +87,6 @@ const userDataSlice = createSlice({
         ...rest
       };
       state.records = [record, ...state.records];
-    },
-    removeRecord(state, action: PayloadAction<number>) {
-      state.records = state.records.filter((r) => r.timestamp !== action.payload);
-    },
-    setUserAddress(state, action: PayloadAction<string>) {
-      state.userAddress = action.payload;
     }
   }
 });
@@ -100,7 +94,6 @@ const userDataSlice = createSlice({
 export const {
   updateUI,
   updateArticle,
-  removeRecord,
   updateCustom,
   toggleSound,
   fillUserData,
@@ -112,6 +105,5 @@ export const {
   updateCellActive,
   addRecord,
   updateFeedback,
-  setUserAddress
 } = userDataSlice.actions;
 export default userDataSlice.reducer;

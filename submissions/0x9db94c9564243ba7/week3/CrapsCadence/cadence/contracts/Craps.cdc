@@ -65,12 +65,12 @@ access(all) contract OnchainCraps {
       //process and add field to roll result
       if diceTotal == 12 || diceTotal == 2 {
         betStatus = "WIN"
-        resultAmount = betAmount * 2.0
+        resultAmount = betAmount * 3.0
         //send resultAmount of coins to user
 
       } else if diceTotal == 3 || diceTotal == 4 || diceTotal == 9 || diceTotal == 10 || diceTotal == 11 {
         betStatus = "WIN"
-        resultAmount = betAmount
+        resultAmount = betAmount * 2.0
         //send resultAmount of coins to user
       } else {
         betStatus = "LOSE"
@@ -82,6 +82,10 @@ access(all) contract OnchainCraps {
 
     access (all) fun rollDice(userAddress: Address, newBets: { String : UFix64 }? ) : RollResult {
 
+      if self.state == OnchainCraps.GameState.COMEOUT && (newBets == nil || newBets!.length == 0)  { //IF its the comeout roll, we need at least 1 bet placed
+        assert(self.bets["POINT"] != nil && self.bets["POINT"]! > 0.0, message: "Come out bets need a bet placed" )
+      }
+
       // Generate first & seconde dice roll (1-6)
       let firstRoll = revertibleRandom<UInt8>(modulo: 6) + 1
       let secondRoll = revertibleRandom<UInt8>(modulo: 6) + 1
@@ -89,24 +93,70 @@ access(all) contract OnchainCraps {
 
       let rollResult: [OnchainCraps.BetResult] = []
 
+      //process all prop bets first, since there is no memory or storage needed
+      if newBets != nil {
+        for bet in newBets?.keys! {
+          if bet == "FIELD" {
+            let fieldResult = self.fieldBet(diceTotal: diceTotal, betAmount: newBets![bet]!)
+            rollResult.append(fieldResult)
+          } else if bet == "CRAPS" {
+            var betStatus: String = ""
+            var resultAmount: UFix64? = nil
+            if diceTotal == 12 || diceTotal == 2 || diceTotal == 3 {
+              betStatus = "WIN"
+              resultAmount = newBets![bet]! * 8.0 //7:1 odds plus buy-in back
+              //send resultAmount of coins to user
+
+            } else {
+              betStatus = "LOSE"
+              resultAmount = newBets![bet]!
+              //send newBets![bet]! to the admin
+
+            }
+            rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: newBets![bet]!, status: betStatus, resultAmount: resultAmount))
+          } else if bet == "YO" {
+            var betStatus: String = ""
+            var resultAmount: UFix64? = nil
+            if diceTotal == 11 {
+              betStatus = "WIN"
+              resultAmount = newBets![bet]! * 16.0 //15:1 odds plus buy-in back
+              //send resultAmount of coins to user
+
+            } else {
+              betStatus = "LOSE"
+              resultAmount = newBets![bet]!
+              //send newBets![bet]! to the admin
+            }
+            rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: newBets![bet]!, status: betStatus, resultAmount: resultAmount ))
+          } else { //this is not a Prop bet, so we should add it to our bets
+            let currentBet = newBets![bet]!
+            if self.bets[bet] != nil {
+              self.bets[bet] = currentBet + self.bets[bet]!
+            } else {
+              self.bets[bet] = currentBet
+            }
+          } 
+        }
+      }
+
+      if self.bets.length == 0 {
+        return OnchainCraps.RollResult(value: diceTotal, rollResults: rollResult)
+      }
+
+      //THIS IS WHERE WE ARE PICKING UP
+
       if self.state == OnchainCraps.GameState.COMEOUT {
 
-        //assert that there is at least 1 bet on the board & bet must be PASS or Field
-        assert(newBets != nil && newBets!.length >= 1, message: "Come out rolls need a bet placed")
-
         //loop through bets and update the state of this game
-        for bet in newBets?.keys! {
+        for bet in self.bets.keys {
 
-          let currentBet = newBets![bet]!
+          let currentBet = self.bets[bet]!
           let allowedBets = OnchainCraps.allowedBets[OnchainCraps.GameState.COMEOUT]!
           //make sure newBets only cointains keys "PASS" and "FIELD
           assert(OnchainCraps.allowedBets[self.state]!.contains(bet), message: "Come out rolls can only have PASS or FIELD bets")
           assert(currentBet >= 0.1, message: "Bet must be greater than 0.1")
           
-          if bet == "FIELD" {
-            let fieldResult = self.fieldBet(diceTotal: diceTotal, betAmount: currentBet)
-            rollResult.append(fieldResult)
-          } else if bet == "PASS" {
+          if bet == "PASS" {
 
             var betStatus: String = ""
             var resultAmount: UFix64? = nil
@@ -150,29 +200,16 @@ access(all) contract OnchainCraps {
       } else if self.state == OnchainCraps.GameState.POINT {
 
         //loop through bets and update the state of this game
-        for bet in newBets?.keys! {
-          let currentBet = newBets![bet]!
+        for bet in self.bets.keys {
+          let currentBet = self.bets[bet]!
           assert(OnchainCraps.allowedBets[self.state]!.contains(bet), message: "This bet is not allowed during the POINT phase")
 
           var betStatus: String = ""
           var resultAmount: UFix64? = nil
 
-          if self.bets[bet] != nil {
-            self.bets[bet] = currentBet + self.bets[bet]!
-          } else {
-            self.bets[bet] = currentBet
-          }
-
           let betAmount = self.bets[bet]!
-          
-          if bet == "FIELD" {
-            let fieldResult = self.fieldBet(diceTotal: diceTotal, betAmount: betAmount)
-            rollResult.append(fieldResult)
-          } else if bet == "CRAPS" { //2, 3, 12 - single bet
 
-          } else if bet == "YO" { //11 - single bet
-
-          }
+          //process bets here
 
         }
       }
@@ -206,8 +243,8 @@ access(all) contract OnchainCraps {
   }
 
   init(){
-    self.allowedBets = {
-      OnchainCraps.GameState.COMEOUT:["PASS", "FIELD"],
+    self.allowedBets = { //are allowed bets necessary?
+      OnchainCraps.GameState.COMEOUT:["PASS", "FIELD"], 
       OnchainCraps.GameState.POINT:["FIELD", "COME", "CRAPS", "YO", "4", "5", "6", "8", "9", "10", "Odds"]
     }
     self.userGames = {}

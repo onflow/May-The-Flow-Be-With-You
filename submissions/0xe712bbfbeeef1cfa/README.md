@@ -37,9 +37,24 @@ Balancing state management with fun gameplay mechanics and creating a gameplay l
 
 ---
 
-## 📅 Week 3 — TBD
+## 📅 Week 3 — Generative Tarot AI 🔮
 
-Upcoming.
+**Theme:** Generative Art and Worlds
+
+For Week 3, I created **Generative Tarot AI**, a mystical NFT experience where users draw a unique Tarot card generated with the help of AI and minted on the Flow blockchain. Each card contains:
+
+- 🎴 A **Tarot card title** from a curated list of 78 archetypal cards (e.g., *The Lovers*, *The Tower*, *The Star*)
+- 🎨 An **AI-generated image** representing the card (stored via IPFS)
+- 🧠 A **GPT-powered interpretation** that changes based on the reading context
+- ⛓️ A Cadence-powered **smart contract** that mints the card as an NFT with on-chain metadata (title, interpretation, image hash, timestamp)
+
+- ✅ Minting and reading functionality deployed to Flow Testnet
+- ✅ Frontend built in React: Users draw, read, and mint their Tarot cards
+- ✅ IPFS integration via `nft.storage` for decentralized asset hosting
+- ❌ GPT-4 integration only available in dev due to API key restrictions
+
+🧠 **Key learning from Week 3:**  
+Blending AI creativity with smart contract logic to create composable, interpretable NFTs. It was especially fun working with dynamic metadata and making each mint feel like a one-of-a-kind experience.
 
 ---
 

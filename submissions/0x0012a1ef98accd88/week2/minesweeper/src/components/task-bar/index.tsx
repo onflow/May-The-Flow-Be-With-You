@@ -1,7 +1,6 @@
 import React, { LegacyRef, useState, memo } from "react";
 import SelectLevel from "../select-level";
 import DarkMode from "../button-darkmode";
-import ScreenShot from "../screenshot";
 import SelectZoom from "../select-cellsize";
 import SelectUI from "./ui-switch";
 import Image from "next/image";

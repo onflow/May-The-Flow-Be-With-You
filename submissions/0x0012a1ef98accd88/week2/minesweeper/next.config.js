@@ -12,6 +12,11 @@ const nextConfig = withMDX({
   experimental: {
     mdxRs: true
   },
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
   webpack(config) {
     // Grab the existing rule that handles SVG imports

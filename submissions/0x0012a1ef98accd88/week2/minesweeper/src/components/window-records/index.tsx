@@ -10,6 +10,7 @@ import PersonalBest from "./personal-best";
 import useRecords from "../../hooks/useRecords";
 import RadioFilter from "./radio-filter";
 import { Level } from "@/types";
+import { LeaderboardRecord } from "@/types/leaderboard";
 import { useState } from "react";
 
 // type Props = {}
@@ -140,7 +141,7 @@ const RecordsWindow = () => {
                     </td>
                   </tr>
                 ) : (
-                  records.map((r) => {
+                  records.map((r: LeaderboardRecord) => {
                     const { duration, level, timestamp, player } = r;
                     const rowId = `${timestamp}-${player}`;
                     const isCopied = copiedRowId === rowId;

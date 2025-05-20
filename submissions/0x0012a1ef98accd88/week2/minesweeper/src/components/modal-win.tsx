@@ -32,7 +32,7 @@ import { useSaveScore, useSaveNFT, useGetRandomNumber } from "../hooks/useContra
 import { getRandomNumber } from "@/contracts/contracts";
 import { PinataSDK } from 'pinata';
 import { isWebview } from "@/utils";
-import saveAs from "file-saver";
+import { useAccount } from 'wagmi';
 
 export const pinata = new PinataSDK({
   pinataJwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJiNDAzOTJjZi01NTEyLTQzODMtOTE5Yy1jMTk5M2Y3MDI0NjEiLCJlbWFpbCI6InRhc25lZW1zaGVyaWYyM0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJGUkExIn0seyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiZGVjYmZhMDRmNGJjZGViYjQ4NWEiLCJzY29wZWRLZXlTZWNyZXQiOiJjZmRhYzExOWVhMDE5ODczMGE3MTJjMGRhODhjNTU0YzNjYjMwMzY3YzdkMjhhYmYyNzYxN2NiMTMwYjAyZTkzIiwiZXhwIjoxNzc5MjIwMTI4fQ.IsWI5Ei_jlnq1zzZam-tnovUqECt9kaoI4PtgMAHdVU",
@@ -42,6 +42,7 @@ export const pinata = new PinataSDK({
 const ModalWin = () => {
   const { width, height } = useWindowSize();
   const dispatch = useAppDispatch();
+  const { isConnected } = useAccount();
   const status = useAppSelector((store) => store.minesweeper.status);
   const level = useAppSelector((store) => store.userData.level);
   const latestRecord = useAppSelector((store) => store.userData.records[0]);
@@ -176,14 +177,16 @@ const ModalWin = () => {
               <button
                 type="button"
                 onClick={handleSaveNFT}
-                disabled={isSaving}
+                disabled={isSaving || !isConnected}
+                title={!isConnected ? "Please connect your wallet first" : ""}
               >
                 {isSaving ? 'Saving...' : 'Save as NFT'}
               </button>
               <button
                 type="button"
                 onClick={handleSaveScore}
-                disabled={isSaving}
+                disabled={isSaving || !isConnected}
+                title={!isConnected ? "Please connect your wallet first" : ""}
               >
                 {isSaving ? 'Saving...' : 'Save Score onChain'}
               </button>
@@ -195,6 +198,9 @@ const ModalWin = () => {
                 Play again
               </button>
             </div>
+            {!isConnected && (
+              <p className="text-red-500 text-sm mt-2">Please connect your wallet to save your score or mint NFT</p>
+            )}
             <fieldset className="mt-4">
               <legend className="m-auto">share it !</legend>
               <ul className="flex items-center flex-wrap gap-2 m-auto">

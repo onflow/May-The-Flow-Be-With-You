@@ -1,60 +1,36 @@
-# 📅 Week 3 — Generative Tarot AI 🔮
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-**Theme:** Generative Art and Worlds
+## Getting Started
 
-**Generative Tarot AI** is a mystical NFT experience built for Week 3 of the *May the Flow Be With You* hackathon. Users draw unique Tarot cards, each with AI-generated artwork and a GPT-powered interpretation, then mint them as NFTs on the Flow blockchain using Cadence smart contracts.
-
----
-
-## 🔮 Features
-
-- Draw a random Tarot card from the classic 78-card deck
-- Each card includes:
-  - 🎴 A unique title (e.g., *The Star*, *The Tower*)
-  - 🎨 AI-generated card image (IPFS hosted)
-  - 🧠 GPT-powered card interpretation
-- Mint your card as an NFT on Flow testnet
-- Modern frontend with React
-- IPFS integration using `nft.storage`
-- On-chain metadata storage (title, interpretation, image CID, timestamp)
-
----
-
-## 🛠 Tech Stack
-
-- **Smart Contracts:** Cadence (Flow blockchain)
-- **Frontend:** React + Tailwind CSS
-- **Wallet Integration:** Flow Client Library (FCL)
-- **Image Hosting:** IPFS via `nft.storage`
-- **AI Integration:** OpenAI GPT (dev-only for now)
-
----
-
-## 📜 Card Generation Pipeline
-
-1. User clicks “Draw a Card”
-2. App randomly selects one of 78 classic Tarot archetypes
-3. (Dev only) GPT generates a spiritual card interpretation
-4. Pre-generated AI art is matched or fetched for the card
-5. Metadata is bundled and minted to Flow testnet via Cadence
-
----
-
-## 🧠 Key Learning
-
-This week focused on integrating **dynamic, composable art and text into NFTs**, with metadata that feels personal and spiritually meaningful. I explored combining AI-driven creativity with Flow’s smart contract architecture, and began laying groundwork for a modular Tarot ecosystem that could support deck expansion or social readings.
-
----
-
-## 🧪 Setup Instructions
-
-### Prerequisites
-- Node.js 14+ and npm
-
-### Setup
+First, run the development server:
 
 ```bash
-git clone https://github.com/yourusername/GenerativeTarotAI.git
-cd GenerativeTarotAI
-npm install
-npm start
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

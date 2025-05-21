@@ -82,11 +82,9 @@ const useRecords = () => {
         if (filter.result !== "all" && r.status !== filter.result) {
           return false;
         }
-        // if (filter.time && r.duration != filter.time) {
-        //   return false;
-        // }
         return true;
-      });
+      }).sort((a, b) => a.duration - b.duration);
+
       setFilteredRecords(filtered);
     } else {
       setFilteredRecords([]);

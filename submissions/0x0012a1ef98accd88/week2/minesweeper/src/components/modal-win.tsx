@@ -132,7 +132,7 @@ const ModalWin = () => {
       const metadataUrl = await pinata.gateways.public.convert(metadataCid);
 
       await saveNFT(metadataUrl);
-      alert('NFT minted successfully!');
+      // alert('NFT minted successfully!');
       // closeShareModal();
     } catch (error) {
       console.error('Failed to save NFT:', error);

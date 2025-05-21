@@ -43,6 +43,7 @@ export default function Home() {
   const handleFullscreen = () => {
     boardRef?.current?.requestFullscreen();
   };
+  
   if (!loaded) return <StartScreen progress={progress} rehydrated={rehydrated} />;
   return (
     <WagmiProvider config={config}>

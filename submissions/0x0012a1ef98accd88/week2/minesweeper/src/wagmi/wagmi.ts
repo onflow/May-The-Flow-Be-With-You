@@ -11,6 +11,6 @@ export const config = createConfig({
         // safe(),
     ],
     transports: {
-        [flowTestnet.id]: http(),
+        [flowTestnet.id]: http("https://testnet.evm.nodes.onflow.org"),
     },
 })

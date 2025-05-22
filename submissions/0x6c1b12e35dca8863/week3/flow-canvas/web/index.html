@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowCanvas - Generative Art Platform</title>
+    <style>
+        :root {
+            --primary: #00ef8b;
+            --secondary: #3c45a2;
+            --dark: #1a1a2e;
+            --light: #f5f5f5;
+            --accent: #ff6b6b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
+            line-height: 1.6;
+        }
+        
+        header {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .logo span {
+            color: var(--light);
+        }
+        
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+        
+        nav ul li {
+            margin-left: 2rem;
+        }
+        
+        nav ul li a {
+            color: var(--light);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        nav ul li a:hover {
+            color: var(--primary);
+        }
+        
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to right, #1a1a2e, #16213e);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="none"/><path d="M0,0 L100,100" stroke="rgba(0,239,139,0.1)" stroke-width="0.5"/><path d="M100,0 L0,100" stroke="rgba(0,239,139,0.1)" stroke-width="0.5"/></svg>') repeat;
+            opacity: 0.5;
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            text-align: center;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        h1 span {
+            color: var(--primary);
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: var(--primary);
+            color: var(--dark);
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .btn:hover {
+            background-color: #00c472;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-secondary {
+            background-color: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            margin-left: 1rem;
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--primary);
+            color: var(--dark);
+        }
+        
+        .section {
+            padding: 5rem 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .section-title h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-title h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background-color: var(--primary);
+        }
+        
+        /* Canvas Grid Section */
+        .canvas-section {
+            background-color: #16213e;
+        }
+        
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .canvas-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            max-width: 800px;
+            margin-bottom: 2rem;
+        }
+        
+        .canvas-cell {
+            width: 90px;
+            height: 90px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .canvas-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 239, 139, 0.3);
+        }
+        
+        .canvas-cell.claimed {
+            background-color: rgba(0, 239, 139, 0.2);
+        }
+        
+        .canvas-cell.selected {
+            border: 2px solid var(--primary);
+        }
+        
+        .control-panel {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: rgba(0, 0, 0, 0.2);
+            color: var(--light);
+            font-size: 1rem;
+        }
+        
+        .color-pickers {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .color-picker {
+            flex: 1;
+        }
+        
+        .color-preview {
+            width: 100%;
+            height: 40px;
+            border-radius: 5px;
+            margin-top: 0.5rem;
+        }
+        
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+        
+        /* Preview Section */
+        .preview-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2rem;
+        }
+        
+        .preview-canvas {
+            width: 256px;
+            height: 256px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        /* How It Works Section */
+        .how-it-works {
+            background-color: #0f3460;
+        }
+        
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .step {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .step:hover {
+            transform: translateY(-10px);
+        }
+        
+        .step-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        
+        .step h3 {
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        /* Gallery Section */
+        .gallery {
+            background-color: #1a1a2e;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .gallery-item {
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s;
+        }
+        
+        .gallery-item:hover {
+            transform: translateY(-10px);
+        }
+        
+        .gallery-img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        
+        .gallery-info {
+            padding: 1rem;
+        }
+        
+        .gallery-info h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .gallery-info p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: #0d1b2a;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+        
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .footer-logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+        }
+        
+        .footer-logo span {
+            color: var(--light);
+        }
+        
+        .footer-links {
+            display: flex;
+            margin-bottom: 2rem;
+        }
+        
+        .footer-links a {
+            margin: 0 1rem;
+            color: var(--light);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+        
+        .social-icons {
+            display: flex;
+            margin-bottom: 2rem;
+        }
+        
+        .social-icons a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            margin: 0 0.5rem;
+            transition: all 0.3s;
+        }
+        
+        .social-icons a:hover {
+            background-color: var(--primary);
+            transform: translateY(-5px);
+        }
+        
+        .social-icons i {
+            color: var(--light);
+            font-size: 1.2rem;
+        }
+        
+        .copyright {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }
+        
+        /* Animations */
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+            100% {
+                transform: translateY(0px);
+            }
+        }
+        
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+    </style>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">Flow<span>Canvas</span></div>
+            <nav>
+                <ul>
+                    <li><a href="#canvas">Canvas</a></li>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#gallery">Gallery</a></li>
+                    <li><a href="#" id="connectWallet" class="btn">Connect Wallet</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Create <span>Generative Art</span> on the Flow Blockchain</h1>
+            <p>FlowCanvas is a collaborative platform where you can create, own, and watch your digital art evolve. Claim your space on the shared canvas and bring your creative vision to life with blockchain-powered generative algorithms.</p>
+            <a href="#canvas" class="btn">Start Creating</a>
+            <a href="#how-it-works" class="btn btn-secondary">Learn More</a>
+        </div>
+    </section>
+
+    <section id="canvas" class="section canvas-section">
+        <div class="container">
+            <div class="section-title">
+                <h2>Canvas Grid</h2>
+                <p>Claim a section and create your generative masterpiece</p>
+            </div>
+            
+            <div class="canvas-container">
+                <div class="canvas-grid" id="canvasGrid">
+                    <!-- Canvas cells are pre-generated for the demo -->
+                    <div class="canvas-cell">0,0</div>
+                    <div class="canvas-cell">0,1</div>
+                    <div class="canvas-cell">0,2</div>
+                    <div class="canvas-cell">0,3</div>
+                    <div class="canvas-cell">0,4</div>
+                    <div class="canvas-cell">0,5</div>
+                    <div class="canvas-cell">0,6</div>
+                    <div class="canvas-cell">0,7</div>
+                    
+                    <div class="canvas-cell">1,0</div>
+                    <div class="canvas-cell claimed">1,1</div>
+                    <div class="canvas-cell">1,2</div>
+                    <div class="canvas-cell claimed">1,3</div>
+                    <div class="canvas-cell">1,4</div>
+                    <div class="canvas-cell">1,5</div>
+                    <div class="canvas-cell claimed">1,6</div>
+                    <div class="canvas-cell">1,7</div>
+                    
+                    <div class="canvas-cell">2,0</div>
+                    <div class="canvas-cell">2,1</div>
+                    <div class="canvas-cell claimed">2,2</div>
+                    <div class="canvas-cell">2,3</div>
+                    <div class="canvas-cell">2,4</div>
+                    <div class="canvas-cell claimed">2,5</div>
+                    <div class="canvas-cell">2,6</div>
+                    <div class="canvas-cell">2,7</div>
+                    
+                    <div class="canvas-cell claimed">3,0</div>
+                    <div class="canvas-cell">3,1</div>
+                    <div class="canvas-cell">3,2</div>
+                    <div class="canvas-cell">3,3</div>
+                    <div class="canvas-cell claimed">3,4</div>
+                    <div class="canvas-cell">3,5</div>
+                    <div class="canvas-cell">3,6</div>
+                    <div class="canvas-cell claimed">3,7</div>
+                    
+                    <div class="canvas-cell">4,0</div>
+                    <div class="canvas-cell">4,1</div>
+                    <div class="canvas-cell claimed">4,2</div>
+                    <div class="canvas-cell">4,3</div>
+                    <div class="canvas-cell">4,4</div>
+                    <div class="canvas-cell">4,5</div>
+                    <div class="canvas-cell claimed">4,6</div>
+                    <div class="canvas-cell">4,7</div>
+                    
+                    <div class="canvas-cell">5,0</div>
+                    <div class="canvas-cell claimed">5,1</div>
+                    <div class="canvas-cell">5,2</div>
+                    <div class="canvas-cell">5,3</div>
+                    <div class="canvas-cell claimed">5,4</div>
+                    <div class="canvas-cell">5,5</div>
+                    <div class="canvas-cell">5,6</div>
+                    <div class="canvas-cell">5,7</div>
+                    
+                    <div class="canvas-cell claimed">6,0</div>
+                    <div class="canvas-cell">6,1</div>
+                    <div class="canvas-cell">6,2</div>
+                    <div class="canvas-cell claimed">6,3</div>
+                    <div class="canvas-cell">6,4</div>
+                    <div class="canvas-cell">6,5</div>
+                    <div class="canvas-cell claimed">6,6</div>
+                    <div class="canvas-cell">6,7</div>
+                    
+                    <div class="canvas-cell">7,0</div>
+                    <div class="canvas-cell">7,1</div>
+                    <div class="canvas-cell claimed">7,2</div>
+                    <div class="canvas-cell">7,3</div>
+                    <div class="canvas-cell">7,4</div>
+                    <div class="canvas-cell claimed">7,5</div>
+                    <div class="canvas-cell">7,6</div>
+                    <div class="canvas-cell">7,7</div>
+                </div>
+                
+                <div class="control-panel" id="controlPanel">
+                    <h3>Create Your Art</h3>
+                    <p>Select a cell on the grid, then customize your generative art below.</p>
+                    
+                    <div class="form-group">
+                        <label for="patternType">Pattern Type</label>
+                        <select id="patternType">
+                            <option value="gradient">Gradient Flow</option>
+                            <option value="cellular">Cellular Automaton</option>
+                            <option value="random">Random Noise</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="seed">Seed Value</label>
+                        <input type="text" id="seed" placeholder="Enter a seed value for randomization">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Colors</label>
+                        <div class="color-pickers">
+                            <div class="color-picker">
+                                <label for="color1">Primary Color</label>
+                                <input type="color" id="color1" value="#00ef8b">
+                                <div class="color-preview" id="color1Preview" style="background-color: #00ef8b"></div>
+                            </div>
+                            
+                            <div class="color-picker">
+                                <label for="color2">Secondary Color</label>
+                                <input type="color" id="color2" value="#3c45a2">
+                                <div class="color-preview" id="color2Preview" style="background-color: #3c45a2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-section">
+                        <h3>Preview</h3>
+                        <div class="preview-canvas" style="background: linear-gradient(45deg, #00ef8b, #3c45a2);"></div>
+                        <p>This is a preview of how your art will look. Changes are not saved until you mint.</p>
+                    </div>
+                    
+                    <div class="actions">
+                        <button id="generatePreview" class="btn btn-secondary">Generate Preview</button>
+                        <button id="mintCanvas" class="btn">Mint Canvas Section</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="section how-it-works">
+        <div class="container">
+            <div class="section-title">
+                <h2>How It Works</h2>
+                <p>Create, own, and watch your art evolve on the blockchain</p>
+            </div>
+            
+            <div class="steps">
+                <div class="step floating">
+                    <div class="step-icon">
+                        <i class="fas fa-palette"></i>
+                    </div>
+                    <h3>Create</h3>
+                    <p>Choose a section on the canvas grid and use our generative tools to create unique art. Select pattern types, colors, and seed values to craft your vision.</p>
+                </div>
+                
+                <div class="step floating" style="animation-delay: 1s;">
+                    <div class="step-icon">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <h3>Mint</h3>
+                    <p>Mint your canvas section as an NFT on the Flow blockchain. Your art's visual data is stored entirely on-chain, ensuring true ownership and permanence.</p>
+                </div>
+                
+                <div class="step floating" style="animation-delay: 2s;">
+                    <div class="step-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <h3>Evolve</h3>
+                    <p>Watch your art evolve over time based on blockchain events, neighboring art sections, and the evolution rules you set. Each piece becomes a living, changing creation.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="gallery" class="section gallery">
+        <div class="container">
+            <div class="section-title">
+                <h2>Gallery</h2>
+                <p>Explore canvas sections created by the community</p>
+            </div>
+            
+            <div class="gallery-grid">
+                <!-- Sample gallery items -->
+                <div class="gallery-item">
+                    <div class="gallery-img" style="background: linear-gradient(45deg, #00ef8b, #3c45a2);"></div>
+                    <div class="gallery-info">
+                        <h3>Gradient Flow #1</h3>
+                        <p>Created by 0x1234...5678</p>
+                        <p>Evolutions: 5</p>
+                    </div>
+                </div>
+                
+                <div class="gallery-item">
+                    <div class="gallery-img" style="background: repeating-linear-gradient(0deg, #ff6b6b, #ff6b6b 10px, #ffa1a1 10px, #ffa1a1 20px);"></div>
+                    <div class="gallery-info">
+                        <h3>Cellular Pattern #7</h3>
+                        <p>Created by 0x8765...4321</p>
+                        <p>Evolutions: 12</p>
+                    </div>
+                </div>
+                
+                <div class="gallery-item">
+                    <div class="gallery-img" style="background: radial-gradient(circle, #5433ff, #20bdff, #a5fecb);"></div>
+                    <div class="gallery-info">
+                        <h3>Chromatic Pulse #3</h3>
+                        <p>Created by 0xabcd...efgh</p>
+                        <p>Evolutions: 8</p>
+                    </div>
+                </div>
+                
+                <div class="gallery-item">
+                    <div class="gallery-img" style="background: conic-gradient(from 0deg, #ff0080, #ff8c00, #ffed00, #00f2ff, #7a00ff, #ff0080);"></div>
+                    <div class="gallery-info">
+                        <h3>Spectrum Wave #5</h3>
+                        <p>Created by 0x9876...5432</p>
+                        <p>Evolutions: 3</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">Flow<span>Canvas</span></div>
+                
+                <div class="footer-links">
+                    <a href="#canvas">Canvas</a>
+                    <a href="#how-it-works">How It Works</a>
+                    <a href="#gallery">Gallery</a>
+                    <a href="#">FAQ</a>
+                    <a href="#">Terms</a>
+                </div>
+                
+                <div class="social-icons">
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-discord"></i></a>
+                    <a href="#"><i class="fab fa-github"></i></a>
+                    <a href="#"><i class="fab fa-medium"></i></a>
+                </div>
+                
+                <p class="copyright">© 2025 FlowCanvas. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Simple event handlers to simulate functionality without complex logic
+        document.addEventListener('DOMContentLoaded', function() {
+            // Make canvas cells selectable
+            const cells = document.querySelectorAll('.canvas-cell:not(.claimed)');
+            cells.forEach(cell => {
+                cell.addEventListener('click', function() {
+                    // Remove selected class from all cells
+                    document.querySelectorAll('.canvas-cell').forEach(c => {
+                        c.classList.remove('selected');
+                    });
+                    
+                    // Add selected class to this cell
+                    this.classList.add('selected');
+                });
+            });
+            
+            // Color picker functionality
+            const color1 = document.getElementById('color1');
+            const color2 = document.getElementById('color2');
+            const color1Preview = document.getElementById('color1Preview');
+            const color2Preview = document.getElementById('color2Preview');
+            
+            color1.addEventListener('input', function() {
+                color1Preview.style.backgroundColor = this.value;
+            });
+            
+            color2.addEventListener('input', function() {
+                color2Preview.style.backgroundColor = this.value;
+            });
+            
+            // Generate preview button
+            document.getElementById('generatePreview').addEventListener('click', function() {
+                const previewCanvas = document.querySelector('.preview-canvas');
+                const patternType = document.getElementById('patternType').value;
+                const color1Value = color1.value;
+                const color2Value = color2.value;
+                
+                if (patternType === 'gradient') {
+                    previewCanvas.style.background = `linear-gradient(45deg, ${color1Value}, ${color2Value})`;
+                } else if (patternType === 'cellular') {
+                    previewCanvas.style.background = `repeating-linear-gradient(45deg, ${color1Value}, ${color1Value} 10px, ${color2Value} 10px, ${color2Value} 20px)`;
+                } else {
+                    previewCanvas.style.background = `radial-gradient(circle, ${color1Value}, ${color2Value})`;
+                }
+            });
+            
+            // Mint button
+            document.getElementById('mintCanvas').addEventListener('click', function() {
+                const selectedCell = document.querySelector('.canvas-cell.selected');
+                
+                if (!selectedCell) {
+                    alert('Please select a cell on the grid first!');
+                    return;
+                }
+                
+                if (selectedCell.classList.contains('claimed')) {
+                    alert('This cell has already been claimed. Please select another one.');
+                    return;
+                }
+                
+                alert('In a real implementation, this would mint your canvas section as an NFT on the Flow blockchain.');
+                selectedCell.classList.add('claimed');
+                selectedCell.classList.remove('selected');
+            });
+            
+            // Connect wallet button
+            document.getElementById('connectWallet').addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('In a real implementation, this would connect to a Flow wallet.');
+                this.textContent = 'Wallet Connected';
+                this.style.backgroundColor = '#00c472';
+            });
+        });
+    </script>
+</body>
+</html>

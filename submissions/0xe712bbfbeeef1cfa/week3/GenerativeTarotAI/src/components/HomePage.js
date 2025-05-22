@@ -1,42 +1,42 @@
-import React, { useRef, Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, useGLTF } from '@react-three/drei';
+import React, { useEffect, useState } from 'react';
 import './HomePage.css';
 
-function FortuneTellerMachine() {
-  const { scene } = useGLTF('/cards/fortune_teller.glb');
-
-  return (
-    <group scale={0.001} rotation={[0, 0, 0]} position={[0, 0, 0]}>
-      <primitive object={scene} />
-    </group>
-  );
-}
-
 function HomePage({ onStart }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isButtonVisible, setIsButtonVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+    setTimeout(() => setIsButtonVisible(true), 1000);
+  }, []);
+
   return (
-    <div className="home-page">
-      <div className="scene-container">
-        <Canvas camera={{ position: [0, 1, 3], fov: 35 }}>
-          <Suspense fallback={null}>
-            <ambientLight intensity={0.7} />
-            <pointLight position={[5, 5, 5]} intensity={1} />
-            <pointLight position={[-5, 5, -5]} intensity={0.5} />
-            <FortuneTellerMachine />
-            <OrbitControls 
-              enableZoom={true}
-              minDistance={2}
-              maxDistance={5}
-              minPolarAngle={Math.PI / 6}
-              maxPolarAngle={Math.PI / 2}
-              enablePan={false}
-            />
-          </Suspense>
-        </Canvas>
+    <div className="home-container">
+      <div className="stars"></div>
+      <div className="twinkling"></div>
+      <div className="welcome-content">
+        <div className={`title-container ${isVisible ? 'visible' : ''}`}>
+          <h1 className="main-title">Welcome to the Tarot Reading</h1>
+          <div className="subtitle-container">
+            <p className="subtitle">Where Mystical Wisdom Meets Modern Magic</p>
+            <p className="subtitle">Unveil the Secrets of Your Destiny</p>
+          </div>
+        </div>
+        
+        <div className={`button-container ${isButtonVisible ? 'visible' : ''}`}>
+          <button onClick={onStart} className="start-button">
+            <span className="button-text">Begin Your Journey</span>
+            <span className="button-icon">→</span>
+          </button>
+        </div>
+
+        <div className="floating-elements">
+          <div className="floating-card card1">✨</div>
+          <div className="floating-card card2">🔮</div>
+          <div className="floating-card card3">🌙</div>
+          <div className="floating-card card4">⭐</div>
+        </div>
       </div>
-      <button className="start-button" onClick={onStart}>
-        Begin Your Reading
-      </button>
     </div>
   );
 }

@@ -97,7 +97,7 @@ access(all) contract OnchainCraps {
       if newBets != nil {
         for bet in newBets?.keys! {
 
-          let currentBet = self.bets[bet]!
+          let currentBet = newBets![bet]
           assert(OnchainCraps.allowedBets[self.state]!.contains(bet), message: "This bet is not allowed during the current gmame phase")
 
           if bet == "FIELD" {
@@ -191,6 +191,7 @@ access(all) contract OnchainCraps {
               self.point = Int(diceTotal)
               self.state = OnchainCraps.GameState.POINT
               betStatus = "HOLD"
+              
             }
 
             rollResult.append(OnchainCraps.BetResult(bet: "PASS", betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
@@ -212,6 +213,7 @@ access(all) contract OnchainCraps {
             resultAmount = self.bets.remove(key: bet) //remove the bet
             rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
             self.state = OnchainCraps.GameState.COMEOUT //reset game state
+            self.point = nil
             //send "resultAmount" of coins to the admin account - payment todo
             
           } else if bet == "PASS" {
@@ -219,10 +221,13 @@ access(all) contract OnchainCraps {
               betStatus = "WIN"
               resultAmount = 2.0 * self.bets.remove(key: bet)! //remove the bet, clear the table
               self.state = OnchainCraps.GameState.COMEOUT //reset game state
+              self.point = nil
               rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
+
               //send the resultAmount to the user - payment todo
             }
           } else if bet == "ODDS" { //pass line odds
+
             if Int(diceTotal) == self.point {
               betStatus = "WIN"
               resultAmount = self.bets[bet]
@@ -236,8 +241,7 @@ access(all) contract OnchainCraps {
               }
 
               resultAmount = resultAmount! + self.bets.remove(key: bet)! //remove the bet, clear the table
-              self.state = OnchainCraps.GameState.COMEOUT //reset game state
-              
+
               rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
               //send the resultAmount to the user - payment todo
             }
@@ -246,7 +250,9 @@ access(all) contract OnchainCraps {
             if diceTotal == UInt8(betNumber) {
               betStatus = "WIN"
               resultAmount = self.bets[bet]
-              
+              self.state = OnchainCraps.GameState.COMEOUT //reset game state
+              self.point = nil
+
               // Apply odds based on the number
               if bet == "6" || bet == "8" {
                 resultAmount = resultAmount! * 1.16666666

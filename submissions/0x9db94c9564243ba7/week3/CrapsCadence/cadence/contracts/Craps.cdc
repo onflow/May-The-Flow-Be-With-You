@@ -50,7 +50,7 @@ access(all) contract OnchainCraps {
     access(all) var state: OnchainCraps.GameState
     access(all) var point: Int? 
     //access(all) var pointAmount: UFix64?
-    access(all) var come: Int?
+    //access(all) var come: Int?
     access(all) var bets: { String : UFix64 }
     access(all) let id: UInt64
 
@@ -96,6 +96,10 @@ access(all) contract OnchainCraps {
       //process all prop bets first, since there is no memory or storage needed
       if newBets != nil {
         for bet in newBets?.keys! {
+
+          let currentBet = self.bets[bet]!
+          assert(OnchainCraps.allowedBets[self.state]!.contains(bet), message: "This bet is not allowed during the current gmame phase")
+
           if bet == "FIELD" {
             let fieldResult = self.fieldBet(diceTotal: diceTotal, betAmount: newBets![bet]!)
             rollResult.append(fieldResult)
@@ -139,16 +143,17 @@ access(all) contract OnchainCraps {
         }
       }
 
-      if self.bets.length == 0 {
+      if self.bets.length == 0 { //If there are only prop bets then we can return
         return OnchainCraps.RollResult(value: diceTotal, rollResults: rollResult)
       }
 
-      //THIS IS WHERE WE ARE PICKING UP
+      if self.bets["ODDS"] != nil {
+        assert(self.bets["PASS"] != nil, message: "Odds bet needs a point bet")
+        assert((self.bets["PASS"]! * 5.0 ) > self.bets["ODDS"]!, message: "Odds must be less than 5x")
+      }
 
       if self.state == OnchainCraps.GameState.COMEOUT {
-
-        //loop through bets and update the state of this game
-        for bet in self.bets.keys {
+        for bet in self.bets.keys { //loop through bets and update the state of this game
 
           let currentBet = self.bets[bet]!
           let allowedBets = OnchainCraps.allowedBets[OnchainCraps.GameState.COMEOUT]!
@@ -160,12 +165,6 @@ access(all) contract OnchainCraps {
 
             var betStatus: String = ""
             var resultAmount: UFix64? = nil
-
-            if self.bets[bet] != nil {
-              self.bets[bet] = currentBet + self.bets[bet]!
-            } else {
-              self.bets[bet] = currentBet
-            }
 
             let betAmount = self.bets[bet]!
 
@@ -201,19 +200,69 @@ access(all) contract OnchainCraps {
 
         //loop through bets and update the state of this game
         for bet in self.bets.keys {
-          let currentBet = self.bets[bet]!
-          assert(OnchainCraps.allowedBets[self.state]!.contains(bet), message: "This bet is not allowed during the POINT phase")
 
           var betStatus: String = ""
           var resultAmount: UFix64? = nil
 
           let betAmount = self.bets[bet]!
+          let userRef: &Account = getAccount(userAddress)
 
-          //process bets here
+          if diceTotal == 7 {
+            betStatus = "LOSE"
+            resultAmount = self.bets.remove(key: bet) //remove the bet
+            rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
+            self.state = OnchainCraps.GameState.COMEOUT //reset game state
+            //send "resultAmount" of coins to the admin account - payment todo
+            
+          } else if bet == "PASS" {
+            if Int(diceTotal) == self.point {
+              betStatus = "WIN"
+              resultAmount = 2.0 * self.bets.remove(key: bet)! //remove the bet, clear the table
+              self.state = OnchainCraps.GameState.COMEOUT //reset game state
+              rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
+              //send the resultAmount to the user - payment todo
+            }
+          } else if bet == "ODDS" { //pass line odds
+            if Int(diceTotal) == self.point {
+              betStatus = "WIN"
+              resultAmount = self.bets[bet]
+
+              if self.point  == 6 || self.point == 8 {
+                resultAmount = resultAmount! * 1.2
+              } else if self.point == 5 || self.point == 9 {
+                resultAmount = resultAmount! * 1.5
+              } else if self.point == 4 || self.point == 10 {
+                resultAmount = resultAmount! * 2.0
+              }
+
+              resultAmount = resultAmount! + self.bets.remove(key: bet)! //remove the bet, clear the table
+              self.state = OnchainCraps.GameState.COMEOUT //reset game state
+              
+              rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
+              //send the resultAmount to the user - payment todo
+            }
+          } else if bet == "4" || bet == "5" || bet == "6" || bet == "8" || bet == "9" || bet == "10" {
+            let betNumber = Int.fromString(bet)!
+            if diceTotal == UInt8(betNumber) {
+              betStatus = "WIN"
+              resultAmount = self.bets[bet]
+              
+              // Apply odds based on the number
+              if bet == "6" || bet == "8" {
+                resultAmount = resultAmount! * 1.16666666
+              } else if bet == "5" || bet == "9" {
+                resultAmount = resultAmount! * 1.4
+              } else if bet == "4" || bet == "10" {
+                resultAmount = resultAmount! * 1.8
+              }
+              
+              rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount))
+              //send the resultAmount to the user - payment todo
+            }
+          }
 
         }
       }
-
 
       return OnchainCraps.RollResult(value: diceTotal, rollResults: rollResult)
     }
@@ -225,7 +274,7 @@ access(all) contract OnchainCraps {
       self.state = OnchainCraps.GameState.COMEOUT //we will need to change this to the enum
       self.point = nil
       //self.pointAmount = nil
-      self.come = nil
+      //self.come = nil
       self.bets = {}
     }
   }
@@ -245,7 +294,7 @@ access(all) contract OnchainCraps {
   init(){
     self.allowedBets = { //are allowed bets necessary?
       OnchainCraps.GameState.COMEOUT:["PASS", "FIELD"], 
-      OnchainCraps.GameState.POINT:["FIELD", "COME", "CRAPS", "YO", "4", "5", "6", "8", "9", "10", "Odds"]
+      OnchainCraps.GameState.POINT:["FIELD", "CRAPS", "YO", "4", "5", "6", "8", "9", "10", "ODDS"] //to add: COME
     }
     self.userGames = {}
     self.tokenVaults <- {} //add aiSportsJuice

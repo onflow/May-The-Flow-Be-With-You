@@ -1,6 +1,6 @@
 import "OnchainCraps"
 
-transaction(betName: String, amount: UFix64) {
+transaction() {
 
     var crapsGameRef: &OnchainCraps.Game?
     let accountAddress: Address
@@ -16,8 +16,9 @@ transaction(betName: String, amount: UFix64) {
     }
 
     execute {
-        let bets = { betName : amount}
-        let result = self.crapsGameRef?.rollDice(userAddress: self.accountAddress, newBets: bets ) ?? panic("cannot access onchain dice resource")
-        log(result)
+
+      let result = self.crapsGameRef?.rollDice(userAddress: self.accountAddress, newBets: nil ) ?? panic("cannot access onchain dice resource")
+      log(result)
+
     }
 }

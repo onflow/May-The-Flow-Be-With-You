@@ -1,0 +1,20 @@
+{
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "testnet": "access.testnet.nodes.onflow.org:9000"
+  },
+  "contracts": {
+    "RockPaperScissors": "./cadence/contracts/RockPaperScissors.cdc"
+  },
+  "accounts": {
+    "emulator-account": {
+      "address": "f8d6e0586b0a20c7",
+      "key": "dc0097a6b58533e56af78c955e7b0c0f386b5f44f22b75c390beab7fcb1af13f"
+    }
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": ["RockPaperScissors"]
+    }
+  }
+} 

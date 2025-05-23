@@ -18,6 +18,16 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
     access(all) event HomeostasisTargetSet(creatureID: UInt64, gene: String, target: UFix64)
     access(all) event CreatureAwaitingFirstSeed(creatureID: UInt64)
 
+    // Add a public emitEvent function to allow transactions to emit contract events
+    access(all) fun emitEvent(_ event: AnyStruct) {
+        emit event
+    }
+
+    // Add a public log function for use in transactions
+    access(all) fun log(_ message: String) {
+        log(message)
+    }
+
     //-----------------------------------------------------------------------
     // Contract State & Constants
     //-----------------------------------------------------------------------
@@ -62,6 +72,16 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
         access(all) fun nextUFix64(): UFix64 {
             // Max value of self.m - 1 for numerator to ensure result < 1.0
             return UFix64(self.next()) / UFix64(self.m)
+        }
+
+        // Add the nextWithSalt function used in process_evolution_update.cdc
+        access(all) fun nextWithSalt(seed: UInt64): UInt64 {
+            // Create temporary PRNG with additional salt
+            let tempSeed = (self.state ^ seed) % self.m
+            let tempPRNG = PRNG(seed: tempSeed, salt: seed)
+            // Get next value and update self state
+            self.state = (self.state * self.a + self.c) % self.m // Also advance our main state
+            return tempPRNG.next() // Return value from temporary PRNG
         }
     }
 
@@ -128,6 +148,9 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
             // TODO: Implement EP gain logic
             // Example: self.puntosEvolucion = self.puntosEvolucion + (UFix64(currentSimulatedDayR0 % 10) / 10.0)
             log("Creature ".concat(self.id.toString()).concat("._gainEP called - IMPLEMENT ME"))
+            
+            // Simple implementation for testing
+            self.puntosEvolucion = self.puntosEvolucion + 1.0
         }
 
         access(contract) fun _ageOneDaySimulated() {

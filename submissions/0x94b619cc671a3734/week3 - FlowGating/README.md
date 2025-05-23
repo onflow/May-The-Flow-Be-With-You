@@ -1,3 +1,9 @@
+
+![Screenshot 2025-05-24 001728](https://github.com/user-attachments/assets/03290d25-bb8c-4ec6-8230-2edae0560639)
+
+
+
+
 # Flow Token Gating
 
 A React application that implements token-based access control using Flow blockchain. This application allows users to check if they have the required FLOW tokens to access premium content.

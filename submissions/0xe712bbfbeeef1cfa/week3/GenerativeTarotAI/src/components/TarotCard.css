@@ -1,14 +1,88 @@
 .tarot-container {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  gap: 20px;
+  padding: 40px 20px;
+  position: relative;
   min-height: 100vh;
-  background-color: #1a1a1a;
+  background-color: #0d0d0d;
+  color: #fff;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* 🔒 Top-right wallet button UI */
+.wallet-ui {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ⏩ Connect Wallet Button */
+.connect-wallet-btn {
+  background-color: #00ef8b;
+  color: #000;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.connect-wallet-btn:hover {
+  background-color: #00d47e;
+  transform: translateY(-2px);
+}
+
+.connect-wallet-btn:disabled {
+  background-color: #999;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 🧙 Wallet Info */
+.wallet-connected span {
+  font-family: monospace;
+  background-color: #222;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #00ef8b;
+}
+
+.wallet-connected button {
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.wallet-connected button:hover {
+  background-color: #ff0000;
+}
+
+/* 🃏 Tarot Card Display */
+.card-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin-top: 60px;
 }
 
 .card {
-  width: 300px;
-  height: 500px;
+  width: 200px;
+  height: 350px;
   perspective: 1000px;
   cursor: pointer;
 }
@@ -18,7 +92,7 @@
   width: 100%;
   height: 100%;
   text-align: center;
-  transition: transform 0.8s;
+  transition: transform 0.8s ease;
   transform-style: preserve-3d;
 }
 
@@ -31,22 +105,58 @@
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
-  border-radius: 15px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
 }
 
 .card-front {
-  background-color: #2a2a2a;
+  background-color: #2c3e50;
 }
 
 .card-back {
   transform: rotateY(180deg);
-  background-color: #2a2a2a;
 }
 
 .card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 15px;
-} 
+  border-radius: 10px;
+}
+
+/* ✨ Mint Button */
+.mint-btn {
+  background-color: #00ef8b;
+  color: #000;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mint-btn:hover {
+  background-color: #00d47e;
+  transform: translateY(-2px);
+}
+
+.mint-btn:disabled {
+  background-color: #999;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ⚠️ Error Message */
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}

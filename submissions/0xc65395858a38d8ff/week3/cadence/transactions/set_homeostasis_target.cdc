@@ -34,6 +34,6 @@ transaction(creatureID: UInt64, geneName: String, targetValue: UFix64) {
         // The contract should emit HomeostasisTargetSet when this is done.
         // For now, the transaction directly modifies the public field.
         // A setter method in the NFT resource that emits the event is a cleaner approach.
-        EvolvingCreatures.emit(HomeostasisTargetSet(creatureID: creatureID, gene: geneName, target: targetValue))
+        EvolvingCreatures.emitEvent(HomeostasisTargetSet(creatureID: creatureID, gene: geneName, target: targetValue))
     }
 } 

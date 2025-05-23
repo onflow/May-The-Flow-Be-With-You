@@ -91,7 +91,7 @@ transaction(ownerAddress: Address, creatureID: UInt64) {
             if self.creatureRef.edadDiasCompletos >= self.creatureRef.lifespanTotalSimulatedDays {
                 self.creatureRef._die() // Sets estaViva = false, deathBlockHeight
                 self.collectionRef._markAsDeadInCollection(creatureID: self.creatureRef.id)
-                EvolvingCreatures.emit(CreatureDied(creatureID: self.creatureRef.id, deathBlockHeight: self.creatureRef.deathBlockHeight!))
+                EvolvingCreatures.emitEvent(CreatureDied(creatureID: self.creatureRef.id, deathBlockHeight: self.creatureRef.deathBlockHeight!))
                 log("Creature ".concat(self.creatureRef.id.toString()).concat(" died of old age during update."))
             }
             currentDay = currentDay + 1
@@ -100,7 +100,7 @@ transaction(ownerAddress: Address, creatureID: UInt64) {
         self.creatureRef.simulatedDaysProcessedWithCurrentSeed = simulatedDayNonceForDerivation
         self.creatureRef.lastEvolutionProcessedBlockHeight = getCurrentBlock().height
         
-        EvolvingCreatures.emit(EvolutionProcessed(
+        EvolvingCreatures.emitEvent(EvolutionProcessed(
             creatureID: self.creatureRef.id, 
             newEP: self.creatureRef.puntosEvolucion, 
             newAgeInDays: self.creatureRef.edadDiasCompletos, 

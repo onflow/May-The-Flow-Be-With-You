@@ -5,7 +5,7 @@ import { Level } from "@/types";
 import React, { FormEvent, useState } from "react";
 import Select from "./select";
 import { Difficulty, startGame } from "@minesweeper";
-import { getRandomNumber } from "../app/utils/contracts";
+import { getRandomNumber } from "../contracts/contracts";
 
 // type Props = {
 

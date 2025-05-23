@@ -1,10 +1,11 @@
-import { Level, PlayRecord } from "@/types";
+import { Level } from "@/types";
+import { LeaderboardRecord } from "@/types/leaderboard";
 import clsx from "clsx";
 import dayjs from "dayjs";
 import React from "react";
 import Image from "next/image";
 
-type Props = { level: Level; data: PlayRecord | null };
+type Props = { level: Level; data: LeaderboardRecord | null };
 
 const PersonalBest = ({ level, data }: Props) => {
   return (

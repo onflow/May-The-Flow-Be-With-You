@@ -6,7 +6,11 @@ import { Difficulty } from "@minesweeper";
 const initialState: UserData = {
   ui: "win98",
   article: "",
-  custom: defaultCustom,
+  custom: {
+    height: 16,
+    width: 16,
+    numMines: 40
+  },
   sound: false,
   minimized: false,
   feedbackVisible: false,
@@ -83,9 +87,6 @@ const userDataSlice = createSlice({
         ...rest
       };
       state.records = [record, ...state.records];
-    },
-    removeRecord(state, action: PayloadAction<number>) {
-      state.records = state.records.filter((r) => r.timestamp !== action.payload);
     }
   }
 });
@@ -93,7 +94,6 @@ const userDataSlice = createSlice({
 export const {
   updateUI,
   updateArticle,
-  removeRecord,
   updateCustom,
   toggleSound,
   fillUserData,
@@ -104,6 +104,6 @@ export const {
   toggleMiniRecords,
   updateCellActive,
   addRecord,
-  updateFeedback
+  updateFeedback,
 } = userDataSlice.actions;
 export default userDataSlice.reducer;

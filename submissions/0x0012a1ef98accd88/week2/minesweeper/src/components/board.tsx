@@ -8,7 +8,7 @@ import { Sound } from "@/types";
 import { difficulty } from "@/config";
 import Hotkeys from "./hotkeys";
 import ModalWin from "./modal-win";
-import { getRandomNumber } from "../app/utils/contracts";
+import { getRandomNumber } from "../contracts/contracts";
 
 // type Props = {
 //   startNewGame: () => void;

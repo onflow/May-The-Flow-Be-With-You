@@ -27,6 +27,8 @@ export type PlayRecord = {
   timestamp: number;
   duration: number;
   level: Level;
+  player: string;
+  status: "win" | "lose";
   // numFlagged: number;
   // remainingFlags: number;
 } & DeepWriteable<Minesweeper>;
@@ -47,4 +49,5 @@ export interface UserData {
   cellSize: number;
   records: PlayRecord[];
   cellActive: boolean;
+  userAddress?: string;
 }

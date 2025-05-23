@@ -4,7 +4,7 @@ import { Coordinate, revealCell, startGame, toggleFlag } from "@minesweeper";
 import { toggleMini, toggleMiniRecords, toggleSound, updateArticle } from "@/redux/slice/user.data";
 import React from "react";
 import { HotkeysProvider, useHotkeys } from "react-hotkeys-hook";
-import { getRandomNumber } from "../app/utils/contracts";
+import { getRandomNumber } from "../contracts/contracts";
 type Props = {
   children: React.ReactNode;
 };

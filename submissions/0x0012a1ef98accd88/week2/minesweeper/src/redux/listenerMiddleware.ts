@@ -7,7 +7,6 @@ import {
   toggleMini,
   addRecord,
   toggleSound,
-  removeRecord,
   updateCustom,
   updateUI
 } from "./slice/user.data";
@@ -31,7 +30,6 @@ startAppListening({
     toggleMini,
     addRecord,
     toggleSound,
-    removeRecord,
     updateCustom,
     updateUI
   ),
@@ -70,7 +68,6 @@ startAppListening({
           set("sound", currState.userData.sound);
         }
         break;
-      case "userData/removeRecord":
       case "userData/addRecord":
         {
           set("records", currState.userData.records);

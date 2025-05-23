@@ -51,8 +51,9 @@ access(all) contract OnchainCraps {
     access(all) var point: Int? 
     //access(all) var pointAmount: UFix64?
     //access(all) var come: Int?
-    access(all) var bets: { String : UFix64 }
+    access(all) var bets: @{ String : {FungibleToken.Vault} }
     access(all) let id: UInt64
+    //access(all) var gameVault: @{FungibleToken.Vault}
 
     //add overall userInfo here instead of above
 
@@ -83,7 +84,8 @@ access(all) contract OnchainCraps {
     access (all) fun rollDice(userAddress: Address, newBets: { String : UFix64 }? ) : RollResult {
 
       if self.state == OnchainCraps.GameState.COMEOUT && (newBets == nil || newBets!.length == 0)  { //IF its the comeout roll, we need at least 1 bet placed
-        assert(self.bets["POINT"] != nil && self.bets["POINT"]! > 0.0, message: "Come out bets need a bet placed" )
+        let vaultRef = &self.bets as &{String: {FungibleToken.Vault}}
+        assert(self.bets["POINT"] != nil && vaultRef["POINT"]!.balance > 0.0, message: "Come out bets need a bet placed" )
       }
 
       // Generate first & seconde dice roll (1-6)
@@ -134,10 +136,12 @@ access(all) contract OnchainCraps {
             rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: newBets![bet]!, status: betStatus, resultAmount: resultAmount ))
           } else { //this is not a Prop bet, so we should add it to our bets
             let currentBet = newBets![bet]!
+            let vaultRef <- self.bets.remove(key: bet)
             if self.bets[bet] != nil {
               self.bets[bet] = currentBet + self.bets[bet]!
             } else {
-              self.bets[bet] = currentBet
+              let vault <- self.bets.remove(key: bet) ?? panic("No vault at this key")
+              self.bets[bet] <-! vault
             }
           } 
         }

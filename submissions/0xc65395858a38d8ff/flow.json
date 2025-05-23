@@ -6,6 +6,12 @@
 				"emulator": "f8d6e0586b0a20c7",
 				"testnet": "0xbeb2f48c3293e514"
 			}
+		},
+		"EvolvingCreatures": {
+			"source": "week3/cadence/contracts/EvolvingCreatures.cdc",
+			"aliases": {
+				"testnet": "0xbeb2f48c3293e514"
+			}
 		}
 	},
 	"dependencies": {
@@ -208,7 +214,8 @@
 		},
 		"testnet": {
 			"testnet-deployer": [
-				"ElementalStrikers"
+				"ElementalStrikers",
+				"EvolvingCreatures"
 			]
 		}
 	}

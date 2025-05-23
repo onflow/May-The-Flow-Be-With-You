@@ -31,6 +31,7 @@ transaction(creatureID: UInt64) {
         // This value might need tuning based on desired user experience and network conditions.
         let commitDelay: UInt64 = 30 // Number of blocks to wait for the reveal
         let targetRevealBlock = getCurrentBlock().height + commitDelay
+        let currentTimestamp = getCurrentBlock().timestamp
 
         // Commit to the RandomBeaconHistory for a future block
         RandomBeaconHistory.commit(self.signerAddress, blockHeight: targetRevealBlock)
@@ -38,13 +39,18 @@ transaction(creatureID: UInt64) {
         // Update the creature's state to reflect this commitment
         self.creatureRef.committedToRandomBlockHeight = targetRevealBlock
 
-        log("Creature ".concat(creatureID.toString()).concat(" committed to random seed reveal at block ").concat(targetRevealBlock.toString()))
-        // The contract should emit EvolutionSeedCommitted event upon this state change if desired,
-        // or this log serves as confirmation.
-        // For consistency, if other state changes in NFT emit events from NFT methods,
-        // consider adding a method like `creatureRef.setCommitment(targetRevealBlock)` that emits.
-        // For now, direct state update is fine as per plan.
-        EvolvingCreatures.log("Transaction: Creature ".concat(creatureID.toString()).concat(" committed to random seed reveal at block ").concat(targetRevealBlock.toString()))
-
+        // Log message directly in the transaction
+        log("Transaction: Creature ".concat(creatureID.toString()).concat(" committed to random seed reveal at block ").concat(targetRevealBlock.toString()))
+        
+        // The contract itself should emit EvolutionSeedCommitted when the creature's state changes internally.
+        // If not, this transaction can emit it directly after updating the creature.
+        // For now, assuming an internal method like `creatureRef.setCommitment(targetRevealBlock)` would emit it,
+        // or the event is emitted from where committedToRandomBlockHeight is set in the NFT resource.
+        // If direct emission from transaction is needed: 
+        emit EvolvingCreatures.EvolutionSeedCommitted(
+            creatureID: self.creatureRef.id, 
+            committedBlockHeight: targetRevealBlock,
+            committedTimestamp: currentTimestamp
+        )
     }
 } 

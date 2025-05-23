@@ -16,7 +16,7 @@ const flowJsonContent = JSON.parse(fs.readFileSync(flowJsonPath, 'utf-8'));
 fcl.config({
     'flow.network': 'testnet',
     'decoder.type': 'json',
-    'accessNode.api': 'https://rest-testnet.onflow.org'
+    'accessNode.api': 'https://access-testnet.onflow.org'
 });
 
 // Function to hash data using SHA3-256
@@ -135,21 +135,18 @@ const deployEvolvingCreatures = async () => {
     try {
         console.log("Starting EvolvingCreatures contract deployment to Flow Testnet...");
         
-        // Read the contract code
-        const contractPath = "week3/cadence/contracts/EvolvingCreatures.cdc";
-        const contractCode = await readFile(contractPath);
+        // Read the transaction code
+        const transactionPath = "test_scripts/deploy_contract_transaction.cdc";
+        const transactionCode = await readFile(transactionPath);
         
-        // Process the contract code to ensure all imports use correct testnet addresses
-        const processedCode = replaceImportAddresses(contractCode);
-        
-        console.log("Contract processed with correct import addresses. Deploying...");
+        console.log("Using proper contract deployment transaction. Deploying...");
         
         // Get the authorization function for the testnet-deployer account
         const deployerAuthz = getAuthz("testnet-deployer");
         
         // Deploy the contract
         const txId = await fcl.mutate({
-            cadence: processedCode,
+            cadence: transactionCode,
             args: (arg, t) => [],
             proposer: deployerAuthz,
             payer: deployerAuthz,

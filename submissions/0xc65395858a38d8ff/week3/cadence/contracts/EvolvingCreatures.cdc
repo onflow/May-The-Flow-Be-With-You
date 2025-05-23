@@ -12,21 +12,11 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
     access(all) event ContractInitialized()
     access(all) event CollectionCreated(owner: Address)
     access(all) event NFTMinted(id: UInt64, owner: Address, birthBlockHeight: UInt64)
-    access(all) event EvolutionSeedCommitted(creatureID: UInt64, committedBlockHeight: UInt64)
-    access(all) event EvolutionProcessed(creatureID: UInt64, newEP: UFix64, newAgeInDays: UFix64, isAlive: Bool, lastProcessedBlock: UInt64)
-    access(all) event CreatureDied(creatureID: UInt64, deathBlockHeight: UInt64)
+    access(all) event EvolutionSeedCommitted(creatureID: UInt64, committedBlockHeight: UInt64, committedTimestamp: UFix64)
+    access(all) event EvolutionProcessed(creatureID: UInt64, newEP: UFix64, newAgeInDays: UFix64, isAlive: Bool, lastProcessedBlock: UInt64, lastProcessedTimestamp: UFix64)
+    access(all) event CreatureDied(creatureID: UInt64, deathBlockHeight: UInt64, deathTimestamp: UFix64)
     access(all) event HomeostasisTargetSet(creatureID: UInt64, gene: String, target: UFix64)
     access(all) event CreatureAwaitingFirstSeed(creatureID: UInt64)
-
-    // Add a public emitEvent function to allow transactions to emit contract events
-    access(all) fun emitEvent(_ event: AnyStruct) {
-        emit event
-    }
-
-    // Add a public log function for use in transactions
-    access(all) fun log(_ message: String) {
-        log(message)
-    }
 
     //-----------------------------------------------------------------------
     // Contract State & Constants
@@ -35,10 +25,12 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
     access(all) let CollectionPublicPath: PublicPath
     access(all) let CollectionPrivatePath: PrivatePath
 
-    access(all) let MAX_ACTIVE_CREATURES: Int = 5
-    access(all) let BLOCKS_PER_SIMULATED_DAY: UInt64 = 100 // Placeholder, can be tuned (e.g., 1 block ~ 1 second, so 86400 for a real day)
+    access(all) let MAX_ACTIVE_CREATURES: Int;
+    access(all) let SECONDS_PER_SIMULATED_DAY: UFix64; // Represents one real day in seconds (24 * 60 * 60)
+    // access(all) let BLOCKS_PER_SIMULATED_DAY: UInt64 = 100 
+    // Placeholder, can be tuned (e.g., 1 block ~ 1 second, so 86400 for a real day)
 
-    access(all) var nextCreatureID: UInt64
+    access(all) var nextCreatureID: UInt64;
 
     //-----------------------------------------------------------------------
     // PRNG Struct (Simple LCG)
@@ -91,6 +83,7 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
     access(all) resource NFT: NonFungibleToken.INFT {
         access(all) let id: UInt64
         access(all) let birthBlockHeight: UInt64
+        access(all) let birthTimestamp: UFix64
 
         access(all) var genesVisibles: {String: UFix64}
         access(all) var genesOcultos: {String: UFix64}
@@ -99,9 +92,11 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
         access(all) var edadDiasCompletos: UFix64
         access(all) var estaViva: Bool
         access(all) var deathBlockHeight: UInt64?
+        access(all) var deathTimestamp: UFix64?
 
         // Evolution tracking
         access(all) var lastEvolutionProcessedBlockHeight: UInt64
+        access(all) var lastEvolutionProcessedTimestamp: UFix64
         access(all) var committedToRandomBlockHeight: UInt64?
         access(all) var currentActiveBeaconSeed: UInt256?
         access(all) var lastBeaconSeedFetchedBlockHeight: UInt64?
@@ -119,6 +114,7 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
         ) {
             self.id = id
             self.birthBlockHeight = birthBlockHeight
+            self.birthTimestamp = getCurrentBlock().timestamp
             self.genesVisibles = initialGenesVisibles
             self.genesOcultos = initialGenesOcultos
             self.puntosEvolucion = initialEP
@@ -126,7 +122,9 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
             self.edadDiasCompletos = 0.0
             self.estaViva = true
             self.deathBlockHeight = nil
+            self.deathTimestamp = nil
             self.lastEvolutionProcessedBlockHeight = birthBlockHeight
+            self.lastEvolutionProcessedTimestamp = getCurrentBlock().timestamp
             self.committedToRandomBlockHeight = nil
             self.currentActiveBeaconSeed = nil
             self.lastBeaconSeedFetchedBlockHeight = nil
@@ -162,13 +160,21 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
             if self.estaViva {
                 self.estaViva = false
                 self.deathBlockHeight = getCurrentBlock().height
+                self.deathTimestamp = getCurrentBlock().timestamp
                 log("Creature ".concat(self.id.toString()).concat(" died at block ").concat(self.deathBlockHeight!.toString()))
                 // Event emission for death will be handled by the caller (e.g., processEvolutionUpdate or Collection)
             }
         }
 
-        destroy() {
-            // NonFungibleToken.destroy(nft: self) // Not needed if the NFT doesn't hold other resources directly.
+        // Calculate elapsed simulated days based on real time 
+        access(contract) fun calcElapsedSimulatedDays(currentTimestamp: UFix64): UFix64 {
+            let elapsedSeconds = currentTimestamp - self.lastEvolutionProcessedTimestamp
+            return elapsedSeconds / EvolvingCreatures.SECONDS_PER_SIMULATED_DAY
+        }
+
+        // Updates the last processed timestamp
+        access(contract) fun updateLastProcessedTimestamp(newTimestamp: UFix64) {
+            self.lastEvolutionProcessedTimestamp = newTimestamp
         }
     }
 
@@ -186,7 +192,7 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
             return ref as! &EvolvingCreatures.NFT // This cast might fail if not careful with what's stored.
                                                 // Better to implement in the concrete Collection.
         }
-        access(all) fun borrowViewResolver(id: UInt64): &AnyResource{NonFungibleToken.NFTViewResolver}?
+        access(all) fun borrowViewResolver(id: UInt64): &NonFungibleToken.NFTViewResolver?
     }
 
     access(all) resource Collection: NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic, NonFungibleToken.CollectionPrivate, EvolvingCreaturesCollectionPublic {
@@ -259,12 +265,12 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
             return nil
         }
 
-        access(all) fun borrowViewResolver(id: UInt64): &AnyResource{NonFungibleToken.NFTViewResolver}? {
+        access(all) fun borrowViewResolver(id: UInt64): &NonFungibleToken.NFTViewResolver? {
             let nft = self.borrowNFT(id: id)
             if nft == nil {
                 return nil
             }
-            return nft as! &AnyResource{NonFungibleToken.NFTViewResolver}
+            return nft as! &NonFungibleToken.NFTViewResolver
         }
 
         access(NonFungibleToken.CollectionPrivate) fun borrowSelf(): &Collection {
@@ -303,10 +309,6 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
                 }
             }
         }
-
-        destroy() {
-            destroy self.ownedNFTs
-        }
     }
 
     //-----------------------------------------------------------------------
@@ -317,7 +319,7 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
     }
 
     access(all) fun mintCreature(
-        recipient: &{NonFungibleToken.Receiver},
+        recipient: &NonFungibleToken.Receiver,
         // serialNumber: UInt64, // Not used for now, id is unique
         initialGenesVisibles: {String: UFix64},
         initialGenesOcultos: {String: UFix64},
@@ -362,6 +364,10 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
         self.CollectionPublicPath = /public/EvolvingCreaturesCollectionPublicV1
         self.CollectionPrivatePath = /private/EvolvingCreaturesCollectionPrivateV1 // For linking provider capability
         self.nextCreatureID = 1
+
+        // Initialize contract constants
+        self.MAX_ACTIVE_CREATURES = 5
+        self.SECONDS_PER_SIMULATED_DAY = 86400.0
 
         // Initialize contract state or emit event
         emit ContractInitialized()

@@ -1,4 +1,4 @@
-import EvolvingCreatures from 0xbeb2f48c3293e514 // Assuming EvolvingCreatures will be deployed here
+import EvolvingCreatures from 0xbeb2f48c3293e514 
 import RandomBeaconHistory from 0x8c5303eaa26202d6
 
 // This transaction processes the evolution update for a creature.
@@ -52,15 +52,17 @@ transaction(ownerAddress: Address, creatureID: UInt64) {
         // B. Verify if there is a "Semilla Maestra del Beacon" active to evolve
         assert(self.creatureRef.currentActiveBeaconSeed != nil, message: "Creature needs an active beacon seed. Call requestEvolutionSeed and then processEvolutionUpdate after the delay.")
 
-        // C. Procesamiento de Evolución (Iterar por bloques/días simulados)
-        let blocksToProcess = getCurrentBlock().height - self.creatureRef.lastEvolutionProcessedBlockHeight
-        let numSimulatedDaysToProcess = blocksToProcess / EvolvingCreatures.BLOCKS_PER_SIMULATED_DAY
+        // C. Procesamiento de Evolución usando timestamps
+        let currentTimestamp = getCurrentBlock().timestamp
+        let elapsedSimulatedDays = self.creatureRef.calcElapsedSimulatedDays(currentTimestamp: currentTimestamp)
+        let numSimulatedDaysToProcess = Int(elapsedSimulatedDays) // Whole days only
         
-        log("Blocks since last update: ".concat(blocksToProcess.toString()).concat(", Equiv. Simulated Days to Process: ").concat(numSimulatedDaysToProcess.toString()))
+        log("Seconds since last update: ".concat((currentTimestamp - self.creatureRef.lastEvolutionProcessedTimestamp).toString()).concat(", Equiv. Simulated Days to Process: ").concat(numSimulatedDaysToProcess.toString()))
 
         if numSimulatedDaysToProcess == 0 {
-            log("Not enough blocks passed to simulate a full day. No evolution processed.")
+            log("Not enough time passed to simulate a full day. No evolution processed.")
             self.creatureRef.lastEvolutionProcessedBlockHeight = getCurrentBlock().height // Still update to prevent tiny block processing next time
+            self.creatureRef.updateLastProcessedTimestamp(newTimestamp: currentTimestamp)
             return
         }
 
@@ -89,9 +91,13 @@ transaction(ownerAddress: Address, creatureID: UInt64) {
 
             // Check for death by old age for this day
             if self.creatureRef.edadDiasCompletos >= self.creatureRef.lifespanTotalSimulatedDays {
-                self.creatureRef._die() // Sets estaViva = false, deathBlockHeight
+                self.creatureRef._die() // Sets estaViva = false, deathBlockHeight, deathTimestamp
                 self.collectionRef._markAsDeadInCollection(creatureID: self.creatureRef.id)
-                EvolvingCreatures.emitEvent(CreatureDied(creatureID: self.creatureRef.id, deathBlockHeight: self.creatureRef.deathBlockHeight!))
+                emit EvolvingCreatures.CreatureDied(
+                    creatureID: self.creatureRef.id, 
+                    deathBlockHeight: self.creatureRef.deathBlockHeight!,
+                    deathTimestamp: self.creatureRef.deathTimestamp!
+                )
                 log("Creature ".concat(self.creatureRef.id.toString()).concat(" died of old age during update."))
             }
             currentDay = currentDay + 1
@@ -99,14 +105,16 @@ transaction(ownerAddress: Address, creatureID: UInt64) {
 
         self.creatureRef.simulatedDaysProcessedWithCurrentSeed = simulatedDayNonceForDerivation
         self.creatureRef.lastEvolutionProcessedBlockHeight = getCurrentBlock().height
+        self.creatureRef.updateLastProcessedTimestamp(newTimestamp: currentTimestamp)
         
-        EvolvingCreatures.emitEvent(EvolutionProcessed(
+        emit EvolvingCreatures.EvolutionProcessed(
             creatureID: self.creatureRef.id, 
             newEP: self.creatureRef.puntosEvolucion, 
             newAgeInDays: self.creatureRef.edadDiasCompletos, 
             isAlive: self.creatureRef.estaViva,
-            lastProcessedBlock: self.creatureRef.lastEvolutionProcessedBlockHeight
-        ))
+            lastProcessedBlock: self.creatureRef.lastEvolutionProcessedBlockHeight,
+            lastProcessedTimestamp: self.creatureRef.lastEvolutionProcessedTimestamp
+        )
         log("Evolution processing complete for creature: ".concat(self.creatureRef.id.toString()).concat(". Is alive: ".concat(self.creatureRef.estaViva.toString())))
     }
 }

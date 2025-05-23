@@ -1,8 +1,4 @@
 
-![Screenshot 2025-05-24 001728](https://github.com/user-attachments/assets/03290d25-bb8c-4ec6-8230-2edae0560639)
-
-
-
 
 # Flow Token Gating
 

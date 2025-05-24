@@ -1,9 +1,9 @@
 import "NonFungibleToken"
-import "CreatureNFT"
+import "CreatureNFTV2"
 import "MetadataViews"
 
-// Esta transacción mintea una nueva criatura para el juego ElementalStrikers
-// usando valores derivados de la blockchain para generar atributos pseudo-aleatorios
+// Esta transacción mintea una nueva criatura evolucionable para el juego
+// usando valores derivados de la blockchain para generar atributos pseudo-aleatorios.
 // La criatura tendrá un lifespan máximo basado en el gen max_lifespan_dias_base.
 // La semilla inicial para evolución se genera automáticamente con el ID, timestamp
 // y altura del bloque al momento de la creación.
@@ -14,7 +14,7 @@ transaction(
     description: String
 ) {
     // Referencia al NFTMinter resource
-    let minter: &CreatureNFT.NFTMinter
+    let minter: &CreatureNFTV2.NFTMinter
 
     // Referencia a la colección del destinatario
     let recipientCollection: &{NonFungibleToken.Receiver}
@@ -36,13 +36,13 @@ transaction(
         let timestampInt = Int(timestamp)
         
         // Borrow a reference to the NFTMinter resource from the signer's account storage
-        self.minter = signer.storage.borrow<&CreatureNFT.NFTMinter>(from: CreatureNFT.MinterStoragePath)
-            ?? panic("Signer does not have a CreatureNFT.NFTMinter resource.")
+        self.minter = signer.storage.borrow<&CreatureNFTV2.NFTMinter>(from: CreatureNFTV2.MinterStoragePath)
+            ?? panic("Signer does not have a CreatureNFTV2.NFTMinter resource.")
 
         // Borrow a reference to the recipient's public Collection capability
         self.recipientCollection = getAccount(recipient)
-            .capabilities.borrow<&{NonFungibleToken.Receiver}>(CreatureNFT.CollectionPublicPath)
-            ?? panic("Could not borrow Receiver capability from recipient's account. Make sure the account is set up to receive CreatureNFTs.")
+            .capabilities.borrow<&{NonFungibleToken.Receiver}>(CreatureNFTV2.CollectionPublicPath)
+            ?? panic("Could not borrow Receiver capability from recipient's account. Make sure the account is set up to receive CreatureNFTV2s.")
             
         // Generar genes visibles aleatorios basados en el bloque
         self.genesVisibles = {
@@ -76,7 +76,7 @@ transaction(
 
     execute {
         // Generar un placeholder para thumbnail - será generado con p5.js
-        let thumbnailPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzEyMzQ1NiIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5FbGVtZW50YWwgU3RyaWtlcjwvdGV4dD48L3N2Zz4="
+        let thumbnailPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzEyMzQ1NiIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5FdmxvdmluZyBDcmVhdHVyZTwvdGV4dD48L3N2Zz4="
         
         // Calcular lifespan basado en el gene max_lifespan_dias_base (más realista)
         let lifespanDays = self.genesOcultos["max_lifespan_dias_base"]! * 10.0 // Multiplicamos por 10 para tener criaturas que vivan entre 30-70 días
@@ -99,7 +99,7 @@ transaction(
         // Deposit the new NFT into the recipient's Collection
         self.recipientCollection.deposit(token: <-newNFT)
 
-        log("ElementalStriker criatura minteada y depositada al jugador con genes aleatorios (bloque #".concat(getCurrentBlock().height.toString()).concat(")"))
+        log("Criatura evolucionable V2 minteada y depositada al jugador con genes aleatorios (bloque #".concat(getCurrentBlock().height.toString()).concat(")"))
         log("La semilla inicial de evolución se generó automáticamente con el ID, timestamp y altura del bloque")
         log("Esta semilla se utilizará para simular 300 steps de evolución por día")
     }

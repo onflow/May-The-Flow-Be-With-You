@@ -2,7 +2,7 @@ import "NonFungibleToken"
 import "MetadataViews"
 import "ViewResolver" // Added for explicit conformance if needed by NFT resource
 
-access(all) contract CreatureNFT: NonFungibleToken {
+access(all) contract CreatureNFTV2: NonFungibleToken {
 
     /// Total supply of CreatureNFTs in existence
     access(all) var totalSupply: UInt64
@@ -28,6 +28,28 @@ access(all) contract CreatureNFT: NonFungibleToken {
     /// The event that is emitted when an NFT's description is updated
     access(all) event DescriptionUpdated(id: UInt64, newDescription: String)
 
+    /// The event that is emitted when an NFT evolves
+    access(all) event EvolutionProcessed(
+        creatureID: UInt64, 
+        processedSteps: UInt64, 
+        newAge: UFix64, 
+        evolutionPoints: UFix64
+    )
+
+    /// The event that is emitted when an NFT dies
+    access(all) event CreatureDied(
+        creatureID: UInt64, 
+        deathBlockHeight: UInt64, 
+        deathTimestamp: UFix64
+    )
+
+    /// The event that is emitted when a homeostasis target is set
+    access(all) event HomeostasisTargetSet(
+        creatureID: UInt64, 
+        gene: String, 
+        target: UFix64
+    )
+
     /// Storage and Public Paths
     access(all) let CollectionStoragePath: StoragePath
     access(all) let CollectionPublicPath: PublicPath
@@ -45,7 +67,7 @@ access(all) contract CreatureNFT: NonFungibleToken {
         access(all) var description: String
         access(all) let thumbnail: String // URL to an image
 
-        // Attributes from EvolvingCreaturesV2
+        // Attributes for evolution
         access(all) let genesVisibles: {String: UFix64}
         access(all) let genesOcultos: {String: UFix64}
         access(all) var puntosEvolucion: UFix64 // Mutable by game logic contract
@@ -66,7 +88,7 @@ access(all) contract CreatureNFT: NonFungibleToken {
         // Homeostasis targets - Explicitly allow modification of this dictionary
         access(all) var homeostasisTargets: {String: UFix64}
         
-        // Nueva semilla inicial para la criatura (se utiliza para derivar semillas diarias)
+        // Semilla inicial para la criatura (se utiliza para derivar semillas diarias)
         access(all) let initialSeed: UInt64
 
         init(
@@ -125,11 +147,8 @@ access(all) contract CreatureNFT: NonFungibleToken {
             emit DescriptionUpdated(id: self.id, newDescription: newDescription)
         }
         
-        // --- Functions to be called by the Game Logic Contract ---
-        // These functions would have stricter access control (e.g., access(contract) or capability-based)
-        // once the game logic contract is defined and interacting.
-        // For now, they are access(all) for easier initial testing if called directly via NFT reference.
-
+        // --- Funciones de evolución ---
+        
         access(all) fun updatePuntosEvolucion(newEP: UFix64) {
             self.puntosEvolucion = newEP
         }
@@ -142,10 +161,23 @@ access(all) contract CreatureNFT: NonFungibleToken {
             self.estaViva = newEstaViva
             self.deathBlockHeight = newDeathBlock
             self.deathTimestamp = newDeathTimestamp
+            
+            if !newEstaViva {
+                emit CreatureDied(
+                    creatureID: self.id,
+                    deathBlockHeight: newDeathBlock!,
+                    deathTimestamp: newDeathTimestamp!
+                )
+            }
         }
         
-        access(all) fun updateHomeostasisTarget(gene: String, target: UFix64) {
-            self.homeostasisTargets[gene] = target
+        access(all) fun setHomeostasisTarget(gene: String, value: UFix64) {
+            self.homeostasisTargets[gene] = value
+            emit HomeostasisTargetSet(
+                creatureID: self.id,
+                gene: gene,
+                target: value
+            )
         }
 
         access(all) fun setLastEvolutionProcessed(blockHeight: UInt64, timestamp: UFix64) {
@@ -153,8 +185,160 @@ access(all) contract CreatureNFT: NonFungibleToken {
             self.lastEvolutionProcessedTimestamp = timestamp
         }
 
-        access(all) fun setHomeostasisTarget(gene: String, value: UFix64) {
-            self.homeostasisTargets[gene] = value
+        // Método para generar semillas diarias basadas en la semilla inicial y el día simulado
+        access(all) fun generateDailySeeds(diaSimulado: UInt64): [UInt64] {
+            let daySalt = diaSimulado * 127 // Factor primo para mejorar distribución
+            let base = self.initialSeed ^ daySalt
+            
+            // Implementación simplificada del PRNG de la simulación Python
+            let a: UInt64 = 1664525
+            let c: UInt64 = 1013904223
+            let m: UInt64 = 4294967296 // 2^32
+            
+            var seedState = base % m
+            var seeds: [UInt64] = []
+            
+            // Generar 5 semillas diarias (como en simulation.py)
+            var i: Int = 0
+            while i < 5 {
+                seedState = (seedState * a + c) % m
+                seeds.append(seedState)
+                i = i + 1
+            }
+            
+            return seeds
+        }
+        
+        // Método para calcular días transcurridos desde última evolución procesada
+        access(all) fun calcularDiasTranscurridos(timestampActual: UFix64, segundosPorDiaSimulado: UFix64): UFix64 {
+            let segundosTranscurridos = timestampActual - self.lastEvolutionProcessedTimestamp
+            return segundosTranscurridos / segundosPorDiaSimulado
+        }
+        
+        // Funciones matemáticas auxiliares
+        access(self) fun abs(_ value: UFix64): UFix64 {
+            if value < 0.0 {
+                return 0.0 - value
+            }
+            return value
+        }
+        
+        access(self) fun min(_ a: UFix64, _ b: UFix64): UFix64 {
+            if a < b {
+                return a
+            }
+            return b
+        }
+        
+        access(self) fun max(_ a: UFix64, _ b: UFix64): UFix64 {
+            if a > b {
+                return a
+            }
+            return b
+        }
+
+        // Método para aplicar evolución por step específico (tiny evolution)
+        access(all) fun updateGenesForStep(r0: UInt64, r1: UInt64, stepsPerDay: UInt64) {
+            // Esta es una versión escalada de updateGenes
+            // donde cada step representa 1/stepsPerDay de un día completo
+            let stepFactor = 1.0 / UFix64(stepsPerDay)
+            
+            // Implementación de _updateGenes de simulation.py pero escalada para steps
+            for geneName in self.genesVisibles.keys {
+                let currentValue = self.genesVisibles[geneName]!
+                
+                // Verificar si existe un objetivo de homeostasis para este gen
+                if self.homeostasisTargets[geneName] != nil {
+                    let targetValue = self.homeostasisTargets[geneName]!
+                    
+                    // Calcular diferencia entre valor actual y objetivo
+                    let difference = targetValue - currentValue
+                    let differenceAbs = self.abs(difference)
+                    
+                    // Si hay suficiente diferencia, evolucionar hacia el objetivo
+                    if differenceAbs > 0.0001 { // Umbral reducido para steps pequeños
+                        // Usar valores aleatorios para determinar velocidad de cambio
+                        let randomFactor = UFix64(r0 % 1000) / 1000.0
+                        // Tasa evolutiva base diaria (entre 1% y 6%) dividida por número de steps
+                        let evolutionRatePerStep = (0.01 + (0.05 * randomFactor)) * stepFactor
+                        
+                        // Dirección del cambio
+                        var changeAmount: UFix64 = 0.0
+                        if difference > 0.0 {
+                            changeAmount = self.min(evolutionRatePerStep, difference)
+                        } else {
+                            // Usando la versión positiva y luego negándola manualmente
+                            let positiveRate = evolutionRatePerStep
+                            if differenceAbs < positiveRate {
+                                changeAmount = 0.0 - differenceAbs
+                            } else {
+                                changeAmount = 0.0 - positiveRate
+                            }
+                        }
+                        
+                        // Aplicar cambio
+                        self.genesVisibles[geneName] = currentValue + changeAmount
+                    }
+                } else {
+                    // Para genes sin objetivo, aplicar pequeñas mutaciones aleatorias
+                    // Usar R0 y R1 para mutaciones base
+                    let r0Factor = UFix64(r0 % 100) / 100.0
+                    let r1Factor = UFix64(r1 % 100) / 100.0
+                    
+                    // Probabilidad reducida para mutación por step (10% / stepsPerDay)
+                    if r0Factor < (0.1 * stepFactor) {
+                        // Dirección y magnitud de la mutación (también escaladas)
+                        let mutationStrength = 0.01 * (r1Factor * 2.0) * stepFactor
+                        
+                        // Aplicar mutación - versión simplificada
+                        var newValue = currentValue
+                        
+                        // Si r1Factor > 0.5, aumentamos el valor
+                        if r1Factor > 0.5 {
+                            newValue = currentValue + mutationStrength
+                            // Verificar límite superior
+                            if newValue > 1.0 {
+                                newValue = 1.0
+                            }
+                        } else {
+                            // Si no, lo disminuimos
+                            if currentValue > mutationStrength {
+                                newValue = currentValue - mutationStrength
+                            } else {
+                                newValue = 0.0
+                            }
+                        }
+                        
+                        // Actualizar gen
+                        self.genesVisibles[geneName] = newValue
+                    }
+                }
+            }
+        }
+        
+        // Método para ganar puntos de evolución por step
+        access(all) fun gainEvolutionPointsForStep(r0: UInt64, stepsPerDay: UInt64) {
+            // Versión escalada de gainEvolutionPoints para un step individual
+            let stepFactor = 1.0 / UFix64(stepsPerDay)
+            
+            // Calcular EP diarios basados en edad y factores aleatorios (como en simulation.py)
+            var ageMultiplier: UFix64 = 0.0
+            if self.edadDiasCompletos < 10.0 {
+                ageMultiplier = 2.0 // Criaturas jóvenes ganan más EP
+            } else if self.edadDiasCompletos < 30.0 {
+                ageMultiplier = 1.5 // Criaturas adolescentes ganan EP moderado
+            } else {
+                ageMultiplier = 1.0 // Criaturas adultas ganan EP normal
+            }
+            
+            // Usar factor aleatorio para EP (entre 0.5 y 1.5)
+            let randomFactor = 0.5 + (UFix64(r0 % 100) / 100.0)
+            
+            // Base diaria de EP: entre 0.5 y 1.5 dividido por número de steps
+            let baseEPPerStep = 1.0 * ageMultiplier * randomFactor * stepFactor
+            
+            // Añadir EP ganados
+            self.puntosEvolucion = self.puntosEvolucion + baseEPPerStep
         }
 
         access(all) view fun getViews(): [Type] {
@@ -183,201 +367,27 @@ access(all) contract CreatureNFT: NonFungibleToken {
                         self.id
                     )
                 case Type<MetadataViews.NFTCollectionData>():
-                    return CreatureNFT.resolveContractView(resourceType: Type<@CreatureNFT.NFT>(), viewType: Type<MetadataViews.NFTCollectionData>())
+                    return CreatureNFTV2.resolveContractView(resourceType: Type<@CreatureNFTV2.NFT>(), viewType: Type<MetadataViews.NFTCollectionData>())
                 case Type<MetadataViews.NFTCollectionDisplay>():
-                    return CreatureNFT.resolveContractView(resourceType: Type<@CreatureNFT.NFT>(), viewType: Type<MetadataViews.NFTCollectionDisplay>())
+                    return CreatureNFTV2.resolveContractView(resourceType: Type<@CreatureNFTV2.NFT>(), viewType: Type<MetadataViews.NFTCollectionDisplay>())
             }
             return nil
         }
 
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <-CreatureNFT.createEmptyCollection(nftType: Type<@CreatureNFT.NFT>())
-        }
-
-        // Método para generar semillas diarias basadas en la semilla inicial y el día simulado
-        access(all) fun generateDailySeeds(diaSimulado: UInt64): [UInt64] {
-            let daySalt = diaSimulado * 127 // Factor primo para mejorar distribución
-            let base = self.initialSeed ^ daySalt
-            
-            // Implementación simplificada del PRNG de la simulación Python
-            let a: UInt64 = 1664525
-            let c: UInt64 = 1013904223
-            let m: UInt64 = 4294967296 // 2^32
-            
-            var seedState = base % m
-            let seeds: [UInt64] = []
-            
-            // Generar 5 semillas diarias (como en simulation.py)
-            for i in 0..<5 {
-                seedState = (seedState * a + c) % m
-                seeds.append(seedState)
-            }
-            
-            return seeds
-        }
-        
-        // Método para calcular días transcurridos desde última evolución procesada
-        access(all) fun calcularDiasTranscurridos(timestampActual: UFix64, segundosPorDiaSimulado: UFix64): UFix64 {
-            let segundosTranscurridos = timestampActual - self.lastEvolutionProcessedTimestamp
-            return segundosTranscurridos / segundosPorDiaSimulado
-        }
-        
-        // Método para actualizar genes basado en el algoritmo de Python
-        access(all) fun updateGenes(r0: UInt64, r1: UInt64) {
-            // Implementación de _updateGenes de simulation.py
-            for geneName in self.genesVisibles.keys {
-                let currentValue = self.genesVisibles[geneName]!
-                
-                // Verificar si existe un objetivo de homeostasis para este gen
-                if self.homeostasisTargets[geneName] != nil {
-                    let targetValue = self.homeostasisTargets[geneName]!
-                    
-                    // Calcular diferencia entre valor actual y objetivo
-                    let difference = targetValue - currentValue
-                    
-                    // Si hay suficiente diferencia, evolucionar hacia el objetivo
-                    if difference.abs() > 0.01 {
-                        // Usar valores aleatorios para determinar velocidad de cambio
-                        let randomFactor = UFix64(r0 % 1000) / 1000.0
-                        let evolutionRate = 0.01 + (0.05 * randomFactor) // Entre 1% y 6% por día
-                        
-                        // Dirección del cambio
-                        let changeAmount = if difference > 0.0 {
-                            min(evolutionRate, difference)
-                        } else {
-                            max(-evolutionRate, difference)
-                        }
-                        
-                        // Aplicar cambio
-                        self.genesVisibles[geneName] = currentValue + changeAmount
-                    }
-                } else {
-                    // Para genes sin objetivo, aplicar pequeñas mutaciones aleatorias
-                    // Usar R0 y R1 para mutaciones base
-                    let r0Factor = UFix64(r0 % 100) / 100.0
-                    let r1Factor = UFix64(r1 % 100) / 100.0
-                    
-                    // Determinar si el gen muta este día (10% de probabilidad)
-                    if r0Factor < 0.1 {
-                        // Determinar dirección y magnitud de la mutación
-                        let mutationDirection = r1Factor > 0.5 ? 1.0 : -1.0
-                        let mutationStrength = 0.01 * (r1Factor * 2.0) // Entre 0% y 2%
-                        
-                        // Aplicar mutación
-                        let newValue = currentValue + (mutationDirection * mutationStrength)
-                        
-                        // Asegurar que está en rango válido (0.0 a 1.0)
-                        self.genesVisibles[geneName] = min(1.0, max(0.0, newValue))
-                    }
-                }
-            }
-        }
-        
-        // Método para ganar puntos de evolución (EP)
-        access(all) fun gainEvolutionPoints(r0: UInt64) {
-            // Implementación de _gainEP de simulation.py
-            // Calcular EP diarios basados en edad y factores aleatorios
-            let ageMultiplier = if self.edadDiasCompletos < 10.0 {
-                2.0 // Criaturas jóvenes ganan más EP
-            } else if self.edadDiasCompletos < 30.0 {
-                1.5 // Criaturas adolescentes ganan EP moderado
-            } else {
-                1.0 // Criaturas adultas ganan EP normal
-            }
-            
-            // Usar factor aleatorio para EP (entre 0.5 y 1.5)
-            let randomFactor = 0.5 + (UFix64(r0 % 100) / 100.0)
-            
-            // Base diaria de EP: entre 0.5 y 1.5 dependiendo de edad y aleatoriedad
-            let baseEP = 1.0 * ageMultiplier * randomFactor
-            
-            // Añadir EP ganados
-            self.puntosEvolucion = self.puntosEvolucion + baseEP
-        }
-
-        // Método para aplicar evolución por step específico (tiny evolution)
-        access(all) fun updateGenesForStep(r0: UInt64, r1: UInt64, stepsPerDay: UInt64) {
-            // Esta es una versión escalada de updateGenes
-            // donde cada step representa 1/stepsPerDay de un día completo
-            let stepFactor = 1.0 / UFix64(stepsPerDay)
-            
-            // Implementación de _updateGenes de simulation.py pero escalada para steps
-            for geneName in self.genesVisibles.keys {
-                let currentValue = self.genesVisibles[geneName]!
-                
-                // Verificar si existe un objetivo de homeostasis para este gen
-                if self.homeostasisTargets[geneName] != nil {
-                    let targetValue = self.homeostasisTargets[geneName]!
-                    
-                    // Calcular diferencia entre valor actual y objetivo
-                    let difference = targetValue - currentValue
-                    
-                    // Si hay suficiente diferencia, evolucionar hacia el objetivo
-                    if difference.abs() > 0.0001 { // Umbral reducido para steps pequeños
-                        // Usar valores aleatorios para determinar velocidad de cambio
-                        let randomFactor = UFix64(r0 % 1000) / 1000.0
-                        // Tasa evolutiva base diaria (entre 1% y 6%) dividida por número de steps
-                        let evolutionRatePerStep = (0.01 + (0.05 * randomFactor)) * stepFactor
-                        
-                        // Dirección del cambio
-                        let changeAmount = if difference > 0.0 {
-                            min(evolutionRatePerStep, difference)
-                        } else {
-                            max(-evolutionRatePerStep, difference)
-                        }
-                        
-                        // Aplicar cambio
-                        self.genesVisibles[geneName] = currentValue + changeAmount
-                    }
-                } else {
-                    // Para genes sin objetivo, aplicar pequeñas mutaciones aleatorias
-                    // Usar R0 y R1 para mutaciones base
-                    let r0Factor = UFix64(r0 % 100) / 100.0
-                    let r1Factor = UFix64(r1 % 100) / 100.0
-                    
-                    // Probabilidad reducida para mutación por step (10% / stepsPerDay)
-                    if r0Factor < (0.1 * stepFactor) {
-                        // Dirección y magnitud de la mutación (también escaladas)
-                        let mutationDirection = r1Factor > 0.5 ? 1.0 : -1.0
-                        let mutationStrength = 0.01 * (r1Factor * 2.0) * stepFactor
-                        
-                        // Aplicar mutación
-                        let newValue = currentValue + (mutationDirection * mutationStrength)
-                        
-                        // Asegurar rango válido
-                        self.genesVisibles[geneName] = min(1.0, max(0.0, newValue))
-                    }
-                }
-            }
-        }
-        
-        // Método para ganar puntos de evolución por step
-        access(all) fun gainEvolutionPointsForStep(r0: UInt64, stepsPerDay: UInt64) {
-            // Versión escalada de gainEvolutionPoints para un step individual
-            let stepFactor = 1.0 / UFix64(stepsPerDay)
-            
-            // Calcular EP diarios basados en edad y factores aleatorios (como en simulation.py)
-            let ageMultiplier = if self.edadDiasCompletos < 10.0 {
-                2.0 // Criaturas jóvenes ganan más EP
-            } else if self.edadDiasCompletos < 30.0 {
-                1.5 // Criaturas adolescentes ganan EP moderado
-            } else {
-                1.0 // Criaturas adultas ganan EP normal
-            }
-            
-            // Usar factor aleatorio para EP (entre 0.5 y 1.5)
-            let randomFactor = 0.5 + (UFix64(r0 % 100) / 100.0)
-            
-            // Base diaria de EP: entre 0.5 y 1.5 dividido por número de steps
-            let baseEPPerStep = 1.0 * ageMultiplier * randomFactor * stepFactor
-            
-            // Añadir EP ganados
-            self.puntosEvolucion = self.puntosEvolucion + baseEPPerStep
+            return <-CreatureNFTV2.createEmptyCollection(nftType: Type<@CreatureNFTV2.NFT>())
         }
     }
 
+    /// Define el interfaz público de la colección para exponer los métodos especiales de las criaturas
+    access(all) resource interface CollectionPublic {
+        access(all) view fun getIDs(): [UInt64]
+        access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}?
+        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV2.NFT?
+    }
+
     /// Defines the Collection resource that holds NFTs
-    access(all) resource Collection: NonFungibleToken.Collection {
+    access(all) resource Collection: NonFungibleToken.Collection, CollectionPublic {
         /// Dictionary of NFT conforming tokens
         /// NFT is a resource type with an `UInt64` ID field
         access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
@@ -395,7 +405,7 @@ access(all) contract CreatureNFT: NonFungibleToken {
 
         /// Adds an NFT to the collections dictionary
         access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
-            let token <- token as! @CreatureNFT.NFT
+            let token <- token as! @CreatureNFTV2.NFT
             let id: UInt64 = token.id
             let oldToken <- self.ownedNFTs[id] <- token
             emit Deposit(id: id, to: self.owner?.address)
@@ -413,19 +423,19 @@ access(all) contract CreatureNFT: NonFungibleToken {
         }
 
         /// Gets a reference to a specific NFT type in the collection (read-only)
-        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFT.NFT? {
+        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV2.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
-                return ref as! &CreatureNFT.NFT
+                return ref as! &CreatureNFTV2.NFT
             }
             return nil
         }
         
         /// Gets an authorized reference to a specific NFT that can be modified
-        access(all) fun borrowCreatureNFTForUpdate(id: UInt64): auth(Mutate, Insert, Remove) &CreatureNFT.NFT? {
+        access(all) fun borrowCreatureNFTForUpdate(id: UInt64): auth(Mutate, Insert, Remove) &CreatureNFTV2.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as auth(Mutate, Insert, Remove) &{NonFungibleToken.NFT}?
-                return ref as! auth(Mutate, Insert, Remove) &CreatureNFT.NFT
+                return ref as! auth(Mutate, Insert, Remove) &CreatureNFTV2.NFT
             }
             return nil
         }
@@ -433,18 +443,18 @@ access(all) contract CreatureNFT: NonFungibleToken {
         /// Returns supported NFT types the collection can receive
         access(all) view fun getSupportedNFTTypes(): {Type: Bool} {
             let supportedTypes: {Type: Bool} = {}
-            supportedTypes[Type<@CreatureNFT.NFT>()] = true
+            supportedTypes[Type<@CreatureNFTV2.NFT>()] = true
             return supportedTypes
         }
 
         /// Returns whether or not the given type is accepted by the collection
         access(all) view fun isSupportedNFTType(type: Type): Bool {
-            return type == Type<@CreatureNFT.NFT>()
+            return type == Type<@CreatureNFTV2.NFT>()
         }
 
         /// Create an empty NFT Collection
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <-CreatureNFT.createEmptyCollection(nftType: Type<@CreatureNFT.NFT>())
+            return <-CreatureNFTV2.createEmptyCollection(nftType: Type<@CreatureNFTV2.NFT>())
         }
     }
 
@@ -464,8 +474,8 @@ access(all) contract CreatureNFT: NonFungibleToken {
             initialEstaViva: Bool,
             initialHomeostasisTargets: {String: UFix64}
         ): @NFT {
-            CreatureNFT.totalSupply = CreatureNFT.totalSupply + 1
-            let newID = CreatureNFT.totalSupply
+            CreatureNFTV2.totalSupply = CreatureNFTV2.totalSupply + 1
+            let newID = CreatureNFTV2.totalSupply
             
             return <-create NFT(
                 id: newID,
@@ -504,10 +514,10 @@ access(all) contract CreatureNFT: NonFungibleToken {
                 return MetadataViews.NFTCollectionData(
                     storagePath: self.CollectionStoragePath,
                     publicPath: self.CollectionPublicPath,
-                    publicCollection: Type<&CreatureNFT.Collection>(),
-                    publicLinkedType: Type<&CreatureNFT.Collection>(),
+                    publicCollection: Type<&CreatureNFTV2.Collection>(),
+                    publicLinkedType: Type<&CreatureNFTV2.Collection>(),
                     createEmptyCollectionFunction: (fun(): @{NonFungibleToken.Collection} {
-                        return <-CreatureNFT.createEmptyCollection(nftType: Type<@CreatureNFT.NFT>())
+                        return <-CreatureNFTV2.createEmptyCollection(nftType: Type<@CreatureNFTV2.NFT>())
                     })
                 )
             case Type<MetadataViews.NFTCollectionDisplay>():
@@ -518,8 +528,8 @@ access(all) contract CreatureNFT: NonFungibleToken {
                     mediaType: "image/png"
                 )
                 return MetadataViews.NFTCollectionDisplay(
-                    name: "Creature Collection",
-                    description: "A collection of unique creatures.",
+                    name: "Evolving Creatures V2",
+                    description: "A collection of unique, evolving digital creatures with simulated life cycles.",
                     externalURL: MetadataViews.ExternalURL("https://example.com/creatures"),
                     squareImage: media,
                     bannerImage: media,
@@ -536,9 +546,9 @@ access(all) contract CreatureNFT: NonFungibleToken {
         self.totalSupply = 0
 
         // Set the named paths
-        self.CollectionStoragePath = /storage/CreatureNFTCollection
-        self.CollectionPublicPath = /public/CreatureNFTCollection
-        self.MinterStoragePath = /storage/CreatureNFTMinter
+        self.CollectionStoragePath = /storage/CreatureNFTV2Collection
+        self.CollectionPublicPath = /public/CreatureNFTV2Collection
+        self.MinterStoragePath = /storage/CreatureNFTV2Minter
 
         // Create and save the NFTMinter resource
         let minter <- create NFTMinter()

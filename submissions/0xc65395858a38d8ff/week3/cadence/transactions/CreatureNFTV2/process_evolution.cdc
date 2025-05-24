@@ -99,6 +99,9 @@ transaction(nftID: UInt64, segundosPorDiaSimulado: UFix64, stepsPerDay: UInt64) 
                         log("La criatura ".concat(self.nftRef.id.toString()).concat(" ha muerto de vejez después de ")
                            .concat(self.nftRef.edadDiasCompletos.toString()).concat(" días simulados."))
                         
+                        // Actualizar la lista de criaturas activas en la colección
+                        collectionRef.markCreatureAsDead(creatureID: nftID)
+                        
                         break // Detener evolución si la criatura muere
                     }
                 }

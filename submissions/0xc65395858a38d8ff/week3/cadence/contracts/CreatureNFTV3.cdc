@@ -2,7 +2,7 @@ import "NonFungibleToken"
 import "MetadataViews"
 import "ViewResolver" // Added for explicit conformance if needed by NFT resource
 
-access(all) contract CreatureNFTV2: NonFungibleToken {
+access(all) contract CreatureNFTV3: NonFungibleToken {
 
     /// Total supply of CreatureNFTs in existence
     access(all) var totalSupply: UInt64
@@ -236,7 +236,7 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
             self.puntosEvolucion = self.puntosEvolucion - epCost
             
             // Emitir evento
-            emit CreatureNFTV2.InitialSeedChanged(
+            emit CreatureNFTV3.InitialSeedChanged(
                 creatureID: self.id,
                 oldSeed: oldSeed,
                 newSeed: newSeed,
@@ -429,15 +429,15 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
                         self.id
                     )
                 case Type<MetadataViews.NFTCollectionData>():
-                    return CreatureNFTV2.resolveContractView(resourceType: Type<@CreatureNFTV2.NFT>(), viewType: Type<MetadataViews.NFTCollectionData>())
+                    return CreatureNFTV3.resolveContractView(resourceType: Type<@CreatureNFTV3.NFT>(), viewType: Type<MetadataViews.NFTCollectionData>())
                 case Type<MetadataViews.NFTCollectionDisplay>():
-                    return CreatureNFTV2.resolveContractView(resourceType: Type<@CreatureNFTV2.NFT>(), viewType: Type<MetadataViews.NFTCollectionDisplay>())
+                    return CreatureNFTV3.resolveContractView(resourceType: Type<@CreatureNFTV3.NFT>(), viewType: Type<MetadataViews.NFTCollectionDisplay>())
             }
             return nil
         }
 
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <-CreatureNFTV2.createEmptyCollection(nftType: Type<@CreatureNFTV2.NFT>())
+            return <-CreatureNFTV3.createEmptyCollection(nftType: Type<@CreatureNFTV3.NFT>())
         }
     }
 
@@ -445,7 +445,7 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
     access(all) resource interface CollectionPublic {
         access(all) view fun getIDs(): [UInt64]
         access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}?
-        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV2.NFT?
+        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV3.NFT?
         access(all) view fun getActiveCreatureIDs(): [UInt64]
         access(all) view fun getActiveCreatureCount(): UInt64
     }
@@ -484,12 +484,12 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
 
         /// Adds an NFT to the collections dictionary
         access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
-            let token <- token as! @CreatureNFTV2.NFT
+            let token <- token as! @CreatureNFTV3.NFT
             let id: UInt64 = token.id
             
             // Verificar si está viva y gestionar límite
             if token.estaViva {
-                if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV2.MAX_ACTIVE_CREATURES {
+                if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV3.MAX_ACTIVE_CREATURES {
                     panic("Límite máximo de criaturas vivas alcanzado (5). No se puede depositar más criaturas vivas.")
                 }
                 
@@ -522,19 +522,19 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
         }
 
         /// Gets a reference to a specific NFT type in the collection (read-only)
-        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV2.NFT? {
+        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV3.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
-                return ref as! &CreatureNFTV2.NFT
+                return ref as! &CreatureNFTV3.NFT
             }
             return nil
         }
         
         /// Gets an authorized reference to a specific NFT that can be modified
-        access(all) fun borrowCreatureNFTForUpdate(id: UInt64): auth(Mutate, Insert, Remove) &CreatureNFTV2.NFT? {
+        access(all) fun borrowCreatureNFTForUpdate(id: UInt64): auth(Mutate, Insert, Remove) &CreatureNFTV3.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as auth(Mutate, Insert, Remove) &{NonFungibleToken.NFT}?
-                return ref as! auth(Mutate, Insert, Remove) &CreatureNFTV2.NFT
+                return ref as! auth(Mutate, Insert, Remove) &CreatureNFTV3.NFT
             }
             return nil
         }
@@ -542,18 +542,18 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
         /// Returns supported NFT types the collection can receive
         access(all) view fun getSupportedNFTTypes(): {Type: Bool} {
             let supportedTypes: {Type: Bool} = {}
-            supportedTypes[Type<@CreatureNFTV2.NFT>()] = true
+            supportedTypes[Type<@CreatureNFTV3.NFT>()] = true
             return supportedTypes
         }
 
         /// Returns whether or not the given type is accepted by the collection
         access(all) view fun isSupportedNFTType(type: Type): Bool {
-            return type == Type<@CreatureNFTV2.NFT>()
+            return type == Type<@CreatureNFTV3.NFT>()
         }
 
         /// Create an empty NFT Collection
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <-CreatureNFTV2.createEmptyCollection(nftType: Type<@CreatureNFTV2.NFT>())
+            return <-CreatureNFTV3.createEmptyCollection(nftType: Type<@CreatureNFTV3.NFT>())
         }
         
         /// Obtiene la lista de IDs de criaturas vivas en la colección
@@ -588,7 +588,7 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
             
             // Si no está en la lista y hay espacio, añadirla
             if !found {
-                if UInt64(self.activeCreatureIDs.length) < CreatureNFTV2.MAX_ACTIVE_CREATURES {
+                if UInt64(self.activeCreatureIDs.length) < CreatureNFTV3.MAX_ACTIVE_CREATURES {
                     self.activeCreatureIDs.append(creatureID)
                     log("Criatura ".concat(creatureID.toString()).concat(" marcada como viva en la colección"))
                 } else {
@@ -628,8 +628,8 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
             initialEstaViva: Bool,
             initialHomeostasisTargets: {String: UFix64}
         ): @NFT {
-            CreatureNFTV2.totalSupply = CreatureNFTV2.totalSupply + 1
-            let newID = CreatureNFTV2.totalSupply
+            CreatureNFTV3.totalSupply = CreatureNFTV3.totalSupply + 1
+            let newID = CreatureNFTV3.totalSupply
             
             return <-create NFT(
                 id: newID,
@@ -668,10 +668,10 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
                 return MetadataViews.NFTCollectionData(
                     storagePath: self.CollectionStoragePath,
                     publicPath: self.CollectionPublicPath,
-                    publicCollection: Type<&CreatureNFTV2.Collection>(),
-                    publicLinkedType: Type<&CreatureNFTV2.Collection>(),
+                    publicCollection: Type<&CreatureNFTV3.Collection>(),
+                    publicLinkedType: Type<&CreatureNFTV3.Collection>(),
                     createEmptyCollectionFunction: (fun(): @{NonFungibleToken.Collection} {
-                        return <-CreatureNFTV2.createEmptyCollection(nftType: Type<@CreatureNFTV2.NFT>())
+                        return <-CreatureNFTV3.createEmptyCollection(nftType: Type<@CreatureNFTV3.NFT>())
                     })
                 )
             case Type<MetadataViews.NFTCollectionDisplay>():
@@ -682,7 +682,7 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
                     mediaType: "image/png"
                 )
                 return MetadataViews.NFTCollectionDisplay(
-                    name: "Evolving Creatures V2",
+                    name: "Evolving Creatures V3",
                     description: "A collection of unique, evolving digital creatures with simulated life cycles.",
                     externalURL: MetadataViews.ExternalURL("https://example.com/creatures"),
                     squareImage: media,
@@ -703,9 +703,9 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
         self.MAX_ACTIVE_CREATURES = 5
 
         // Set the named paths
-        self.CollectionStoragePath = /storage/CreatureNFTV2Collection
-        self.CollectionPublicPath = /public/CreatureNFTV2Collection
-        self.MinterStoragePath = /storage/CreatureNFTV2Minter
+        self.CollectionStoragePath = /storage/CreatureNFTV3Collection
+        self.CollectionPublicPath = /public/CreatureNFTV3Collection
+        self.MinterStoragePath = /storage/CreatureNFTV3Minter
 
         // Create and save the NFTMinter resource
         let minter <- create NFTMinter()

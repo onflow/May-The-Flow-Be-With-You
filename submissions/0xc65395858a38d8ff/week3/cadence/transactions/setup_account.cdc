@@ -1,36 +1,40 @@
 import NonFungibleToken from 0x631e88ae7f1d7c20
-import EvolvingCreatures from 0x2444e6b4d9327f09
+import EvolvingCreaturesV2 from 0x2444e6b4d9327f09 // Dirección correcta para la V2
 
-// This transaction sets up a user's account to hold EvolvingCreatures NFTs.
+// This transaction sets up a user's account to hold EvolvingCreaturesV2 NFTs.
 // It creates a new empty Collection and stores it in account storage.
 // It also links the Collection's public capabilities.
 
 transaction {
-    prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, SaveValue, Capabilities, PublishCapability, UnpublishCapability) &Account) {
-        // Paths
-        let storagePath: StoragePath = /storage/EvolvingCreaturesCollectionV2
-        let publicPath: PublicPath = /public/EvolvingCreaturesCollectionPublicV2
-        
-        // Check if already exists
-        if signer.storage.borrow<&EvolvingCreatures.Collection>(from: storagePath) != nil {
-            log("Collection already exists")
+    prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, SaveValue, UnpublishCapability, PublishCapability) &Account) {
+        // Check if the account already has a Collection
+        if signer.storage.borrow<&EvolvingCreaturesV2.Collection>(from: EvolvingCreaturesV2.CollectionStoragePath) != nil {
+            log("Account already has an EvolvingCreaturesV2 Collection.")
             return
         }
+
+        // Create a new empty Collection and save it to storage
+        let collection <- EvolvingCreaturesV2.createEmptyCollection()
+        signer.storage.save(<-collection, to: EvolvingCreaturesV2.CollectionStoragePath)
+        log("EvolvingCreaturesV2 Collection created and saved.")
+
+        // Create a public capability for the Collection
+        // Note: EvolvingCreaturesCollectionPublic should be an interface that includes NonFungibleToken.CollectionPublic
+        // and any other public functions specific to the EvolvingCreatures collection.
+        // For now, we assume EvolvingCreatures.Collection resource directly implements these or
+        // that EvolvingCreatures.CollectionPublicPath expects the concrete type if no separate public interface is defined yet.
+
+        // Unpublish any existing capability at the public path first
+        signer.capabilities.unpublish(EvolvingCreaturesV2.CollectionPublicPath)
+
+        // Publish the new capability
+        let cap = signer.capabilities.storage.issue<&EvolvingCreaturesV2.Collection>(EvolvingCreaturesV2.CollectionStoragePath)
+        signer.capabilities.publish(cap, at: EvolvingCreaturesV2.CollectionPublicPath)
         
-        // Create a new collection using createEmptyCollection with the correct parameter
-        let newCollection <- EvolvingCreatures.createEmptyCollection(nftType: Type<@EvolvingCreatures.NFT>())
-        
-        // Save the collection
-        signer.storage.save(<-newCollection, to: storagePath)
-        
-        // Create public capability
-        let cap = signer.capabilities.storage.issue<&EvolvingCreatures.Collection{NonFungibleToken.CollectionPublic, EvolvingCreatures.EvolvingCreaturesCollectionPublic}>(storagePath)
-        signer.capabilities.publish(cap, at: publicPath)
-        
-        log("Setup complete!")
+        log("Published EvolvingCreaturesV2 Collection capability to public path.")
     }
 
     execute {
-        log("Account setup complete for EvolvingCreatures.")
+        log("Account setup complete for EvolvingCreaturesV2.")
     }
 } 

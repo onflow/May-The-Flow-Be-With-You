@@ -1,12 +1,13 @@
 // EvolvingCreatures.cdc
 // Contract for evolving creatures as NFTs on the Flow blockchain.
 // Updated with minor change to test update process
+// This comment was added to test the update functionality
 
 import NonFungibleToken from 0x631e88ae7f1d7c20
 import RandomBeaconHistory from 0x8c5303eaa26202d6
 import MetadataViews from 0x631e88ae7f1d7c20
 
-access(all) contract EvolvingCreatures: NonFungibleToken {
+access(all) contract EvolvingCreaturesV2: NonFungibleToken {
 
     //-----------------------------------------------------------------------
     // Events
@@ -199,7 +200,7 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
                 case Type<MetadataViews.Serial>():
                     return MetadataViews.Serial(self.id)
                 case Type<MetadataViews.NFTCollectionData>():
-                    return EvolvingCreatures.resolveContractView(resourceType: Type<@EvolvingCreatures.Collection>(), viewType: Type<MetadataViews.NFTCollectionData>())
+                    return EvolvingCreaturesV2.resolveContractView(resourceType: Type<@EvolvingCreaturesV2.Collection>(), viewType: Type<MetadataViews.NFTCollectionData>())
                 case Type<EvolvingCreatureMetadataView>():
                     return EvolvingCreatureMetadataView(
                         id: self.id,
@@ -252,7 +253,7 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
         // Calculate elapsed simulated days based on real time 
         access(contract) fun calcElapsedSimulatedDays(currentTimestamp: UFix64): UFix64 {
             let elapsedSeconds = currentTimestamp - self.lastEvolutionProcessedTimestamp
-            return elapsedSeconds / EvolvingCreatures.SECONDS_PER_SIMULATED_DAY
+            return elapsedSeconds / EvolvingCreaturesV2.SECONDS_PER_SIMULATED_DAY
         }
 
         // Updates the last processed timestamp
@@ -265,7 +266,7 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
     // Moved INSIDE the contract block
     access(all) resource interface EvolvingCreaturesCollectionPublic {
         access(all) fun getActiveIDs(): [UInt64]
-        access(all) fun borrowEvolvingCreature(id: UInt64): &EvolvingCreatures.NFT?
+        access(all) fun borrowEvolvingCreature(id: UInt64): &EvolvingCreaturesV2.NFT?
         // It also implicitly includes methods from NonFungibleToken.CollectionPublic
         // like getIDs(), borrowNFT(), deposit(), getSupportedNFTTypes(), isSupportedNFTType()
         // when a Collection resource implements this.
@@ -298,9 +299,9 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
         }
 
         access(all) fun deposit(token: @NonFungibleToken.NFT) {
-            let creatureToken <- token as! @EvolvingCreatures.NFT
+            let creatureToken <- token as! @EvolvingCreaturesV2.NFT
             if creatureToken.estaViva {
-                if self.activeCreatureIDs.length >= EvolvingCreatures.MAX_ACTIVE_CREATURES {
+                if self.activeCreatureIDs.length >= EvolvingCreaturesV2.MAX_ACTIVE_CREATURES {
                     panic("Maximum number of active creatures reached.")
                 }
                 var found = false
@@ -328,21 +329,21 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
         
         access(all) view fun getSupportedNFTTypes(): {Type: Bool} {
             let supportedTypes: {Type: Bool} = {}
-            supportedTypes[Type<@EvolvingCreatures.NFT>()] = true
+            supportedTypes[Type<@EvolvingCreaturesV2.NFT>()] = true
             return supportedTypes
         }
 
         access(all) view fun isSupportedNFTType(type: Type): Bool {
-            return type == Type<@EvolvingCreatures.NFT>()
+            return type == Type<@EvolvingCreaturesV2.NFT>()
         }
 
         // --- EvolvingCreatures specific Collection methods (implementing EvolvingCreaturesCollectionPublic) ---
         access(all) fun getActiveIDs(): [UInt64] {
             return self.activeCreatureIDs
         }
-        access(all) fun borrowEvolvingCreature(id: UInt64): &EvolvingCreatures.NFT? {
+        access(all) fun borrowEvolvingCreature(id: UInt64): &EvolvingCreaturesV2.NFT? {
             if self.ownedNFTs[id] != nil {
-                let ref = &self.ownedNFTs[id] as! &EvolvingCreatures.NFT
+                let ref = &self.ownedNFTs[id] as! &EvolvingCreaturesV2.NFT
                 return ref
             }
             return nil
@@ -362,7 +363,7 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
             var found = false
             for id in self.activeCreatureIDs { if id == creatureID { found = true; break } }
             if !found {
-                if self.activeCreatureIDs.length < EvolvingCreatures.MAX_ACTIVE_CREATURES {
+                if self.activeCreatureIDs.length < EvolvingCreaturesV2.MAX_ACTIVE_CREATURES {
                     self.activeCreatureIDs.append(creatureID)
                     log("Creature ".concat(creatureID.toString()).concat(" marked as alive, added to active list."))
                 } else {
@@ -386,8 +387,8 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
         initialEP: UFix64,
         lifespanDays: UFix64
     ): @NFT {
-        let newID = EvolvingCreatures.nextCreatureID
-        EvolvingCreatures.nextCreatureID = EvolvingCreatures.nextCreatureID + 1
+        let newID = EvolvingCreaturesV2.nextCreatureID
+        EvolvingCreaturesV2.nextCreatureID = EvolvingCreaturesV2.nextCreatureID + 1
 
         let newCreature <- create NFT(
             id: newID,
@@ -400,7 +401,7 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
 
         emit NFTMinted(id: newCreature.id, owner: recipient.owner!.address, birthBlockHeight: newCreature.birthBlockHeight)
         
-        EvolvingCreatures.totalSupply = EvolvingCreatures.totalSupply + 1
+        EvolvingCreaturesV2.totalSupply = EvolvingCreaturesV2.totalSupply + 1
         
         return <-newCreature
     }
@@ -438,10 +439,10 @@ access(all) contract EvolvingCreatures: NonFungibleToken {
                 return MetadataViews.NFTCollectionData(
                     storagePath: self.CollectionStoragePath,
                     publicPath: self.CollectionPublicPath,
-                    publicCollection: Type<&EvolvingCreatures.Collection>(),
-                    publicLinkedType: Type<&EvolvingCreatures.Collection>(),
+                    publicCollection: Type<&EvolvingCreaturesV2.Collection>(),
+                    publicLinkedType: Type<&EvolvingCreaturesV2.Collection>(),
                     createEmptyCollectionFunction: (fun (): @{NonFungibleToken.Collection} {
-                        return <-EvolvingCreatures.createEmptyCollection()
+                        return <-EvolvingCreaturesV2.createEmptyCollection()
                     })
                 )
             case Type<MetadataViews.NFTCollectionDisplay>():

@@ -538,6 +538,16 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
                 "initialSeed": self.initialSeed
             }
         }
+
+        // Nueva función para emitir el evento de evolución procesada
+        access(all) fun emitEvolutionProcessedEvent(processedSteps: UInt64, newAge: UFix64, evolutionPoints: UFix64) {
+            emit EvolutionProcessed(
+                creatureID: self.id,
+                processedSteps: processedSteps,
+                newAge: newAge,
+                evolutionPoints: evolutionPoints
+            )
+        }
     }
 
     /// Define el interfaz público de la colección para exponer los métodos especiales de las criaturas

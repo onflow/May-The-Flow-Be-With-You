@@ -88,15 +88,47 @@ transaction(nftID: UInt64, segundosPorDiaSimulado: UFix64, stepsPerDay: UInt64) 
                     let R4_semilla_evento = currentDaySeeds[4]
                     
                     // Modificador de EP basado en R4 (como en simulation.py)
-                    let ep_modifier_factor = (UFix64(R4_semilla_evento % 1000) / 999.0) - 0.5  // -0.5 a +0.5
-                    let ep_change_ratio: UFix64 = 0.01 // Cambia EP hasta en +/- 1%
-                    let ep_change_abs = self.nftRef.puntosEvolucion * ep_change_ratio * ep_modifier_factor
+                    // Objetivo: factor entre -0.5 y +0.5
+                    // Primero, obtener un valor entre 0.0 y 1.0 (aproximadamente)
+                    let random_normalized = UFix64(R4_semilla_evento % 1000) / 999.0 
+                    // Ahora, mapear esto a -0.5 a +0.5.
+                    // random_normalized - 0.5 dará un Fix64 resultado.
+                    // Para UFix64, calcularemos el cambio absoluto y luego aplicaremos el signo.
+
+                    let ep_change_ratio: UFix64 = 0.01 // Cambia EP base hasta en +/- 1%
+                    let base_ep_change = self.nftRef.puntosEvolucion * ep_change_ratio
+
+                    var final_ep_change: UFix64 = 0.0
+                    var positive_change = true
+
+                    // random_normalized es [0.0, ~1.0]
+                    // Si random_normalized < 0.5, el cambio es negativo. Factor: (0.5 - random_normalized) * 2.0 => [0.0, 1.0]
+                    // Si random_normalized >= 0.5, el cambio es positivo. Factor: (random_normalized - 0.5) * 2.0 => [0.0, 1.0]
+                    if random_normalized < 0.5 {
+                        positive_change = false
+                        let magnitude_factor = (0.5 - random_normalized) * 2.0 // Escala a [0.0, 1.0] para magnitud
+                        final_ep_change = base_ep_change * magnitude_factor
+                    } else {
+                        positive_change = true
+                        let magnitude_factor = (random_normalized - 0.5) * 2.0 // Escala a [0.0, 1.0] para magnitud
+                        final_ep_change = base_ep_change * magnitude_factor
+                    }
                     
                     // Aplicar cambio de EP con límite inferior
-                    let newEP = self.nftRef.puntosEvolucion + ep_change_abs
-                    self.nftRef.updatePuntosEvolucion(newEP: newEP < 0.1 ? 0.1 : newEP)
-                    
-                    log("Evento fin de día: Modificación EP ".concat(ep_change_abs > 0.0 ? "+" : "").concat(ep_change_abs.toString()))
+                    var newEP = self.nftRef.puntosEvolucion
+                    if positive_change {
+                        newEP = self.nftRef.puntosEvolucion + final_ep_change
+                    } else {
+                        // Asegurarse de no ir por debajo de 0.1 al restar
+                        if self.nftRef.puntosEvolucion > final_ep_change + 0.1 {
+                            newEP = self.nftRef.puntosEvolucion - final_ep_change
+                        } else {
+                            newEP = 0.1 // Límite inferior
+                        }
+                    }
+                    self.nftRef.updatePuntosEvolucion(newEP: newEP) // newEP ya considera el límite de 0.1
+
+                    log("Evento fin de día: Modificación EP ".concat(positive_change ? "+" : "-").concat(final_ep_change.toString()))
                     
                     // --- INTENTAR REPRODUCCIÓN SEXUAL AUTOMÁTICA ---
                     // Solo intentar si hay menos del límite máximo de criaturas vivas
@@ -107,12 +139,18 @@ transaction(nftID: UInt64, segundosPorDiaSimulado: UFix64, stepsPerDay: UInt64) 
                         
                         if reproProb < 0.25 { // 25% de probabilidad diaria
                             // Intentar reproducción sexual
-                            let childNFT <- self.collectionRef.attemptSexualReproduction()
+                            let potentialChildNFT <- self.collectionRef.attemptSexualReproduction()
                             
-                            if childNFT != nil {
+                            if potentialChildNFT != nil {
+                                let actualChildNFT <- potentialChildNFT!
                                 // Depositar la nueva criatura en la colección
-                                self.collectionRef.deposit(token: <-childNFT!)
+                                self.collectionRef.deposit(token: <-actualChildNFT)
                                 log("¡Reproducción sexual automática exitosa! Se ha creado una nueva criatura.")
+                            } else {
+                                // If no child was created, potentialChildNFT is nil.
+                                // We must explicitly destroy the `nil` value that was moved into potentialChildNFT
+                                // to satisfy Cadence's resource tracking.
+                                destroy potentialChildNFT
                             }
                         }
                     }
@@ -172,9 +210,8 @@ transaction(nftID: UInt64, segundosPorDiaSimulado: UFix64, stepsPerDay: UInt64) 
                 timestamp: currentTimestamp
             )
             
-            // Emitir evento de evolución
-            emit CreatureNFTV3.EvolutionProcessed(
-                creatureID: self.nftRef.id,
+            // Emitir evento de evolución llamando a la función en el NFT
+            self.nftRef.emitEvolutionProcessedEvent(
                 processedSteps: totalStepsToProcess,
                 newAge: self.nftRef.edadDiasCompletos,
                 evolutionPoints: self.nftRef.puntosEvolucion

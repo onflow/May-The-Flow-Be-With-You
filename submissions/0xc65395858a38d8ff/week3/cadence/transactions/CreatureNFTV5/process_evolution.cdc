@@ -1,5 +1,5 @@
 import "NonFungibleToken"
-import "CreatureNFTV3"
+import "CreatureNFTV5"
 
 // Esta transacción procesa la evolución de una criatura NFT V3 basada en
 // el tiempo transcurrido desde la última actualización. Utiliza la semilla inicial
@@ -10,13 +10,13 @@ import "CreatureNFTV3"
 
 transaction(nftID: UInt64, segundosPorDiaSimulado: UFix64, stepsPerDay: UInt64) {
     // Referencia al NFT que se va a actualizar
-    let nftRef: &CreatureNFTV3.NFT
+    let nftRef: &CreatureNFTV5.NFT
     // Referencia a la colección para manejo de reproducción
-    let collectionRef: &CreatureNFTV3.Collection
+    let collectionRef: &CreatureNFTV5.Collection
     
     prepare(signer: auth(Storage) &Account) {
         // Obtener referencia a la colección del firmante
-        self.collectionRef = signer.storage.borrow<auth(Storage) &CreatureNFTV3.Collection>(from: CreatureNFTV3.CollectionStoragePath)
+        self.collectionRef = signer.storage.borrow<auth(Storage) &CreatureNFTV5.Collection>(from: CreatureNFTV5.CollectionStoragePath)
             ?? panic("No se pudo obtener referencia a la colección. Asegúrate de que la cuenta esté configurada correctamente.")
             
         // Obtener referencia a la criatura específica
@@ -118,7 +118,7 @@ transaction(nftID: UInt64, segundosPorDiaSimulado: UFix64, stepsPerDay: UInt64) 
                     log("Evento fin de día: Modificación EP ".concat(positive_change_ep_event ? "+" : "-").concat(final_ep_change_event.toString()))
                     
                     // --- INTENTAR REPRODUCCIÓN SEXUAL AUTOMÁTICA ---
-                    if self.collectionRef.getActiveCreatureCount() < CreatureNFTV3.MAX_ACTIVE_CREATURES && 
+                    if self.collectionRef.getActiveCreatureCount() < CreatureNFTV5.MAX_ACTIVE_CREATURES && 
                        self.collectionRef.getActiveCreatureCount() >= 2 {
                         let reproProb = UFix64((R4_semilla_evento >> 10) % 100) / 100.0
                         if reproProb < 0.25 { 
@@ -189,10 +189,12 @@ transaction(nftID: UInt64, segundosPorDiaSimulado: UFix64, stepsPerDay: UInt64) 
                 stepNumber = stepNumber + 1
             }
             
-            // Si procesamos steps pero no días completos, actualizar la edad proporcionalmente
-            if diasCompletados < 1.0 && stepsTakenInCurrentDay > 0 {
-                let fraccionDiaCompletado = UFix64(stepsTakenInCurrentDay) / UFix64(stepsPerDay)
-                self.nftRef.updateEdad(newEdad: self.nftRef.edadDiasCompletos + fraccionDiaCompletado)
+            // Actualizar la edad para reflejar cualquier fracción de día procesada 
+            // después del último día completo.
+            if stepsTakenInCurrentDay > 0 { 
+                // Solución: Añadir directamente la fracción del día actual a la edad existente
+                let fraccionDiaAdicional = UFix64(stepsTakenInCurrentDay) / UFix64(stepsPerDay)
+                self.nftRef.updateEdad(newEdad: self.nftRef.edadDiasCompletos + fraccionDiaAdicional)
             }
             
             // Actualizar timestamp y bloque de última evolución

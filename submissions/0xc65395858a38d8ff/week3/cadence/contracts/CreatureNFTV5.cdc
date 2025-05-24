@@ -2,7 +2,22 @@ import "NonFungibleToken"
 import "MetadataViews"
 import "ViewResolver" // Added for explicit conformance if needed by NFT resource
 
-access(all) contract CreatureNFTV3: NonFungibleToken {
+access(all) contract CreatureNFTV5: NonFungibleToken {
+
+    // --- Evolution Constants (Inspired by Python Simulation) ---
+    // Estas constantes serán inicializadas en la función init()
+    access(all) let TASA_APRENDIZAJE_HOMEOSTASIS_BASE: UFix64
+    access(all) let TASA_EVOLUCION_PASIVA_GEN_BASE: UFix64
+    access(all) let FACTOR_INFLUENCIA_VISUAL_SOBRE_COMBATE: UFix64
+    access(all) let GENES_VISIBLES_RANGES: {String: {String: UFix64}}
+    access(all) let GENES_OCULTOS_RANGES: {String: {String: UFix64}}
+    // --- New Mitosis Constants ---
+    access(all) let MITOSIS_LIFESPAN_BASE_FACTOR: UFix64
+    access(all) let MITOSIS_LIFESPAN_EP_BONUS_FACTOR: UFix64
+    access(all) let MITOSIS_POTENCIAL_BASE_INHERITANCE_FACTOR: UFix64
+    access(all) let MITOSIS_POTENCIAL_EP_BONUS_FACTOR: UFix64
+    // --- End Mitosis Constants ---
+    // --- End Evolution Constants ---
 
     /// Total supply of CreatureNFTs in existence
     access(all) var totalSupply: UInt64
@@ -95,7 +110,7 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
 
         // Attributes for evolution
         access(all) let genesVisibles: {String: UFix64}
-        access(all) let genesOcultos: {String: UFix64}
+        access(all) let genesOcultos: {String: UFix64} // Reverted to let, modification happens in local var before child NFT init
         access(all) var puntosEvolucion: UFix64 // Mutable by game logic contract
         access(all) let lifespanTotalSimulatedDays: UFix64
         access(all) var edadDiasCompletos: UFix64 // Mutable by game logic contract
@@ -116,6 +131,38 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
         
         // Semilla inicial para la criatura (se utiliza para derivar semillas diarias)
         access(all) var initialSeed: UInt64
+
+        // --- START Funciones Matemáticas Auxiliares Adicionales ---
+        access(self) fun UFix64toFix64(_ val: UFix64): Fix64 {
+            // Este es un workaround común. Asegúrate de que los valores sean apropiados.
+            let s = val.toString()
+            let converted = Fix64.fromString(s) // Usar Fix64.fromString()
+            if converted == nil {
+                panic("Failed to convert UFix64 '".concat(s).concat("' to Fix64"))
+            }
+            return converted!
+        }
+
+        access(self) fun Fix64toUFix64(_ val: Fix64): UFix64 {
+            if val < 0.0 {
+                panic("Cannot convert negative Fix64 to UFix64")
+            }
+            let s = val.toString()
+            let converted = UFix64.fromString(s) // Usar UFix64.fromString()
+            if converted == nil {
+                panic("Failed to convert Fix64 '".concat(s).concat("' to UFix64"))
+            }
+            return converted!
+        }
+
+        // Nueva función para valor absoluto de Fix64 devolviendo UFix64
+        access(self) fun absFix64(_ value: Fix64): UFix64 {
+            if value < 0.0 {
+                return self.Fix64toUFix64(0.0 - value) // Llama a la función definida aquí
+            }
+            return self.Fix64toUFix64(value) // Llama a la función definida aquí
+        }
+        // --- END Funciones Matemáticas Auxiliares Adicionales ---
 
         init(
             id: UInt64,
@@ -252,7 +299,7 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
             self.puntosEvolucion = self.puntosEvolucion - epCost
             
             // Emitir evento
-            emit CreatureNFTV3.InitialSeedChanged(
+            emit CreatureNFTV5.InitialSeedChanged(
                 creatureID: self.id,
                 oldSeed: oldSeed,
                 newSeed: newSeed,
@@ -315,107 +362,283 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
             return b
         }
 
+        // Helper para clamp genérico si no se encuentra un rango específico
+        access(self) fun clampValue(_ value: UFix64, _ geneName: String, _ geneRanges: {String: {String: UFix64}}): UFix64 {
+            if let ranges = geneRanges[geneName] {
+                let minVal = ranges["min"]!
+                let maxVal = ranges["max"]!
+                return self.max(minVal, self.min(maxVal, value))
+            }
+            // Default clamp si el gen no está en los rangos definidos (ej. 0.0 a 1.0)
+            // Esto es una fallback, idealmente todos los genes manipulados tendrían sus rangos definidos.
+            return self.max(0.0, self.min(1.0, value))
+        }
+
         // Método para aplicar evolución por step específico (tiny evolution)
-        access(all) fun updateGenesForStep(r0: UInt64, r1: UInt64, stepsPerDay: UInt64) {
-            // Esta es una versión escalada de updateGenes
-            // donde cada step representa 1/stepsPerDay de un día completo
-            let stepFactor = 1.0 / UFix64(stepsPerDay)
-            
-            // Implementación de _updateGenes de simulation.py pero escalada para steps
+        // r0_volatilidad_seed, r1_semilla_pasiva_step_seed, r2_boost_homeo_seed, r3_semilla_homeo_efec_seed
+        access(all) fun updateGenesForStep(r0VolSeed: UInt64, r1PasSeed: UInt64, r2BoostHomeoSeed: UInt64, r3HomeoEfecSeed: UInt64, stepsPerDay: UInt64) {
+            // let stepFactor = 1.0 / UFix64(stepsPerDay) // No se usa directamente si las tasas son por step
+            let potencialEvolutivo = self.genesOcultos["potencialEvolutivo"] ?? 1.0
+
+            // Simular daily_volatility_factor (0.5 a 1.5) y daily_homeostasis_boost (0.8 a 1.2) de Python
+            let dailyVolatilityFactor = 0.5 + (UFix64(r0VolSeed % 1000) / 999.0) 
+            let dailyHomeostasisBoost = 0.8 + (UFix64(r2BoostHomeoSeed % 1000) / 999.0) * 0.4
+
             for geneName in self.genesVisibles.keys {
-                let currentValue = self.genesVisibles[geneName]!
+                var currentValue = self.genesVisibles[geneName]!
                 
-                // Verificar si existe un objetivo de homeostasis para este gen
+                // Placeholder para determinar si el gen es entero y sus rangos específicos
+                // Actualmente GENES_VISIBLES_RANGES no distingue enteros.
+                // La función clampValue usará el rango si existe, sino 0.0-1.0.
+                // let isIntegerGene = false // TODO: Determinar esto si es necesario para redondeo
+
                 if self.homeostasisTargets[geneName] != nil {
                     let targetValue = self.homeostasisTargets[geneName]!
+                    let diferencia = targetValue - currentValue
                     
-                    // Calcular diferencia entre valor actual y objetivo
-                    let difference = targetValue - currentValue
-                    let differenceAbs = self.abs(difference)
+                    // Efectividad de homeostasis por step (0.8 a 1.2)
+                    let efectividadTimestepHomeo = 0.8 + (UFix64(r3HomeoEfecSeed % 1000) / 999.0) * 0.4
                     
-                    // Si hay suficiente diferencia, evolucionar hacia el objetivo
-                    if differenceAbs > 0.0001 { // Umbral reducido para steps pequeños
-                        // Usar valores aleatorios para determinar velocidad de cambio
-                        let randomFactor = UFix64(r0 % 1000) / 1000.0
-                        // Tasa evolutiva base diaria (entre 1% y 6%) dividida por número de steps
-                        let evolutionRatePerStep = (0.01 + (0.05 * randomFactor)) * stepFactor
-                        
-                        // Dirección del cambio
-                        var changeAmount: UFix64 = 0.0
-                        if difference > 0.0 {
-                            changeAmount = self.min(evolutionRatePerStep, difference)
-                        } else {
-                            // Usando la versión positiva y luego negándola manualmente
-                            let positiveRate = evolutionRatePerStep
-                            if differenceAbs < positiveRate {
-                                changeAmount = 0.0 - differenceAbs
-                            } else {
-                                changeAmount = 0.0 - positiveRate
-                            }
-                        }
-                        
-                        // Aplicar cambio
-                        self.genesVisibles[geneName] = currentValue + changeAmount
+                    var cambioHomeostasis = diferencia * CreatureNFTV5.TASA_APRENDIZAJE_HOMEOSTASIS_BASE * potencialEvolutivo 
+                                        * efectividadTimestepHomeo * dailyHomeostasisBoost
+                    
+                    // Asegurar que el cambio no invierta el signo si es muy grande
+                    if self.abs(cambioHomeostasis) > self.abs(diferencia) {
+                        cambioHomeostasis = diferencia
                     }
+                    
+                    currentValue = currentValue + cambioHomeostasis
                 } else {
-                    // Para genes sin objetivo, aplicar pequeñas mutaciones aleatorias
-                    // Usar R0 y R1 para mutaciones base
-                    let r0Factor = UFix64(r0 % 100) / 100.0
-                    let r1Factor = UFix64(r1 % 100) / 100.0
-                    
-                    // Probabilidad reducida para mutación por step (10% / stepsPerDay)
-                    if r0Factor < (0.1 * stepFactor) {
-                        // Dirección y magnitud de la mutación (también escaladas)
-                        let mutationStrength = 0.01 * (r1Factor * 2.0) * stepFactor
-                        
-                        // Aplicar mutación - versión simplificada
-                        var newValue = currentValue
-                        
-                        // Si r1Factor > 0.5, aumentamos el valor
-                        if r1Factor > 0.5 {
-                            newValue = currentValue + mutationStrength
-                            // Verificar límite superior
-                            if newValue > 1.0 {
-                                newValue = 1.0
-                            }
+                    // Evolución Pasiva
+                    let randomNormalized_Vis = UFix64(r1PasSeed % 10000) / 9999.0 // Rango [0.0, 1.0]
+                    let magnitude_Vis = CreatureNFTV5.TASA_EVOLUCION_PASIVA_GEN_BASE * potencialEvolutivo * dailyVolatilityFactor
+                    var changeAmount_Vis: UFix64 = 0.0
+
+                    if randomNormalized_Vis < 0.5 {
+                        // Restar
+                        changeAmount_Vis = (0.5 - randomNormalized_Vis) * 2.0 * magnitude_Vis
+                        if currentValue > changeAmount_Vis {
+                            currentValue = currentValue - changeAmount_Vis
                         } else {
-                            // Si no, lo disminuimos
-                            if currentValue > mutationStrength {
-                                newValue = currentValue - mutationStrength
-                            } else {
-                                newValue = 0.0
+                            // Corrected access to optional dictionary
+                            var minGeneValue_Vis: UFix64 = 0.0
+                            if let geneRange = CreatureNFTV5.GENES_VISIBLES_RANGES[geneName] {
+                                minGeneValue_Vis = geneRange["min"] ?? 0.0
                             }
+                            currentValue = minGeneValue_Vis
                         }
-                        
-                        // Actualizar gen
-                        self.genesVisibles[geneName] = newValue
+                    } else {
+                        // Sumar
+                        changeAmount_Vis = (randomNormalized_Vis - 0.5) * 2.0 * magnitude_Vis
+                        currentValue = currentValue + changeAmount_Vis
                     }
+                    // La asignación de currentValue ya se hizo dentro del if/else
                 }
+                
+                // Aplicar clamp usando los rangos definidos en el contrato
+                self.genesVisibles[geneName] = self.clampValue(currentValue, geneName, CreatureNFTV5.GENES_VISIBLES_RANGES)
+                // if isIntegerGene { self.genesVisibles[geneName] = UFix64(Int(self.genesVisibles[geneName]!)) } // Redondeo si fuera entero
             }
         }
         
+        // Nueva función para la evolución de genes ocultos de combate
+        // r0VolSeed: semilla diaria para volatilidad general.
+        // r1PasSeedStep: semilla que varía por step para la evolución pasiva base.
+        // Las influencias se tomarán de los genes visibles actuales.
+        access(all) fun _updateCombatGenesForStep(r0VolSeed: UInt64, r1PasSeedStep: UInt64, stepsPerDay: UInt64) {
+            let potencialEvolutivo = self.genesOcultos["potencialEvolutivo"] ?? 1.0
+            let dailyVolatilityFactor = 0.5 + (UFix64(r0VolSeed % 1000) / 999.0) // ~0.5 a ~1.5
+
+            // Pre-calcular normalizaciones de genes visibles relevantes
+            var normTamanoBase: UFix64 = 0.5 
+            if let rangoTB = CreatureNFTV5.GENES_VISIBLES_RANGES["tamanoBase"] {
+                let minTB = rangoTB["min"]!
+                let maxTB = rangoTB["max"]!
+                if (maxTB - minTB) > 0.0 {
+                    normTamanoBase = (self.genesVisibles["tamanoBase"]! - minTB) / (maxTB - minTB)
+                }
+            }
+            // Calculate tendTamanoNormFactor as Fix64 to represent -1.0 to 1.0 range
+            let tendTamanoNormFactor_signed: Fix64 = (self.UFix64toFix64(normTamanoBase) - 0.5) * 2.0
+
+            var normNumApendices: UFix64 = 0.5 
+            if let rangoNA = CreatureNFTV5.GENES_VISIBLES_RANGES["numApendices"] {
+                let minNA = rangoNA["min"]!
+                let maxNA = rangoNA["max"]!
+                if (maxNA - minNA) > 0.0 {
+                    normNumApendices = (self.genesVisibles["numApendices"]! - minNA) / (maxNA - minNA)
+                }
+            }
+
+            let formaActual = self.genesVisibles["formaPrincipal"]! 
+            let apendicesActuales = self.genesVisibles["numApendices"]! 
+
+            let genesCombate = [
+                "puntosSaludMax", 
+                "ataqueBase", 
+                "defensaBase", 
+                "agilidadCombate"
+            ]
+
+            for geneNombreOculto in genesCombate {
+                var currentValue = self.genesOcultos[geneNombreOculto]!
+                let minGeneValue = CreatureNFTV5.GENES_OCULTOS_RANGES[geneNombreOculto]!["min"]!
+
+                // 1. Cambio base aleatorio pasivo
+                let randomNormalized_Hid = UFix64(r1PasSeedStep % 10000) / 9999.0 // Rango [0.0, 1.0]
+                let magnitude_Hid = CreatureNFTV5.TASA_EVOLUCION_PASIVA_GEN_BASE * potencialEvolutivo * dailyVolatilityFactor
+                var changeAmount_Hid: UFix64 = 0.0
+                
+                if randomNormalized_Hid < 0.5 {
+                    // Restar
+                    changeAmount_Hid = (0.5 - randomNormalized_Hid) * 2.0 * magnitude_Hid
+                    if currentValue > changeAmount_Hid { 
+                        currentValue = currentValue - changeAmount_Hid
+                    } else { 
+                        currentValue = minGeneValue 
+                    }
+                } else {
+                    // Sumar
+                    changeAmount_Hid = (randomNormalized_Hid - 0.5) * 2.0 * magnitude_Hid
+                    currentValue = currentValue + changeAmount_Hid
+                }
+                // La asignación de currentValue ya se hizo dentro del if/else
+
+                // 2. Cambio por influencias de genes visibles
+                let factorEvolucionInfluenciaBase = CreatureNFTV5.FACTOR_INFLUENCIA_VISUAL_SOBRE_COMBATE * potencialEvolutivo * dailyVolatilityFactor
+
+                if geneNombreOculto == "puntosSaludMax" {
+                    let influenceMagnitude = self.absFix64(tendTamanoNormFactor_signed * 1.0) * factorEvolucionInfluenciaBase
+                    if tendTamanoNormFactor_signed >= 0.0 {
+                        currentValue = currentValue + influenceMagnitude
+                    } else {
+                        if currentValue > influenceMagnitude { currentValue = currentValue - influenceMagnitude } else { currentValue = minGeneValue }
+                    }
+                    // tendenciaForma = (formaActual == 2.0) ? 0.5 : 0.0
+                    if formaActual == 2.0 { currentValue = currentValue + (0.5 * factorEvolucionInfluenciaBase) }
+                
+                } else if geneNombreOculto == "ataqueBase" {
+                    // tendenciaForma
+                    if formaActual == 3.0 { currentValue = currentValue + (1.0 * factorEvolucionInfluenciaBase) }
+                    else if formaActual == 1.0 { // Factor -0.3
+                        let decremento = 0.3 * factorEvolucionInfluenciaBase
+                        if currentValue > decremento { currentValue = currentValue - decremento } else { currentValue = minGeneValue }
+                    }
+                    // tendenciaApendices = normNumApendices * 0.7
+                    currentValue = currentValue + (normNumApendices * 0.7 * factorEvolucionInfluenciaBase)
+                    // tendenciaTamano = tendTamanoNormFactor * 0.3
+                    let tamanoInfluenceAtaque = self.absFix64(tendTamanoNormFactor_signed * 0.3) * factorEvolucionInfluenciaBase
+                    if tendTamanoNormFactor_signed >= 0.0 {
+                        currentValue = currentValue + tamanoInfluenceAtaque
+                    } else {
+                        if currentValue > tamanoInfluenceAtaque { currentValue = currentValue - tamanoInfluenceAtaque } else { currentValue = minGeneValue }
+                    }
+
+                } else if geneNombreOculto == "defensaBase" {
+                    // tendenciaForma
+                    if formaActual == 2.0 { currentValue = currentValue + (1.0 * factorEvolucionInfluenciaBase) }
+                    else if formaActual == 3.0 { // Factor -0.3
+                        let decremento = 0.3 * factorEvolucionInfluenciaBase
+                        if currentValue > decremento { currentValue = currentValue - decremento } else { currentValue = minGeneValue }
+                    }
+                    // tendenciaTamano = tendTamanoNormFactor * 1.0
+                    let tamanoInfluenceDefensa = self.absFix64(tendTamanoNormFactor_signed * 1.0) * factorEvolucionInfluenciaBase
+                    if tendTamanoNormFactor_signed >= 0.0 {
+                        currentValue = currentValue + tamanoInfluenceDefensa
+                    } else {
+                        if currentValue > tamanoInfluenceDefensa { currentValue = currentValue - tamanoInfluenceDefensa } else { currentValue = minGeneValue }
+                    }
+
+                } else if geneNombreOculto == "agilidadCombate" {
+                    // tendenciaForma
+                    if formaActual == 1.0 { currentValue = currentValue + (1.0 * factorEvolucionInfluenciaBase) }
+                    else if formaActual == 2.0 { // Factor -0.7
+                        let decremento = 0.7 * factorEvolucionInfluenciaBase
+                        if currentValue > decremento { currentValue = currentValue - decremento } else { currentValue = minGeneValue }
+                    }
+                    // tendenciaTamano = -tendTamanoNormFactor * 1.0 (mayor tamaño, menos ágil)
+                    // Si tendTamanoNormFactor_signed es positivo (grande), se resta para agilidad (efecto negativo)
+                    // Si tendTamanoNormFactor_signed es negativo (pequeno), se suma para agilidad (efecto positivo)
+                    let tamanoInfluenceAgilidad = self.absFix64(tendTamanoNormFactor_signed * 1.0) * factorEvolucionInfluenciaBase
+                    if tendTamanoNormFactor_signed >= 0.0 { // Creatura grande (factor positivo), impacto negativo en agilidad
+                        if currentValue > tamanoInfluenceAgilidad { currentValue = currentValue - tamanoInfluenceAgilidad } else { currentValue = minGeneValue }
+                    } else { // Creatura pequena (factor negativo), impacto positivo en agilidad
+                        currentValue = currentValue + tamanoInfluenceAgilidad
+                    }
+                    
+                    // numApendices: U-shape, óptimo en el medio del rango (0-8 -> óptimo 4)
+                    // uShapeFactor conceptualmente -1.0 (extremos) a 1.0 (óptimo)
+                    var uShapeInfluenceFactor: UFix64 = 0.0
+                    var uShapeIsPositiveInfluence = true
+                    if let rangoNA = CreatureNFTV5.GENES_VISIBLES_RANGES["numApendices"] {
+                        let minNA = rangoNA["min"]!; let maxNA = rangoNA["max"]!
+                        let optimoApendices = (minNA + maxNA) / 2.0
+                        let distMaxDesdeOptimoAp = (maxNA - minNA) / 2.0
+                        if distMaxDesdeOptimoAp > 0.0 {
+                            // Corrected calculation for uShapeFactorRaw to prevent underflow
+                            var uShapeFactorRaw_signed: Fix64 = 0.0
+                            
+                            // Calculate absolute difference safely for UFix64
+                            var diffAbsApendices: UFix64 = 0.0
+                            if apendicesActuales > optimoApendices {
+                                diffAbsApendices = apendicesActuales - optimoApendices
+                            } else {
+                                diffAbsApendices = optimoApendices - apendicesActuales
+                            }
+                            let normalizedDistance = diffAbsApendices / distMaxDesdeOptimoAp
+                            
+                            let proximityToOptimum = 1.0 - normalizedDistance // Rango [0.0, 1.0] donde 1.0 es óptimo
+                            
+                            uShapeFactorRaw_signed = (self.UFix64toFix64(proximityToOptimum) - 0.5) * 2.0
+
+                            uShapeInfluenceFactor = self.absFix64(uShapeFactorRaw_signed * 0.5) // Factor 0.5 de Python para apéndices en agilidad
+                            if uShapeFactorRaw_signed < 0.0 { uShapeIsPositiveInfluence = false }
+                        }    
+                    }
+                    if uShapeIsPositiveInfluence {
+                        currentValue = currentValue + (uShapeInfluenceFactor * factorEvolucionInfluenciaBase)
+                    } else {
+                        let decremento = uShapeInfluenceFactor * factorEvolucionInfluenciaBase
+                        if currentValue > decremento { currentValue = currentValue - decremento } else { currentValue = minGeneValue }
+                    }
+                }
+                
+                self.genesOcultos[geneNombreOculto] = self.clampValue(currentValue, geneNombreOculto, CreatureNFTV5.GENES_OCULTOS_RANGES)
+            }
+        }
+
         // Método para ganar puntos de evolución por step
         access(all) fun gainEvolutionPointsForStep(r0: UInt64, stepsPerDay: UInt64) {
-            // Versión escalada de gainEvolutionPoints para un step individual
-            let stepFactor = 1.0 / UFix64(stepsPerDay)
+            // Obtener potencialEvolutivo de los genes ocultos
+            let potencialEvolutivo = self.genesOcultos["potencialEvolutivo"] ?? 1.0 
+
+            // Calcular ageMultiplier con disminución lineal
+            let MAX_LIFESPAN_DAYS: UFix64 = 7.0 // Vida máxima para este cálculo
+            let MAX_AGE_MULTIPLIER: UFix64 = 2.0
+            let MIN_AGE_MULTIPLIER: UFix64 = 1.0
             
-            // Calcular EP diarios basados en edad y factores aleatorios (como en simulation.py)
-            var ageMultiplier: UFix64 = 0.0
-            if self.edadDiasCompletos < 10.0 {
-                ageMultiplier = 2.0 // Criaturas jóvenes ganan más EP
-            } else if self.edadDiasCompletos < 30.0 {
-                ageMultiplier = 1.5 // Criaturas adolescentes ganan EP moderado
-            } else {
-                ageMultiplier = 1.0 // Criaturas adultas ganan EP normal
+            let totalDecreaseOverLifespan = MAX_AGE_MULTIPLIER - MIN_AGE_MULTIPLIER
+            var decreasePerDay: UFix64 = 0.0
+            // Evitar división por cero si lifespan fuera 0, aunque lifespanTotalSimulatedDays debería ser > 0
+            if MAX_LIFESPAN_DAYS > 0.0 { 
+                decreasePerDay = totalDecreaseOverLifespan / MAX_LIFESPAN_DAYS
             }
             
-            // Usar factor aleatorio para EP (entre 0.5 y 1.5)
-            let randomFactor = 0.5 + (UFix64(r0 % 100) / 100.0)
+            let calculatedAgeMultiplier = MAX_AGE_MULTIPLIER - (self.edadDiasCompletos * decreasePerDay)
+            // Usar self.max que está definido en este recurso NFT
+            let ageMultiplier = self.max(MIN_AGE_MULTIPLIER, calculatedAgeMultiplier) 
             
-            // Base diaria de EP: entre 0.5 y 1.5 dividido por número de steps
-            let baseEPPerStep = 1.0 * ageMultiplier * randomFactor * stepFactor
+            // Multiplicador base de Python y factor de ganancia
+            let PYTHON_MULTIPLIER = 50.0
+            let PYTHON_BASE_FACTOR = 0.01 // Corresponde a FACTOR_GANANCIA_EP_POR_TIMESTEP en Python
+
+            // Factor aleatorio (rango 0.5 a 1.5)
+            // (UFix64(r0 % 101) / 100.0) da 0.0 a 1.0. Sumando 0.5 -> 0.5 a 1.5
+            let correctedRandomFactor = 0.5 + (UFix64(r0 % 101) / 100.0)
+
+            // Cálculo de EP por step
+            let baseEPPerStep = potencialEvolutivo * PYTHON_BASE_FACTOR * PYTHON_MULTIPLIER * ageMultiplier * correctedRandomFactor
             
-            // Añadir EP ganados
             self.puntosEvolucion = self.puntosEvolucion + baseEPPerStep
         }
 
@@ -445,15 +668,15 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
                         self.id
                     )
                 case Type<MetadataViews.NFTCollectionData>():
-                    return CreatureNFTV3.resolveContractView(resourceType: Type<@CreatureNFTV3.NFT>(), viewType: Type<MetadataViews.NFTCollectionData>())
+                    return CreatureNFTV5.resolveContractView(resourceType: Type<@CreatureNFTV5.NFT>(), viewType: Type<MetadataViews.NFTCollectionData>())
                 case Type<MetadataViews.NFTCollectionDisplay>():
-                    return CreatureNFTV3.resolveContractView(resourceType: Type<@CreatureNFTV3.NFT>(), viewType: Type<MetadataViews.NFTCollectionDisplay>())
+                    return CreatureNFTV5.resolveContractView(resourceType: Type<@CreatureNFTV5.NFT>(), viewType: Type<MetadataViews.NFTCollectionDisplay>())
             }
             return nil
         }
 
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <-CreatureNFTV3.createEmptyCollection(nftType: Type<@CreatureNFTV3.NFT>())
+            return <-CreatureNFTV5.createEmptyCollection(nftType: Type<@CreatureNFTV5.NFT>())
         }
 
         // --- Funciones de reproducción ---
@@ -476,31 +699,66 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
             
             // Generar semilla para el descendiente basada en la del padre
             let currentBlock = getCurrentBlock()
-            let childSeed = self.initialSeed ^ UInt64(currentBlock.timestamp * 100000.0) ^ currentBlock.height
+            let timestampFactor = UInt64(currentBlock.timestamp) % 1000000 // Limitar tamaño
+            let childSeed = self.initialSeed ^ timestampFactor ^ currentBlock.height
             
-            // Crear nuevos genes con pequeñas mutaciones
+            // Crear nuevos genes con pequenas mutaciones
+            // Usamos 'var' para childGenesOcultos porque modificaremos potencialEvolutivo
             let childGenesVisibles: {String: UFix64} = {}
-            let childGenesOcultos: {String: UFix64} = {}
+            var childGenesOcultos: {String: UFix64} = {} 
             
-            // Copiar genes visibles con pequeñas mutaciones
+            // Copiar genes visibles con pequenas mutaciones
             for genName in self.genesVisibles.keys {
                 let currentValue = self.genesVisibles[genName]!
-                // Mutación pequeña (±5%)
-                let mutationFactor = 0.95 + (UFix64(childSeed % 100) / 1000.0) // 0.95-1.05
+                // Mutación pequena (±5%)
+                // Asegurarse que childSeed % 100 no cause problemas si childSeed es muy grande.
+                // Usar (childSeed % 1000) / 10000.0 para un rango 0.0 a 0.099, luego ajustar.
+                // Para 0.95 a 1.05 (rango de 0.1), sería: 0.95 + (UFix64(childSeed % 1000) / 10000.0)
+                let mutationFactor = 0.95 + (UFix64(childSeed % 1000) / 10000.0) 
                 childGenesVisibles[genName] = currentValue * mutationFactor
             }
             
-            // Copiar genes ocultos con pequeñas mutaciones
+            // Copiar genes ocultos con pequenas mutaciones
             for genName in self.genesOcultos.keys {
                 let currentValue = self.genesOcultos[genName]!
-                // Mutación pequeña (±5%)
-                let mutationFactor = 0.95 + (UFix64((childSeed >> 8) % 100) / 1000.0) // 0.95-1.05
+                // Mutación pequena (±5%)
+                // Usar (childSeed >> 8) para variar la semilla
+                let mutationFactor = 0.95 + (UFix64(((childSeed >> 8) % 1000)) / 10000.0)
                 childGenesOcultos[genName] = currentValue * mutationFactor
             }
+
+            // --- START: Mejoras del hijo basadas en epCost ---
+
+            // 1. Mejorar Potencial Evolutivo del Hijo
+            let parentPotencial = self.genesOcultos["potencialEvolutivo"] ?? 1.0 
+            let childPotencialBase = parentPotencial * CreatureNFTV5.MITOSIS_POTENCIAL_BASE_INHERITANCE_FACTOR
+            let potencialEpBonus = epCost * CreatureNFTV5.MITOSIS_POTENCIAL_EP_BONUS_FACTOR
+            var finalChildPotencial = childPotencialBase + potencialEpBonus
+            
+            // Clamp potencial evolutivo del hijo
+            if let potencialRanges = CreatureNFTV5.GENES_OCULTOS_RANGES["potencialEvolutivo"] {
+                finalChildPotencial = self.max(potencialRanges["min"]!, self.min(potencialRanges["max"]!, finalChildPotencial))
+            } else { // Fallback clamp si no hay rango (improbable para potencialEvolutivo)
+                finalChildPotencial = self.max(0.5, self.min(2.0, finalChildPotencial)) // Ejemplo de fallback
+            }
+            childGenesOcultos["potencialEvolutivo"] = finalChildPotencial
+
+            // 2. Mejorar Esperanza de Vida del Hijo
+            // Asegurarse que self.lifespanTotalSimulatedDays es positivo
+            let baseLifespanForChild = self.lifespanTotalSimulatedDays * CreatureNFTV5.MITOSIS_LIFESPAN_BASE_FACTOR
+            let lifespanEpBonus = epCost * CreatureNFTV5.MITOSIS_LIFESPAN_EP_BONUS_FACTOR
+            var childLifespan = baseLifespanForChild + lifespanEpBonus
+
+            // Opcional: Clamp para la esperanza de vida del hijo, por ejemplo, a un máximo razonable
+            // o asegurarse que no sea menor que un mínimo.
+            // Por ahora, lo dejamos así, asumiendo que los factores son razonables.
+            // Podríamos añadir un clamp similar al de potencialEvolutivo si es necesario, usando GENES_OCULTOS_RANGES["max_lifespan_dias_base"]
+
+            // --- END: Mejoras del hijo basadas en epCost ---
             
             // Obtener siguiente ID desde el contrato
-            CreatureNFTV3.totalSupply = CreatureNFTV3.totalSupply + 1
-            let newID = CreatureNFTV3.totalSupply
+            CreatureNFTV5.totalSupply = CreatureNFTV5.totalSupply + 1
+            let newID = CreatureNFTV5.totalSupply
             
             // Crear nueva criatura con vida reducida (mitad)
             let newCreature <- create NFT(
@@ -512,7 +770,7 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
                 initialGenesVisibles: childGenesVisibles,
                 initialGenesOcultos: childGenesOcultos,
                 initialPuntosEvolucion: epCost / 4.0, // 1/4 del costo como EP inicial
-                lifespanDays: self.lifespanTotalSimulatedDays / 2.0, // Mitad de vida
+                lifespanDays: childLifespan, // Esperanza de vida mejorada
                 initialEdadDiasCompletos: 0.0,
                 initialEstaViva: true,
                 initialHomeostasisTargets: {}
@@ -554,7 +812,7 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
     access(all) resource interface CollectionPublic {
         access(all) view fun getIDs(): [UInt64]
         access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}?
-        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV3.NFT?
+        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV5.NFT?
         access(all) view fun getActiveCreatureIDs(): [UInt64]
         access(all) view fun getActiveCreatureCount(): UInt64
         access(all) fun attemptSexualReproduction(): @NFT?
@@ -594,12 +852,12 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
 
         /// Adds an NFT to the collections dictionary
         access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
-            let token <- token as! @CreatureNFTV3.NFT
+            let token <- token as! @CreatureNFTV5.NFT
             let id: UInt64 = token.id
             
             // Verificar si está viva y gestionar límite
             if token.estaViva {
-                if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV3.MAX_ACTIVE_CREATURES {
+                if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV5.MAX_ACTIVE_CREATURES {
                     panic("Límite máximo de criaturas vivas alcanzado (5). No se puede depositar más criaturas vivas.")
                 }
                 
@@ -632,19 +890,19 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
         }
 
         /// Gets a reference to a specific NFT type in the collection (read-only)
-        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV3.NFT? {
+        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV5.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
-                return ref as! &CreatureNFTV3.NFT
+                return ref as! &CreatureNFTV5.NFT
             }
             return nil
         }
         
         /// Gets an authorized reference to a specific NFT that can be modified
-        access(all) fun borrowCreatureNFTForUpdate(id: UInt64): auth(Mutate, Insert, Remove) &CreatureNFTV3.NFT? {
+        access(all) fun borrowCreatureNFTForUpdate(id: UInt64): auth(Mutate, Insert, Remove) &CreatureNFTV5.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as auth(Mutate, Insert, Remove) &{NonFungibleToken.NFT}?
-                return ref as! auth(Mutate, Insert, Remove) &CreatureNFTV3.NFT
+                return ref as! auth(Mutate, Insert, Remove) &CreatureNFTV5.NFT
             }
             return nil
         }
@@ -652,18 +910,18 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
         /// Returns supported NFT types the collection can receive
         access(all) view fun getSupportedNFTTypes(): {Type: Bool} {
             let supportedTypes: {Type: Bool} = {}
-            supportedTypes[Type<@CreatureNFTV3.NFT>()] = true
+            supportedTypes[Type<@CreatureNFTV5.NFT>()] = true
             return supportedTypes
         }
 
         /// Returns whether or not the given type is accepted by the collection
         access(all) view fun isSupportedNFTType(type: Type): Bool {
-            return type == Type<@CreatureNFTV3.NFT>()
+            return type == Type<@CreatureNFTV5.NFT>()
         }
 
         /// Create an empty NFT Collection
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <-CreatureNFTV3.createEmptyCollection(nftType: Type<@CreatureNFTV3.NFT>())
+            return <-CreatureNFTV5.createEmptyCollection(nftType: Type<@CreatureNFTV5.NFT>())
         }
         
         /// Obtiene la lista de IDs de criaturas vivas en la colección
@@ -696,9 +954,9 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
                 }
             }
             
-            // Si no está en la lista y hay espacio, añadirla
+            // Si no está en la lista y hay espacio, anadirla
             if !found {
-                if UInt64(self.activeCreatureIDs.length) < CreatureNFTV3.MAX_ACTIVE_CREATURES {
+                if UInt64(self.activeCreatureIDs.length) < CreatureNFTV5.MAX_ACTIVE_CREATURES {
                     self.activeCreatureIDs.append(creatureID)
                     log("Criatura ".concat(creatureID.toString()).concat(" marcada como viva en la colección"))
                 } else {
@@ -730,16 +988,17 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
             }
             
             // Verificar que no exceda el límite máximo
-            if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV3.MAX_ACTIVE_CREATURES {
+            if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV5.MAX_ACTIVE_CREATURES {
                 return nil
             }
             
-            // Probabilidad base de reproducción (25%)
-            let reproductionChance: UFix64 = 0.25
+            // Probabilidad base de reproducción (original)
+            let reproductionChance: UFix64 = 0.25 // Restaurado a 0.25 (valor original)
             
             // Generar un número aleatorio para determinar si ocurre la reproducción
             let currentBlock = getCurrentBlock()
-            let randomSeed = currentBlock.height ^ UInt64(currentBlock.timestamp * 1000.0)
+            let timestampFactor = UInt64(currentBlock.timestamp) % 1000000 // Limitar tamaño
+            let randomSeed = currentBlock.height ^ timestampFactor
             let randomValue = UFix64(randomSeed % 100) / 100.0
             
             if randomValue > reproductionChance {
@@ -795,26 +1054,30 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
             
             // Mezclar genes visibles (herencia mendeliana simplificada)
             for genName in p1GenesVisibles.keys {
-                // 50% de probabilidad de heredar de cada padre, con pequeña mutación
+                // 50% de probabilidad de heredar de cada padre, con pequena mutación
                 let geneSeed = childSeed ^ UInt64(genName.length)
                 let parentChoice = geneSeed % 2 // 0 o 1
                 let baseValue = parentChoice == 0 ? p1GenesVisibles[genName]! : p2GenesVisibles[genName]!
                 
-                // Pequeña mutación (±10%)
-                let mutationFactor = 0.9 + (UFix64(geneSeed % 200) / 1000.0) // 0.9-1.1
+                // Pequena mutación (±10%)
+                // Fix: Usar valor limitado para evitar overflow
+                let safeSeed = geneSeed % 200 // Limitar el valor a 0-199
+                let mutationFactor = 0.9 + (UFix64(safeSeed) / 1000.0) // 0.9-1.1
                 childGenesVisibles[genName] = baseValue * mutationFactor
             }
             
-            // Mezclar genes ocultos (promedio con pequeña mutación)
+            // Mezclar genes ocultos (promedio con pequena mutación)
             for genName in p1GenesOcultos.keys {
                 // Promedio de ambos padres
                 let parent1Value = p1GenesOcultos[genName]!
                 let parent2Value = p2GenesOcultos[genName]!
                 let avgValue = (parent1Value + parent2Value) / 2.0
                 
-                // Pequeña mutación (±10%)
+                // Pequena mutación (±10%)
+                // Fix: Usar valor limitado para evitar overflow
                 let geneSeed = (childSeed >> 16) ^ UInt64(genName.length)
-                let mutationFactor = 0.9 + (UFix64(geneSeed % 200) / 1000.0) // 0.9-1.1
+                let safeSeed = geneSeed % 200 // Limitar el valor a 0-199
+                let mutationFactor = 0.9 + (UFix64(safeSeed) / 1000.0) // 0.9-1.1
                 childGenesOcultos[genName] = avgValue * mutationFactor
             }
             
@@ -822,8 +1085,8 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
             let baseLifespan = childGenesOcultos["max_lifespan_dias_base"]!
             
             // Crear nueva criatura con vida completa
-            CreatureNFTV3.totalSupply = CreatureNFTV3.totalSupply + 1
-            let newID = CreatureNFTV3.totalSupply
+            CreatureNFTV5.totalSupply = CreatureNFTV5.totalSupply + 1
+            let newID = CreatureNFTV5.totalSupply
             
             let newCreature <- create NFT(
                 id: newID,
@@ -867,8 +1130,8 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
             initialEstaViva: Bool,
             initialHomeostasisTargets: {String: UFix64}
         ): @NFT {
-            CreatureNFTV3.totalSupply = CreatureNFTV3.totalSupply + 1
-            let newID = CreatureNFTV3.totalSupply
+            CreatureNFTV5.totalSupply = CreatureNFTV5.totalSupply + 1
+            let newID = CreatureNFTV5.totalSupply
             
             return <-create NFT(
                 id: newID,
@@ -907,10 +1170,10 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
                 return MetadataViews.NFTCollectionData(
                     storagePath: self.CollectionStoragePath,
                     publicPath: self.CollectionPublicPath,
-                    publicCollection: Type<&CreatureNFTV3.Collection>(),
-                    publicLinkedType: Type<&CreatureNFTV3.Collection>(),
+                    publicCollection: Type<&CreatureNFTV5.Collection>(),
+                    publicLinkedType: Type<&CreatureNFTV5.Collection>(),
                     createEmptyCollectionFunction: (fun(): @{NonFungibleToken.Collection} {
-                        return <-CreatureNFTV3.createEmptyCollection(nftType: Type<@CreatureNFTV3.NFT>())
+                        return <-CreatureNFTV5.createEmptyCollection(nftType: Type<@CreatureNFTV5.NFT>())
                     })
                 )
             case Type<MetadataViews.NFTCollectionDisplay>():
@@ -942,9 +1205,43 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
         self.MAX_ACTIVE_CREATURES = 5
 
         // Set the named paths
-        self.CollectionStoragePath = /storage/CreatureNFTV3Collection
-        self.CollectionPublicPath = /public/CreatureNFTV3Collection
-        self.MinterStoragePath = /storage/CreatureNFTV3Minter
+        self.CollectionStoragePath = /storage/CreatureNFTV5Collection
+        self.CollectionPublicPath = /public/CreatureNFTV5Collection
+        self.MinterStoragePath = /storage/CreatureNFTV5Minter
+
+        // --- START Initialize Evolution Constants & Gene Ranges ---
+        self.TASA_APRENDIZAJE_HOMEOSTASIS_BASE = 0.05
+        self.TASA_EVOLUCION_PASIVA_GEN_BASE = 0.001
+        self.FACTOR_INFLUENCIA_VISUAL_SOBRE_COMBATE = 0.0001
+
+        let visibleRanges: {String: {String: UFix64}} = {}
+        visibleRanges["colorR"] = {"min": 0.0, "max": 1.0}
+        visibleRanges["colorG"] = {"min": 0.0, "max": 1.0}
+        visibleRanges["colorB"] = {"min": 0.0, "max": 1.0}
+        visibleRanges["tamanoBase"] = {"min": 0.5, "max": 3.0}
+        visibleRanges["formaPrincipal"] = {"min": 1.0, "max": 3.0} 
+        visibleRanges["numApendices"] = {"min": 0.0, "max": 8.0}
+        visibleRanges["patronMovimiento"] = {"min": 1.0, "max": 4.0}
+        self.GENES_VISIBLES_RANGES = visibleRanges
+
+        let ocultosRanges: {String: {String: UFix64}} = {}
+        ocultosRanges["tasaMetabolica"] = {"min": 0.5, "max": 1.5}
+        ocultosRanges["fertilidad"] = {"min": 0.1, "max": 0.9}
+        ocultosRanges["potencialEvolutivo"] = {"min": 0.5, "max": 1.5}
+        ocultosRanges["max_lifespan_dias_base"] = {"min": 3.0, "max": 7.0}
+        ocultosRanges["puntosSaludMax"] = {"min": 50.0, "max": 200.0}
+        ocultosRanges["ataqueBase"] = {"min": 5.0, "max": 25.0}
+        ocultosRanges["defensaBase"] = {"min": 5.0, "max": 25.0}
+        ocultosRanges["agilidadCombate"] = {"min": 0.5, "max": 2.0}
+        self.GENES_OCULTOS_RANGES = ocultosRanges
+        // --- END Initialize Evolution Constants & Gene Ranges ---
+
+        // --- START Initialize Mitosis Constants ---
+        self.MITOSIS_LIFESPAN_BASE_FACTOR = 0.4
+        self.MITOSIS_LIFESPAN_EP_BONUS_FACTOR = 0.005 // Ej: 100 EP = +0.5 días
+        self.MITOSIS_POTENCIAL_BASE_INHERITANCE_FACTOR = 0.75 
+        self.MITOSIS_POTENCIAL_EP_BONUS_FACTOR = 0.001 // Ej: 100 EP = +0.1 al potencial
+        // --- END Initialize Mitosis Constants ---
 
         // Create and save the NFTMinter resource
         let minter <- create NFTMinter()

@@ -19,7 +19,8 @@ transaction(
         let collectionRef = signer.storage.borrow<&CreatureNFT.Collection>(from: CreatureNFT.CollectionStoragePath)
             ?? panic("Could not borrow a reference to the owner's Collection. Make sure the account is set up and owns NFTs.")
 
-        // Borrow a reference to the NFT to be updated
+        // Borrow a reference to the NFT to be updated - No necesitamos permisos especiales
+        // ahora que usaremos un método específico para actualizar homeostasis
         let borrowedNFT = collectionRef.borrowCreatureNFT(id: nftID)
             ?? panic("Could not borrow CreatureNFT with ID ".concat(nftID.toString()).concat(" from collection."))
 
@@ -40,8 +41,8 @@ transaction(
             panic("No hay suficientes puntos de evolución. Necesita al menos ".concat(epCost.toString()).concat(" EP."))
         }
 
-        // Establecer el objetivo de homeostasis
-        self.nftRef.homeostasisTargets[geneName] = targetValue
+        // Usar el método específico para establecer objetivo de homeostasis
+        self.nftRef.setHomeostasisTarget(gene: geneName, value: targetValue)
         
         // Restar el costo de EP
         self.nftRef.updatePuntosEvolucion(newEP: self.nftRef.puntosEvolucion - epCost)

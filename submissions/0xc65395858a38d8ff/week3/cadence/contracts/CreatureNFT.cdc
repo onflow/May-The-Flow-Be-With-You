@@ -62,7 +62,9 @@ access(all) contract CreatureNFT: NonFungibleToken {
         access(all) var currentActiveBeaconSeed: String? // UInt256 might need custom handling/lib, using String for simplicity for now
         access(all) var lastBeaconSeedFetchedBlockHeight: UInt64?
         access(all) var simulatedDaysProcessedWithCurrentSeed: UInt64
-        access(all) var homeostasisTargets: {String: UFix64} // Mutable by game logic contract
+        
+        // Homeostasis targets - Explicitly allow modification of this dictionary
+        access(all) var homeostasisTargets: {String: UFix64}
 
         init(
             id: UInt64,
@@ -144,6 +146,10 @@ access(all) contract CreatureNFT: NonFungibleToken {
             self.lastEvolutionProcessedTimestamp = timestamp
         }
 
+        access(all) fun setHomeostasisTarget(gene: String, value: UFix64) {
+            self.homeostasisTargets[gene] = value
+        }
+
         access(all) view fun getViews(): [Type] {
             return [
                 Type<MetadataViews.Display>(),
@@ -218,11 +224,20 @@ access(all) contract CreatureNFT: NonFungibleToken {
             return &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
         }
 
-        /// Gets a reference to a specific NFT type in the collection
+        /// Gets a reference to a specific NFT type in the collection (read-only)
         access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFT.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
                 return ref as! &CreatureNFT.NFT
+            }
+            return nil
+        }
+        
+        /// Gets an authorized reference to a specific NFT that can be modified
+        access(all) fun borrowCreatureNFTForUpdate(id: UInt64): auth(Mutate, Insert, Remove) &CreatureNFT.NFT? {
+            if self.ownedNFTs[id] != nil {
+                let ref = &self.ownedNFTs[id] as auth(Mutate, Insert, Remove) &{NonFungibleToken.NFT}?
+                return ref as! auth(Mutate, Insert, Remove) &CreatureNFT.NFT
             }
             return nil
         }

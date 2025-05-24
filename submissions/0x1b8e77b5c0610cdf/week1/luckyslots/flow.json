@@ -1,0 +1,47 @@
+{
+	"contracts": {
+		"LuckySlots": {
+			"source": "cadence/contracts/LuckySlots.cdc",
+			"aliases": {
+				"testing": "0000000000000007",
+				"emulator": "0xf8d6e0586b0a20c7"
+			}
+		},
+		"FungibleToken": {
+			"source": "",
+			"aliases": {
+				"emulator": "0xee82856bf20e2aa6",
+				"testing": "0000000000000006"
+			}
+		},
+		"FlowToken": {
+			"source": "",
+			"aliases": {
+				"emulator": "0x0ae53cb6e3f42a79",
+				"testing": "0000000000000005"
+			}
+		}
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testing": "127.0.0.1:3569",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": {
+				"type": "file",
+				"location": "emulator-account.pkey"
+			}
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"LuckySlots"
+			]
+		}
+	}
+}

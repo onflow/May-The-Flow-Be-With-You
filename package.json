@@ -1,8 +1,22 @@
 {
-  "dependencies": {
-    "@emotion/cache": "^11.14.0",
-    "@emotion/react": "^11.14.0",
-    "@emotion/server": "^11.11.0",
-    "@emotion/styled": "^11.14.0"
+  "name": "may-the-flow-be-with-you",
+  "private": true,
+  "workspaces": [
+    "on-chain-leaderboard",
+    "frontend-leaderboard"
+  ],
+  "scripts": {
+    "postinstall": "only-allow bun"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "latest",
+    "only-allow": "^1.2.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

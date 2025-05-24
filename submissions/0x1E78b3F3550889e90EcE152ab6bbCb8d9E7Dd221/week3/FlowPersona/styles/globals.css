@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 0, 0, 0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  min-height: 100vh;
+}
+
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-flow-blue to-flow-purple;
+}
+
+.glass-card {
+  @apply bg-white/10 backdrop-blur-lg rounded-lg border border-white/20;
+}
+
+.animate-gradient {
+  @apply bg-gradient-to-r from-flow-blue via-flow-purple to-flow-blue bg-[length:200%_auto] animate-gradient-x;
+} 

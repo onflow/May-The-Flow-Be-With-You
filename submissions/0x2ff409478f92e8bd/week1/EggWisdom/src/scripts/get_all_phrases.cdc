@@ -1,5 +1,5 @@
 import "EggWisdom"
 
-access(all) fun main(): {String: UInt64} {
+access(all) fun main(): {UInt64: EggWisdom.PhraseStruct} {
     return EggWisdom.getPhrases()
 }

@@ -58,7 +58,7 @@ access(all) contract OnchainCraps {
     //add overall userInfo here instead of above
 
 
-    access (contract) fun fieldBet(diceTotal: UInt8, betAmount: UFix64) : OnchainCraps.BetResult {
+    access (contract) fun fieldBet(diceTotal: UInt8, betAmount: @{FungibleToken.Vault}) : OnchainCraps.BetResult {
 
       var betStatus: String = ""
       var resultAmount: UFix64? = nil
@@ -66,24 +66,27 @@ access(all) contract OnchainCraps {
       //process and add field to roll result
       if diceTotal == 12 || diceTotal == 2 {
         betStatus = "WIN"
-        resultAmount = betAmount * 3.0
+        resultAmount = betAmount.balance * 3.0
         //send resultAmount of coins to user
 
       } else if diceTotal == 3 || diceTotal == 4 || diceTotal == 9 || diceTotal == 10 || diceTotal == 11 {
         betStatus = "WIN"
-        resultAmount = betAmount * 2.0
+        resultAmount = betAmount.balance * 2.0
         //send resultAmount of coins to user
       } else {
         betStatus = "LOSE"
-        resultAmount = betAmount
+        resultAmount = betAmount.balance
+        //send betAmount to main account
       }
-      return OnchainCraps.BetResult(bet: "FIELD", betAmount: betAmount, status: betStatus, resultAmount: resultAmount )
+      return OnchainCraps.BetResult(bet: "FIELD", betAmount: betAmount.balance, status: betStatus, resultAmount: resultAmount )
     }
 
 
-    access (all) fun rollDice(userAddress: Address, newBets: { String : UFix64 }? ) : RollResult {
+    access (all) fun rollDice(userAddress: Address, newBets: @{ String : {FungibleToken.Vault} } ) : RollResult {
 
-      if self.state == OnchainCraps.GameState.COMEOUT && (newBets == nil || newBets!.length == 0)  { //IF its the comeout roll, we need at least 1 bet placed
+      let newBetsRef = &newBets as &{String: {FungibleToken.Vault}}
+
+      if self.state == OnchainCraps.GameState.COMEOUT && (newBetsRef.keys.length == 0)  { //IF its the comeout roll, we need at least 1 bet placed
         let vaultRef = &self.bets as &{String: {FungibleToken.Vault}}
         assert(self.bets["POINT"] != nil && vaultRef["POINT"]!.balance > 0.0, message: "Come out bets need a bet placed" )
       }
@@ -96,87 +99,96 @@ access(all) contract OnchainCraps {
       let rollResult: [OnchainCraps.BetResult] = []
 
       //process all prop bets first, since there is no memory or storage needed
-      if newBets != nil {
-        for bet in newBets?.keys! {
+      if newBetsRef.keys.length > 0 {
+        for bet in newBetsRef.keys {
 
-          let currentBet = newBets![bet]
+          let currentBet = newBetsRef[bet]
           assert(OnchainCraps.allowedBets[self.state]!.contains(bet), message: "This bet is not allowed during the current gmame phase")
 
           if bet == "FIELD" {
-            let fieldResult = self.fieldBet(diceTotal: diceTotal, betAmount: newBets![bet]!)
+            let fieldResult = self.fieldBet(diceTotal: diceTotal, betAmount: <- newBets.remove(key: bet)!)
             rollResult.append(fieldResult)
           } else if bet == "CRAPS" {
             var betStatus: String = ""
             var resultAmount: UFix64? = nil
             if diceTotal == 12 || diceTotal == 2 || diceTotal == 3 {
               betStatus = "WIN"
-              resultAmount = newBets![bet]! * 8.0 //7:1 odds plus buy-in back
+              resultAmount = newBetsRef[bet]!.balance * 8.0 //7:1 odds plus buy-in back
               //send resultAmount of coins to user
 
             } else {
               betStatus = "LOSE"
-              resultAmount = newBets![bet]!
+              resultAmount = newBetsRef[bet]!.balance
               //send newBets![bet]! to the admin
 
             }
-            rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: newBets![bet]!, status: betStatus, resultAmount: resultAmount))
+            rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: newBetsRef[bet]!.balance, status: betStatus, resultAmount: resultAmount))
           } else if bet == "YO" {
             var betStatus: String = ""
             var resultAmount: UFix64? = nil
             if diceTotal == 11 {
               betStatus = "WIN"
-              resultAmount = newBets![bet]! * 16.0 //15:1 odds plus buy-in back
+              resultAmount = newBetsRef[bet]!.balance * 16.0 //15:1 odds plus buy-in back
               //send resultAmount of coins to user
 
             } else {
               betStatus = "LOSE"
-              resultAmount = newBets![bet]!
+              resultAmount = newBetsRef[bet]!.balance
               //send newBets![bet]! to the admin
             }
-            rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: newBets![bet]!, status: betStatus, resultAmount: resultAmount ))
+            rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: newBetsRef[bet]!.balance, status: betStatus, resultAmount: resultAmount ))
           } else { //this is not a Prop bet, so we should add it to our bets
-            let currentBet = newBets![bet]!
-            let vaultRef <- self.bets.remove(key: bet)
+            //let currentBet = newBetsRef[bet]!.balance
+            
             if self.bets[bet] != nil {
-              self.bets[bet] = currentBet + self.bets[bet]!
-            } else {
-              let vault <- self.bets.remove(key: bet) ?? panic("No vault at this key")
+              let vault: @{FungibleToken.Vault} <- self.bets.remove(key: bet) ?? panic("No vault at this key")
+              let tokens <- newBets.remove(key: bet)!
+              vault.deposit(from: <-tokens) 
               self.bets[bet] <-! vault
-            }
+            } else {
+              self.bets[bet] <-! newBets.remove(key: bet)
+            } 
           } 
         }
       }
+      
+      assert( newBetsRef.keys.length == 0, message: "There are New Bets that are not processed. Aborting.")
+      
+      destroy newBets 
 
       if self.bets.length == 0 { //If there are only prop bets then we can return
         return OnchainCraps.RollResult(value: diceTotal, rollResults: rollResult)
       }
 
+      let selfBetsRef = &self.bets as &{String: {FungibleToken.Vault}}
+
       if self.bets["ODDS"] != nil {
         assert(self.bets["PASS"] != nil, message: "Odds bet needs a point bet")
-        assert((self.bets["PASS"]! * 5.0 ) > self.bets["ODDS"]!, message: "Odds must be less than 5x")
+        assert((selfBetsRef["PASS"]!.balance * 5.0 ) > selfBetsRef["ODDS"]!.balance, message: "Odds must be less than 5x")
       }
 
       if self.state == OnchainCraps.GameState.COMEOUT {
         for bet in self.bets.keys { //loop through bets and update the state of this game
 
-          let currentBet = self.bets[bet]!
+          //let currentBet = self.bets[bet]!
           let allowedBets = OnchainCraps.allowedBets[OnchainCraps.GameState.COMEOUT]!
           //make sure newBets only cointains keys "PASS" and "FIELD
           assert(OnchainCraps.allowedBets[self.state]!.contains(bet), message: "Come out rolls can only have PASS or FIELD bets")
-          assert(currentBet >= 0.1, message: "Bet must be greater than 0.1")
+          assert(selfBetsRef[bet]!.balance >= 0.1, message: "Bet must be greater than 0.1")
           
           if bet == "PASS" {
 
             var betStatus: String = ""
             var resultAmount: UFix64? = nil
 
-            let betAmount = self.bets[bet]!
+            let betAmount = selfBetsRef[bet]!.balance
 
             // Check for craps (lose) first
             if diceTotal == 2 || diceTotal == 3 || diceTotal == 12 {
 
               betStatus = "LOSE"
-              resultAmount = self.bets.remove(key: "PASS") //remove the bet
+              resultAmount = selfBetsRef[bet]!.balance
+              //resultAmount = self.bets.remove(key: "PASS") //remove the bet
 
               //send "resultAmount" of coins to the admin account - payment todo
 
@@ -185,7 +197,7 @@ access(all) contract OnchainCraps {
 
               //need to get users account to send
               betStatus = "WIN"
-              resultAmount = self.bets["PASS"]
+              resultAmount = selfBetsRef[bet]!.balance
               let userRef = getAccount(userAddress)
 
               //send the userPayout to the user - payment todo
@@ -209,12 +221,12 @@ access(all) contract OnchainCraps {
           var betStatus: String = ""
           var resultAmount: UFix64? = nil
 
-          let betAmount = self.bets[bet]!
+          let betAmount = selfBetsRef[bet]!.balance
           let userRef: &Account = getAccount(userAddress)
 
           if diceTotal == 7 {
             betStatus = "LOSE"
-            resultAmount = self.bets.remove(key: bet) //remove the bet
+            resultAmount = selfBetsRef[bet]!.balance //remove the bet
             rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
             self.state = OnchainCraps.GameState.COMEOUT //reset game state
             self.point = nil
@@ -223,7 +235,7 @@ access(all) contract OnchainCraps {
           } else if bet == "PASS" {
             if Int(diceTotal) == self.point {
               betStatus = "WIN"
-              resultAmount = 2.0 * self.bets.remove(key: bet)! //remove the bet, clear the table
+              resultAmount = 2.0 * selfBetsRef[bet]!.balance //remove the bet, clear the table
               self.state = OnchainCraps.GameState.COMEOUT //reset game state
               self.point = nil
               rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
@@ -234,7 +246,7 @@ access(all) contract OnchainCraps {
 
             if Int(diceTotal) == self.point {
               betStatus = "WIN"
-              resultAmount = self.bets[bet]
+              resultAmount = selfBetsRef[bet]!.balance
 
               if self.point  == 6 || self.point == 8 {
                 resultAmount = resultAmount! * 1.2
@@ -244,7 +256,7 @@ access(all) contract OnchainCraps {
                 resultAmount = resultAmount! * 2.0
               }
 
-              resultAmount = resultAmount! + self.bets.remove(key: bet)! //remove the bet, clear the table
+              resultAmount = resultAmount! + selfBetsRef[bet]!.balance //remove the bet, clear the table
 
               rollResult.append(OnchainCraps.BetResult(bet: bet, betAmount: betAmount, status: betStatus, resultAmount: resultAmount )) //TODO - we should't return until the end
               //send the resultAmount to the user - payment todo
@@ -253,7 +265,7 @@ access(all) contract OnchainCraps {
             let betNumber = Int.fromString(bet)!
             if diceTotal == UInt8(betNumber) {
               betStatus = "WIN"
-              resultAmount = self.bets[bet]
+              resultAmount = selfBetsRef[bet]!.balance
               self.state = OnchainCraps.GameState.COMEOUT //reset game state
               self.point = nil
 
@@ -285,7 +297,7 @@ access(all) contract OnchainCraps {
       self.point = nil
       //self.pointAmount = nil
       //self.come = nil
-      self.bets = {}
+      self.bets <- {}
     }
   }
 

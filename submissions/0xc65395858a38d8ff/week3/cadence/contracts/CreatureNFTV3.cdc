@@ -61,6 +61,20 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
         changeCount: UInt64,
         epCost: UFix64
     )
+    
+    /// The event that is emitted when mitosis occurs
+    access(all) event MitosisOccurred(
+        parentID: UInt64,
+        childID: UInt64,
+        epCost: UFix64
+    )
+    
+    /// The event that is emitted when sexual reproduction occurs
+    access(all) event SexualReproductionOccurred(
+        parent1ID: UInt64,
+        parent2ID: UInt64,
+        childID: UInt64
+    )
 
     /// Storage and Public Paths
     access(all) let CollectionStoragePath: StoragePath
@@ -439,6 +453,89 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <-CreatureNFTV3.createEmptyCollection(nftType: Type<@CreatureNFTV3.NFT>())
         }
+
+        // --- Funciones de reproducción ---
+        
+        // Función para realizar mitosis (reproducción asexual)
+        // Gasta EP del padre para crear un descendiente con vida reducida
+        access(all) fun performMitosis(epCost: UFix64): @NFT? {
+            // Verificar si la criatura está viva
+            if !self.estaViva {
+                return nil
+            }
+            
+            // Verificar si tiene suficientes EP
+            if self.puntosEvolucion < epCost {
+                return nil
+            }
+            
+            // Deducir EP
+            self.puntosEvolucion = self.puntosEvolucion - epCost
+            
+            // Generar semilla para el descendiente basada en la del padre
+            let currentBlock = getCurrentBlock()
+            let childSeed = self.initialSeed ^ UInt64(currentBlock.timestamp * 100000.0) ^ currentBlock.height
+            
+            // Crear nuevos genes con pequeñas mutaciones
+            let childGenesVisibles: {String: UFix64} = {}
+            let childGenesOcultos: {String: UFix64} = {}
+            
+            // Copiar genes visibles con pequeñas mutaciones
+            for genName in self.genesVisibles.keys {
+                let currentValue = self.genesVisibles[genName]!
+                // Mutación pequeña (±5%)
+                let mutationFactor = 0.95 + (UFix64(childSeed % 100) / 1000.0) // 0.95-1.05
+                childGenesVisibles[genName] = currentValue * mutationFactor
+            }
+            
+            // Copiar genes ocultos con pequeñas mutaciones
+            for genName in self.genesOcultos.keys {
+                let currentValue = self.genesOcultos[genName]!
+                // Mutación pequeña (±5%)
+                let mutationFactor = 0.95 + (UFix64((childSeed >> 8) % 100) / 1000.0) // 0.95-1.05
+                childGenesOcultos[genName] = currentValue * mutationFactor
+            }
+            
+            // Obtener siguiente ID desde el contrato
+            CreatureNFTV3.totalSupply = CreatureNFTV3.totalSupply + 1
+            let newID = CreatureNFTV3.totalSupply
+            
+            // Crear nueva criatura con vida reducida (mitad)
+            let newCreature <- create NFT(
+                id: newID,
+                name: "", // Sin nombre predefinido
+                description: "", // Sin descripción predefinida
+                thumbnail: self.thumbnail, // Usar el mismo thumbnail
+                birthBlockHeight: currentBlock.height,
+                initialGenesVisibles: childGenesVisibles,
+                initialGenesOcultos: childGenesOcultos,
+                initialPuntosEvolucion: epCost / 4.0, // 1/4 del costo como EP inicial
+                lifespanDays: self.lifespanTotalSimulatedDays / 2.0, // Mitad de vida
+                initialEdadDiasCompletos: 0.0,
+                initialEstaViva: true,
+                initialHomeostasisTargets: {}
+            )
+            
+            // Emitir evento
+            emit MitosisOccurred(
+                parentID: self.id,
+                childID: newID,
+                epCost: epCost
+            )
+            
+            return <-newCreature
+        }
+        
+        // Función auxiliar para reproducción sexual
+        // Esta función será usada internamente por la colección
+        access(all) fun getReproductionData(): {String: AnyStruct} {
+            return {
+                "id": self.id,
+                "genesVisibles": self.genesVisibles,
+                "genesOcultos": self.genesOcultos,
+                "initialSeed": self.initialSeed
+            }
+        }
     }
 
     /// Define el interfaz público de la colección para exponer los métodos especiales de las criaturas
@@ -448,6 +545,7 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
         access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV3.NFT?
         access(all) view fun getActiveCreatureIDs(): [UInt64]
         access(all) view fun getActiveCreatureCount(): UInt64
+        access(all) fun attemptSexualReproduction(): @NFT?
     }
 
     /// Defines the Collection resource that holds NFTs
@@ -609,6 +707,135 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
                 }
                 i = i + 1
             }
+        }
+
+        /// Intenta reproducción sexual entre dos criaturas aleatorias
+        /// Retorna un nuevo NFT si tiene éxito, o nil si falla
+        access(all) fun attemptSexualReproduction(): @NFT? {
+            // Verificar que haya al menos 2 criaturas vivas
+            if UInt64(self.activeCreatureIDs.length) < 2 {
+                return nil
+            }
+            
+            // Verificar que no exceda el límite máximo
+            if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV3.MAX_ACTIVE_CREATURES {
+                return nil
+            }
+            
+            // Probabilidad base de reproducción (25%)
+            let reproductionChance: UFix64 = 0.25
+            
+            // Generar un número aleatorio para determinar si ocurre la reproducción
+            let currentBlock = getCurrentBlock()
+            let randomSeed = currentBlock.height ^ UInt64(currentBlock.timestamp * 1000.0)
+            let randomValue = UFix64(randomSeed % 100) / 100.0
+            
+            if randomValue > reproductionChance {
+                // No ocurre reproducción esta vez
+                return nil
+            }
+            
+            // Elegir dos padres aleatorios diferentes
+            if self.activeCreatureIDs.length < 2 {
+                return nil
+            }
+            
+            // Mezclar los IDs para selección aleatoria
+            var shuffledIDs = self.activeCreatureIDs
+            
+            // Algoritmo simple de shuffle
+            let shuffleSeed = randomSeed ^ UInt64(self.activeCreatureIDs.length)
+            var i = shuffledIDs.length - 1
+            while i > 0 {
+                let j = UInt64(shuffleSeed ^ UInt64(i)) % UInt64(i + 1)
+                let temp = shuffledIDs[i]
+                shuffledIDs[i] = shuffledIDs[Int(j)]
+                shuffledIDs[Int(j)] = temp
+                i = i - 1
+            }
+            
+            // Tomar los dos primeros IDs después del shuffle
+            let parent1ID = shuffledIDs[0]
+            let parent2ID = shuffledIDs[1]
+            
+            // Obtener referencias a los padres
+            let parent1Ref = self.borrowCreatureNFT(id: parent1ID) ?? panic("No se pudo encontrar la criatura padre 1")
+            let parent2Ref = self.borrowCreatureNFT(id: parent2ID) ?? panic("No se pudo encontrar la criatura padre 2")
+            
+            // Obtener datos para la reproducción
+            let parent1Data = parent1Ref.getReproductionData()
+            let parent2Data = parent2Ref.getReproductionData()
+            
+            // Combinar semillas de ambos padres
+            let parent1Seed = parent1Data["initialSeed"] as! UInt64
+            let parent2Seed = parent2Data["initialSeed"] as! UInt64
+            let childSeed = parent1Seed ^ parent2Seed ^ randomSeed
+            
+            // Combinar genes de ambos padres
+            let childGenesVisibles: {String: UFix64} = {}
+            let childGenesOcultos: {String: UFix64} = {}
+            
+            // Obtener genes de los padres
+            let p1GenesVisibles = parent1Data["genesVisibles"] as! {String: UFix64}
+            let p2GenesVisibles = parent2Data["genesVisibles"] as! {String: UFix64}
+            let p1GenesOcultos = parent1Data["genesOcultos"] as! {String: UFix64}
+            let p2GenesOcultos = parent2Data["genesOcultos"] as! {String: UFix64}
+            
+            // Mezclar genes visibles (herencia mendeliana simplificada)
+            for genName in p1GenesVisibles.keys {
+                // 50% de probabilidad de heredar de cada padre, con pequeña mutación
+                let geneSeed = childSeed ^ UInt64(genName.length)
+                let parentChoice = geneSeed % 2 // 0 o 1
+                let baseValue = parentChoice == 0 ? p1GenesVisibles[genName]! : p2GenesVisibles[genName]!
+                
+                // Pequeña mutación (±10%)
+                let mutationFactor = 0.9 + (UFix64(geneSeed % 200) / 1000.0) // 0.9-1.1
+                childGenesVisibles[genName] = baseValue * mutationFactor
+            }
+            
+            // Mezclar genes ocultos (promedio con pequeña mutación)
+            for genName in p1GenesOcultos.keys {
+                // Promedio de ambos padres
+                let parent1Value = p1GenesOcultos[genName]!
+                let parent2Value = p2GenesOcultos[genName]!
+                let avgValue = (parent1Value + parent2Value) / 2.0
+                
+                // Pequeña mutación (±10%)
+                let geneSeed = (childSeed >> 16) ^ UInt64(genName.length)
+                let mutationFactor = 0.9 + (UFix64(geneSeed % 200) / 1000.0) // 0.9-1.1
+                childGenesOcultos[genName] = avgValue * mutationFactor
+            }
+            
+            // Calcular esperanza de vida basada en el gen correspondiente
+            let baseLifespan = childGenesOcultos["max_lifespan_dias_base"]!
+            
+            // Crear nueva criatura con vida completa
+            CreatureNFTV3.totalSupply = CreatureNFTV3.totalSupply + 1
+            let newID = CreatureNFTV3.totalSupply
+            
+            let newCreature <- create NFT(
+                id: newID,
+                name: "", // Sin nombre predefinido
+                description: "", // Sin descripción predefinida
+                thumbnail: parent1Ref.thumbnail, // Usar el thumbnail del primer padre
+                birthBlockHeight: currentBlock.height,
+                initialGenesVisibles: childGenesVisibles,
+                initialGenesOcultos: childGenesOcultos,
+                initialPuntosEvolucion: 15.0, // EP inicial estándar
+                lifespanDays: baseLifespan, // Vida completa
+                initialEdadDiasCompletos: 0.0,
+                initialEstaViva: true,
+                initialHomeostasisTargets: {}
+            )
+            
+            // Emitir evento
+            emit SexualReproductionOccurred(
+                parent1ID: parent1ID,
+                parent2ID: parent2ID,
+                childID: newID
+            )
+            
+            return <-newCreature
         }
     }
 

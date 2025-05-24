@@ -157,7 +157,9 @@ access(all) contract CreatureNFTV3: NonFungibleToken {
             
             // Generar semilla inicial basada en ID, timestamp y altura del bloque
             // La combinación de estos valores debería dar una semilla única para cada criatura
-            self.initialSeed = self.id ^ UInt64(self.birthTimestamp * 100000.0) ^ self.birthBlockHeight
+            // MODIFICADO para prevenir overflow con el timestamp
+            let timestampFactor = UInt64(self.birthTimestamp) % 1000000 // Usar módulo para seguridad
+            self.initialSeed = self.id ^ timestampFactor ^ self.birthBlockHeight
             
             // Inicializar contador de cambios de semilla en el diccionario de homeostasis
             self.homeostasisTargets["_seedChangeCount"] = 0.0

@@ -50,6 +50,15 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
         target: UFix64
     )
 
+    /// The event that is emitted when la semilla inicial es cambiada
+    access(all) event InitialSeedChanged(
+        creatureID: UInt64,
+        oldSeed: UInt64,
+        newSeed: UInt64,
+        changeCount: UInt64,
+        epCost: UFix64
+    )
+
     /// Storage and Public Paths
     access(all) let CollectionStoragePath: StoragePath
     access(all) let CollectionPublicPath: PublicPath
@@ -89,7 +98,7 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
         access(all) var homeostasisTargets: {String: UFix64}
         
         // Semilla inicial para la criatura (se utiliza para derivar semillas diarias)
-        access(all) let initialSeed: UInt64
+        access(all) var initialSeed: UInt64
 
         init(
             id: UInt64,
@@ -132,6 +141,9 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
             // Generar semilla inicial basada en ID, timestamp y altura del bloque
             // La combinación de estos valores debería dar una semilla única para cada criatura
             self.initialSeed = self.id ^ UInt64(self.birthTimestamp * 100000.0) ^ self.birthBlockHeight
+            
+            // Inicializar contador de cambios de semilla en el diccionario de homeostasis
+            self.homeostasisTargets["_seedChangeCount"] = 0.0
 
             emit NFTMinted(
                 id: self.id, 
@@ -183,6 +195,53 @@ access(all) contract CreatureNFTV2: NonFungibleToken {
         access(all) fun setLastEvolutionProcessed(blockHeight: UInt64, timestamp: UFix64) {
             self.lastEvolutionProcessedBlockHeight = blockHeight
             self.lastEvolutionProcessedTimestamp = timestamp
+        }
+        
+        // Método para cambiar la semilla inicial (máximo 3 veces, cuesta 10 EP)
+        access(all) fun changeInitialSeed(newSeedBase: UInt64): Bool {
+            // Obtener el contador de cambios actual del diccionario de homeostasis
+            let seedChangeCount = self.homeostasisTargets["_seedChangeCount"] ?? 0.0
+            
+            // Verificar si se puede cambiar la semilla
+            if seedChangeCount >= 3.0 {
+                // Ya ha cambiado la semilla 3 veces, no se permite más
+                return false
+            }
+            
+            // Verificar si tiene suficientes puntos de evolución
+            let epCost: UFix64 = 10.0
+            if self.puntosEvolucion < epCost {
+                // No tiene suficientes puntos de evolución
+                return false
+            }
+            
+            // Guardar la semilla anterior para el evento
+            let oldSeed = self.initialSeed
+            
+            // Generar nueva semilla basada en la entrada del usuario y otros factores para evitar duplicación
+            let currentBlock = getCurrentBlock()
+            let newSeed = newSeedBase ^ UInt64(currentBlock.timestamp * 100000.0) ^ currentBlock.height
+            
+            // Actualizar semilla inicial
+            self.initialSeed = newSeed
+            
+            // Incrementar contador de cambios
+            let newChangeCount = seedChangeCount + 1.0
+            self.homeostasisTargets["_seedChangeCount"] = newChangeCount
+            
+            // Deducir puntos de evolución
+            self.puntosEvolucion = self.puntosEvolucion - epCost
+            
+            // Emitir evento
+            emit CreatureNFTV2.InitialSeedChanged(
+                creatureID: self.id,
+                oldSeed: oldSeed,
+                newSeed: newSeed,
+                changeCount: UInt64(newChangeCount),
+                epCost: epCost
+            )
+            
+            return true
         }
 
         // Método para generar semillas diarias basadas en la semilla inicial y el día simulado

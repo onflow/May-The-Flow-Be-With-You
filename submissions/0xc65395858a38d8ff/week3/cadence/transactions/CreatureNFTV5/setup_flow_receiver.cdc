@@ -7,7 +7,7 @@ import "FlowToken"
 transaction {
     prepare(signer: auth(Storage, Capabilities) &Account) {
         // Verificar si ya existe la capacidad pública
-        if signer.capabilities.check<&{FungibleToken.Receiver}>(/public/flowTokenReceiver) {
+        if signer.capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver).borrow() != nil {
             log("La cuenta ya tiene configurada la capacidad para recibir Flow")
             return
         }
@@ -15,7 +15,7 @@ transaction {
         // Verificar que existe la billetera de Flow
         if signer.storage.borrow<auth(Storage) &FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
             // Crear una billetera vacía
-            let vault <- FlowToken.createEmptyVault()
+            let vault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
             signer.storage.save(<-vault, to: /storage/flowTokenVault)
             
             log("Se ha creado una billetera de Flow")

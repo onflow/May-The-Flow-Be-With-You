@@ -4,38 +4,38 @@ import { Box, Button, Container, Flex, Heading, Spacer, useColorMode, useColorMo
 import { FaSun, FaMoon } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import * as fcl from '@onflow/fcl';
-import '@/flow/config'; // FCL Config - Adjusted path if tsconfig paths are set to root
+import '@/flow/config'; // FCL Config
 
 // Cadence code for setup_account transaction
 const SETUP_ACCOUNT_TX = `
-import NonFungibleToken from "0xNonFungibleToken"
-import CreatureNFTV5 from "0xCreatureNFTV5"
+import NonFungibleToken from 0xNonFungibleToken
+import CreatureNFTV6 from 0xCreatureNFTV6
 
-// Esta transacción configura una cuenta para usar CreatureNFTV5
+// Esta transacción configura una cuenta para usar CreatureNFTV6
 // Crea una colección vacía y la guarda en el storage de la cuenta
 // También establece links públicos para que otros puedan depositar criaturas
 
 transaction {
     prepare(signer: auth(Storage, Capabilities) &Account) {
         // Verificar si la colección ya existe
-        if signer.storage.borrow<auth(Storage) &CreatureNFTV5.Collection>(from: CreatureNFTV5.CollectionStoragePath) == nil {
+        if signer.storage.borrow<auth(Storage) &CreatureNFTV6.Collection>(from: CreatureNFTV6.CollectionStoragePath) == nil {
             // Crear una colección vacía
-            let collection <- CreatureNFTV5.createEmptyCollection(nftType: Type<@CreatureNFTV5.NFT>())
+            let collection <- CreatureNFTV6.createEmptyCollection(nftType: Type<@CreatureNFTV6.NFT>())
             
             // Guardar la colección en el storage
-            signer.storage.save(<-collection, to: CreatureNFTV5.CollectionStoragePath)
+            signer.storage.save(<-collection, to: CreatureNFTV6.CollectionStoragePath)
 
             // Crear un link público para la colección
             signer.capabilities.publish(
-                signer.capabilities.storage.issue<&{NonFungibleToken.CollectionPublic, CreatureNFTV5.CollectionPublic}>(
-                    CreatureNFTV5.CollectionStoragePath
+                signer.capabilities.storage.issue<&{NonFungibleToken.CollectionPublic, CreatureNFTV6.CollectionPublic}>(
+                    CreatureNFTV6.CollectionStoragePath
                 ),
-                at: CreatureNFTV5.CollectionPublicPath
+                at: CreatureNFTV6.CollectionPublicPath
             )
             
-            log("Cuenta configurada para usar CreatureNFTV5")
+            log("Cuenta configurada para usar CreatureNFTV6")
         } else {
-            log("La cuenta ya está configurada para usar CreatureNFTV5")
+            log("La cuenta ya está configurada para usar CreatureNFTV6")
         }
     }
 } 
@@ -49,10 +49,25 @@ export default function Header() {
 
   const [user, setUser] = useState<{ addr?: string; loggedIn?: boolean }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isAccountConfigured, setIsAccountConfigured] = useState(false);
 
   useEffect(() => {
     fcl.currentUser.subscribe(setUser);
   }, []);
+
+  // Efecto para verificar el estado de configuración de la cuenta desde localStorage
+  useEffect(() => {
+    if (user.addr) {
+      const configuredStatus = localStorage.getItem(`primordia_account_configured_${user.addr}`);
+      if (configuredStatus === 'true') {
+        setIsAccountConfigured(true);
+      } else {
+        setIsAccountConfigured(false); // Asegurarse de resetear si no está configurada o el usuario cambia
+      }
+    } else {
+      setIsAccountConfigured(false); // Resetear si no hay usuario
+    }
+  }, [user.addr]); // Depende de user.addr para re-evaluar cuando el usuario cambia
 
   const handleConnect = () => {
     fcl.logIn();
@@ -60,9 +75,15 @@ export default function Header() {
 
   const handleDisconnect = () => {
     fcl.unauthenticate();
+    // Opcional: podrías querer limpiar el estado de configuración si se desconecta,
+    // pero normalmente se mantiene por si vuelve a conectar con la misma cuenta.
   };
 
   const handleSetupAccount = async () => {
+    if (!user.addr) {
+      toast({ title: 'Error', description: 'Usuario no conectado.', status: 'error' });
+      return;
+    }
     setIsLoading(true);
     try {
       const transactionId = await fcl.mutate({
@@ -84,12 +105,16 @@ export default function Header() {
       await fcl.tx(transactionId).onceSealed();
       
       toast({
-        title: 'Cuenta Configurada!',
-        description: 'Tu cuenta está lista para CreatureNFTV5.',
+        title: 'Cuenta Configurada',
+        description: 'Tu cuenta está lista para CreatureNFTV6.',
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
+      
+      // Guardar estado en localStorage y actualizar estado local
+      localStorage.setItem(`primordia_account_configured_${user.addr}`, 'true');
+      setIsAccountConfigured(true);
 
     } catch (error: any) {
       console.error("Error en Setup Account TX:", error);
@@ -128,7 +153,7 @@ export default function Header() {
           <Button 
             mr={4} 
             onClick={user.loggedIn ? handleDisconnect : handleConnect}
-            isLoading={isLoading && !user.loggedIn} // Show loading on connect button if auth is in progress
+            isLoading={isLoading && !user.loggedIn} 
           >
             {user.loggedIn ? `Desconectar (${user.addr?.substring(0,4)}...${user.addr?.substring(user.addr.length - 4)})` : 'Conectar Wallet'}
           </Button>
@@ -136,10 +161,11 @@ export default function Header() {
             <Button 
               mr={4} 
               onClick={handleSetupAccount} 
-              isLoading={isLoading} // General loading for setup button
-              colorScheme="secondary"
+              isLoading={isLoading && !isAccountConfigured} // Solo muestra loading si no está configurada y se está configurando
+              colorScheme={isAccountConfigured ? "green" : "secondary"}
+              isDisabled={isAccountConfigured || isLoading} // Deshabilitar si ya está configurada o si alguna operación (conexión/setup) está en curso
             >
-              Configurar Cuenta
+              {isAccountConfigured ? 'Cuenta Configurada' : 'Configurar Cuenta'}
             </Button>
           )}
           <IconButton

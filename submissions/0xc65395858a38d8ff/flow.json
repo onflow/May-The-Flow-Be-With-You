@@ -28,8 +28,8 @@
 				"testnet": "2444e6b4d9327f09"
 			}
 		},
-		"CreatureNFTV5": {
-			"source": "week3/cadence/contracts/CreatureNFTV5.cdc",
+		"CreatureNFTV6": {
+			"source": "week3/cadence/contracts/CreatureNFTV6.cdc",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
 				"testnet": "2444e6b4d9327f09"
@@ -239,7 +239,7 @@
 		"testnet": {
 			"testnet-deployer": [
 				"MyNFT",
-				"CreatureNFTV5"
+				"CreatureNFTV6"
 			]
 		}
 	}

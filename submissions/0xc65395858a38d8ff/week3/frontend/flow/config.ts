@@ -44,15 +44,15 @@ config({
   
   // --- Direcciones de Contratos (ajustar según la red) ---
   // Si usas emulador, estas direcciones probablemente serán diferentes (ej. 0x01, 0x02, etc., o las de tu flow.json)
-  // Para Testnet, si has desplegado CreatureNFTV5 con tu cuenta `testnet-deployer` (0x2444e6b4d9327f09):
-  "0xCreatureNFTV5": "0x2444e6b4d9327f09", // Reemplaza con la dirección real de tu contrato en Testnet/Mainnet
+  // Para Testnet, si has desplegado CreatureNFTV6 con tu cuenta `testnet-deployer` (0x2444e6b4d9327f09):
+  "0xCreatureNFTV6": "0x2444e6b4d9327f09", // Reemplaza con la dirección real de tu contrato en Testnet/Mainnet
 
   // Si usas emulador, asegúrate de que estas coincidan con tu `flow.json`
   // "0xNonFungibleToken": "0xf8d6e0586b0a20c7", // Ejemplo para Emulador
   // "0xMetadataViews": "0xf8d6e0586b0a20c7",    // Ejemplo para Emulador
   // "0xFungibleToken": "0xee82856bf20e2aa6",     // Ejemplo para Emulador
   // "0xFlowToken": "0x0ae53cb6e3f42a79",         // Ejemplo para Emulador
-  // "0xCreatureNFTV5": "0xf8d6e0586b0a20c7", // Ejemplo para Emulador
+  // "0xCreatureNFTV6": "0xf8d6e0586b0a20c7", // Ejemplo para Emulador
 });
 
-console.log("FCL Configured:", config().get("accessNode.api"), config().get("0xCreatureNFTV5")); 
+console.log("FCL Configured:", config().get("accessNode.api"), config().get("0xCreatureNFTV6")); 

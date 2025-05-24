@@ -2,7 +2,7 @@ import "NonFungibleToken"
 import "MetadataViews"
 import "ViewResolver" // Added for explicit conformance if needed by NFT resource
 
-access(all) contract CreatureNFTV5: NonFungibleToken {
+access(all) contract CreatureNFTV6: NonFungibleToken {
 
     // --- Evolution Constants (Inspired by Python Simulation) ---
     // Estas constantes serán inicializadas en la función init()
@@ -299,7 +299,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
             self.puntosEvolucion = self.puntosEvolucion - epCost
             
             // Emitir evento
-            emit CreatureNFTV5.InitialSeedChanged(
+            emit CreatureNFTV6.InitialSeedChanged(
                 creatureID: self.id,
                 oldSeed: oldSeed,
                 newSeed: newSeed,
@@ -399,7 +399,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
                     // Efectividad de homeostasis por step (0.8 a 1.2)
                     let efectividadTimestepHomeo = 0.8 + (UFix64(r3HomeoEfecSeed % 1000) / 999.0) * 0.4
                     
-                    var cambioHomeostasis = diferencia * CreatureNFTV5.TASA_APRENDIZAJE_HOMEOSTASIS_BASE * potencialEvolutivo 
+                    var cambioHomeostasis = diferencia * CreatureNFTV6.TASA_APRENDIZAJE_HOMEOSTASIS_BASE * potencialEvolutivo 
                                         * efectividadTimestepHomeo * dailyHomeostasisBoost
                     
                     // Asegurar que el cambio no invierta el signo si es muy grande
@@ -411,7 +411,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
                 } else {
                     // Evolución Pasiva
                     let randomNormalized_Vis = UFix64(r1PasSeed % 10000) / 9999.0 // Rango [0.0, 1.0]
-                    let magnitude_Vis = CreatureNFTV5.TASA_EVOLUCION_PASIVA_GEN_BASE * potencialEvolutivo * dailyVolatilityFactor
+                    let magnitude_Vis = CreatureNFTV6.TASA_EVOLUCION_PASIVA_GEN_BASE * potencialEvolutivo * dailyVolatilityFactor
                     var changeAmount_Vis: UFix64 = 0.0
 
                     if randomNormalized_Vis < 0.5 {
@@ -422,7 +422,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
                         } else {
                             // Corrected access to optional dictionary
                             var minGeneValue_Vis: UFix64 = 0.0
-                            if let geneRange = CreatureNFTV5.GENES_VISIBLES_RANGES[geneName] {
+                            if let geneRange = CreatureNFTV6.GENES_VISIBLES_RANGES[geneName] {
                                 minGeneValue_Vis = geneRange["min"] ?? 0.0
                             }
                             currentValue = minGeneValue_Vis
@@ -436,7 +436,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
                 }
                 
                 // Aplicar clamp usando los rangos definidos en el contrato
-                self.genesVisibles[geneName] = self.clampValue(currentValue, geneName, CreatureNFTV5.GENES_VISIBLES_RANGES)
+                self.genesVisibles[geneName] = self.clampValue(currentValue, geneName, CreatureNFTV6.GENES_VISIBLES_RANGES)
                 // if isIntegerGene { self.genesVisibles[geneName] = UFix64(Int(self.genesVisibles[geneName]!)) } // Redondeo si fuera entero
             }
         }
@@ -451,7 +451,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
 
             // Pre-calcular normalizaciones de genes visibles relevantes
             var normTamanoBase: UFix64 = 0.5 
-            if let rangoTB = CreatureNFTV5.GENES_VISIBLES_RANGES["tamanoBase"] {
+            if let rangoTB = CreatureNFTV6.GENES_VISIBLES_RANGES["tamanoBase"] {
                 let minTB = rangoTB["min"]!
                 let maxTB = rangoTB["max"]!
                 if (maxTB - minTB) > 0.0 {
@@ -462,7 +462,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
             let tendTamanoNormFactor_signed: Fix64 = (self.UFix64toFix64(normTamanoBase) - 0.5) * 2.0
 
             var normNumApendices: UFix64 = 0.5 
-            if let rangoNA = CreatureNFTV5.GENES_VISIBLES_RANGES["numApendices"] {
+            if let rangoNA = CreatureNFTV6.GENES_VISIBLES_RANGES["numApendices"] {
                 let minNA = rangoNA["min"]!
                 let maxNA = rangoNA["max"]!
                 if (maxNA - minNA) > 0.0 {
@@ -482,11 +482,11 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
 
             for geneNombreOculto in genesCombate {
                 var currentValue = self.genesOcultos[geneNombreOculto]!
-                let minGeneValue = CreatureNFTV5.GENES_OCULTOS_RANGES[geneNombreOculto]!["min"]!
+                let minGeneValue = CreatureNFTV6.GENES_OCULTOS_RANGES[geneNombreOculto]!["min"]!
 
                 // 1. Cambio base aleatorio pasivo
                 let randomNormalized_Hid = UFix64(r1PasSeedStep % 10000) / 9999.0 // Rango [0.0, 1.0]
-                let magnitude_Hid = CreatureNFTV5.TASA_EVOLUCION_PASIVA_GEN_BASE * potencialEvolutivo * dailyVolatilityFactor
+                let magnitude_Hid = CreatureNFTV6.TASA_EVOLUCION_PASIVA_GEN_BASE * potencialEvolutivo * dailyVolatilityFactor
                 var changeAmount_Hid: UFix64 = 0.0
                 
                 if randomNormalized_Hid < 0.5 {
@@ -505,7 +505,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
                 // La asignación de currentValue ya se hizo dentro del if/else
 
                 // 2. Cambio por influencias de genes visibles
-                let factorEvolucionInfluenciaBase = CreatureNFTV5.FACTOR_INFLUENCIA_VISUAL_SOBRE_COMBATE * potencialEvolutivo * dailyVolatilityFactor
+                let factorEvolucionInfluenciaBase = CreatureNFTV6.FACTOR_INFLUENCIA_VISUAL_SOBRE_COMBATE * potencialEvolutivo * dailyVolatilityFactor
 
                 if geneNombreOculto == "puntosSaludMax" {
                     let influenceMagnitude = self.absFix64(tendTamanoNormFactor_signed * 1.0) * factorEvolucionInfluenciaBase
@@ -570,7 +570,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
                     // uShapeFactor conceptualmente -1.0 (extremos) a 1.0 (óptimo)
                     var uShapeInfluenceFactor: UFix64 = 0.0
                     var uShapeIsPositiveInfluence = true
-                    if let rangoNA = CreatureNFTV5.GENES_VISIBLES_RANGES["numApendices"] {
+                    if let rangoNA = CreatureNFTV6.GENES_VISIBLES_RANGES["numApendices"] {
                         let minNA = rangoNA["min"]!; let maxNA = rangoNA["max"]!
                         let optimoApendices = (minNA + maxNA) / 2.0
                         let distMaxDesdeOptimoAp = (maxNA - minNA) / 2.0
@@ -603,7 +603,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
                     }
                 }
                 
-                self.genesOcultos[geneNombreOculto] = self.clampValue(currentValue, geneNombreOculto, CreatureNFTV5.GENES_OCULTOS_RANGES)
+                self.genesOcultos[geneNombreOculto] = self.clampValue(currentValue, geneNombreOculto, CreatureNFTV6.GENES_OCULTOS_RANGES)
             }
         }
 
@@ -668,15 +668,15 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
                         self.id
                     )
                 case Type<MetadataViews.NFTCollectionData>():
-                    return CreatureNFTV5.resolveContractView(resourceType: Type<@CreatureNFTV5.NFT>(), viewType: Type<MetadataViews.NFTCollectionData>())
+                    return CreatureNFTV6.resolveContractView(resourceType: Type<@CreatureNFTV6.NFT>(), viewType: Type<MetadataViews.NFTCollectionData>())
                 case Type<MetadataViews.NFTCollectionDisplay>():
-                    return CreatureNFTV5.resolveContractView(resourceType: Type<@CreatureNFTV5.NFT>(), viewType: Type<MetadataViews.NFTCollectionDisplay>())
+                    return CreatureNFTV6.resolveContractView(resourceType: Type<@CreatureNFTV6.NFT>(), viewType: Type<MetadataViews.NFTCollectionDisplay>())
             }
             return nil
         }
 
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <-CreatureNFTV5.createEmptyCollection(nftType: Type<@CreatureNFTV5.NFT>())
+            return <-CreatureNFTV6.createEmptyCollection(nftType: Type<@CreatureNFTV6.NFT>())
         }
 
         // --- Funciones de reproducción ---
@@ -731,12 +731,12 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
 
             // 1. Mejorar Potencial Evolutivo del Hijo
             let parentPotencial = self.genesOcultos["potencialEvolutivo"] ?? 1.0 
-            let childPotencialBase = parentPotencial * CreatureNFTV5.MITOSIS_POTENCIAL_BASE_INHERITANCE_FACTOR
-            let potencialEpBonus = epCost * CreatureNFTV5.MITOSIS_POTENCIAL_EP_BONUS_FACTOR
+            let childPotencialBase = parentPotencial * CreatureNFTV6.MITOSIS_POTENCIAL_BASE_INHERITANCE_FACTOR
+            let potencialEpBonus = epCost * CreatureNFTV6.MITOSIS_POTENCIAL_EP_BONUS_FACTOR
             var finalChildPotencial = childPotencialBase + potencialEpBonus
             
             // Clamp potencial evolutivo del hijo
-            if let potencialRanges = CreatureNFTV5.GENES_OCULTOS_RANGES["potencialEvolutivo"] {
+            if let potencialRanges = CreatureNFTV6.GENES_OCULTOS_RANGES["potencialEvolutivo"] {
                 finalChildPotencial = self.max(potencialRanges["min"]!, self.min(potencialRanges["max"]!, finalChildPotencial))
             } else { // Fallback clamp si no hay rango (improbable para potencialEvolutivo)
                 finalChildPotencial = self.max(0.5, self.min(2.0, finalChildPotencial)) // Ejemplo de fallback
@@ -745,8 +745,8 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
 
             // 2. Mejorar Esperanza de Vida del Hijo
             // Asegurarse que self.lifespanTotalSimulatedDays es positivo
-            let baseLifespanForChild = self.lifespanTotalSimulatedDays * CreatureNFTV5.MITOSIS_LIFESPAN_BASE_FACTOR
-            let lifespanEpBonus = epCost * CreatureNFTV5.MITOSIS_LIFESPAN_EP_BONUS_FACTOR
+            let baseLifespanForChild = self.lifespanTotalSimulatedDays * CreatureNFTV6.MITOSIS_LIFESPAN_BASE_FACTOR
+            let lifespanEpBonus = epCost * CreatureNFTV6.MITOSIS_LIFESPAN_EP_BONUS_FACTOR
             var childLifespan = baseLifespanForChild + lifespanEpBonus
 
             // Opcional: Clamp para la esperanza de vida del hijo, por ejemplo, a un máximo razonable
@@ -757,8 +757,8 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
             // --- END: Mejoras del hijo basadas en epCost ---
             
             // Obtener siguiente ID desde el contrato
-            CreatureNFTV5.totalSupply = CreatureNFTV5.totalSupply + 1
-            let newID = CreatureNFTV5.totalSupply
+            CreatureNFTV6.totalSupply = CreatureNFTV6.totalSupply + 1
+            let newID = CreatureNFTV6.totalSupply
             
             // Crear nueva criatura con vida reducida (mitad)
             let newCreature <- create NFT(
@@ -812,7 +812,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
     access(all) resource interface CollectionPublic {
         access(all) view fun getIDs(): [UInt64]
         access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}?
-        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV5.NFT?
+        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV6.NFT?
         access(all) view fun getActiveCreatureIDs(): [UInt64]
         access(all) view fun getActiveCreatureCount(): UInt64
         access(all) fun attemptSexualReproduction(): @NFT?
@@ -852,12 +852,12 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
 
         /// Adds an NFT to the collections dictionary
         access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
-            let token <- token as! @CreatureNFTV5.NFT
+            let token <- token as! @CreatureNFTV6.NFT
             let id: UInt64 = token.id
             
             // Verificar si está viva y gestionar límite
             if token.estaViva {
-                if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV5.MAX_ACTIVE_CREATURES {
+                if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV6.MAX_ACTIVE_CREATURES {
                     panic("Límite máximo de criaturas vivas alcanzado (5). No se puede depositar más criaturas vivas.")
                 }
                 
@@ -890,19 +890,19 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
         }
 
         /// Gets a reference to a specific NFT type in the collection (read-only)
-        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV5.NFT? {
+        access(all) view fun borrowCreatureNFT(id: UInt64): &CreatureNFTV6.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
-                return ref as! &CreatureNFTV5.NFT
+                return ref as! &CreatureNFTV6.NFT
             }
             return nil
         }
         
         /// Gets an authorized reference to a specific NFT that can be modified
-        access(all) fun borrowCreatureNFTForUpdate(id: UInt64): auth(Mutate, Insert, Remove) &CreatureNFTV5.NFT? {
+        access(all) fun borrowCreatureNFTForUpdate(id: UInt64): auth(Mutate, Insert, Remove) &CreatureNFTV6.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as auth(Mutate, Insert, Remove) &{NonFungibleToken.NFT}?
-                return ref as! auth(Mutate, Insert, Remove) &CreatureNFTV5.NFT
+                return ref as! auth(Mutate, Insert, Remove) &CreatureNFTV6.NFT
             }
             return nil
         }
@@ -910,18 +910,18 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
         /// Returns supported NFT types the collection can receive
         access(all) view fun getSupportedNFTTypes(): {Type: Bool} {
             let supportedTypes: {Type: Bool} = {}
-            supportedTypes[Type<@CreatureNFTV5.NFT>()] = true
+            supportedTypes[Type<@CreatureNFTV6.NFT>()] = true
             return supportedTypes
         }
 
         /// Returns whether or not the given type is accepted by the collection
         access(all) view fun isSupportedNFTType(type: Type): Bool {
-            return type == Type<@CreatureNFTV5.NFT>()
+            return type == Type<@CreatureNFTV6.NFT>()
         }
 
         /// Create an empty NFT Collection
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <-CreatureNFTV5.createEmptyCollection(nftType: Type<@CreatureNFTV5.NFT>())
+            return <-CreatureNFTV6.createEmptyCollection(nftType: Type<@CreatureNFTV6.NFT>())
         }
         
         /// Obtiene la lista de IDs de criaturas vivas en la colección
@@ -956,7 +956,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
             
             // Si no está en la lista y hay espacio, anadirla
             if !found {
-                if UInt64(self.activeCreatureIDs.length) < CreatureNFTV5.MAX_ACTIVE_CREATURES {
+                if UInt64(self.activeCreatureIDs.length) < CreatureNFTV6.MAX_ACTIVE_CREATURES {
                     self.activeCreatureIDs.append(creatureID)
                     log("Criatura ".concat(creatureID.toString()).concat(" marcada como viva en la colección"))
                 } else {
@@ -988,7 +988,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
             }
             
             // Verificar que no exceda el límite máximo
-            if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV5.MAX_ACTIVE_CREATURES {
+            if UInt64(self.activeCreatureIDs.length) >= CreatureNFTV6.MAX_ACTIVE_CREATURES {
                 return nil
             }
             
@@ -1085,8 +1085,8 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
             let baseLifespan = childGenesOcultos["max_lifespan_dias_base"]!
             
             // Crear nueva criatura con vida completa
-            CreatureNFTV5.totalSupply = CreatureNFTV5.totalSupply + 1
-            let newID = CreatureNFTV5.totalSupply
+            CreatureNFTV6.totalSupply = CreatureNFTV6.totalSupply + 1
+            let newID = CreatureNFTV6.totalSupply
             
             let newCreature <- create NFT(
                 id: newID,
@@ -1130,8 +1130,8 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
             initialEstaViva: Bool,
             initialHomeostasisTargets: {String: UFix64}
         ): @NFT {
-            CreatureNFTV5.totalSupply = CreatureNFTV5.totalSupply + 1
-            let newID = CreatureNFTV5.totalSupply
+            CreatureNFTV6.totalSupply = CreatureNFTV6.totalSupply + 1
+            let newID = CreatureNFTV6.totalSupply
             
             return <-create NFT(
                 id: newID,
@@ -1170,10 +1170,10 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
                 return MetadataViews.NFTCollectionData(
                     storagePath: self.CollectionStoragePath,
                     publicPath: self.CollectionPublicPath,
-                    publicCollection: Type<&CreatureNFTV5.Collection>(),
-                    publicLinkedType: Type<&CreatureNFTV5.Collection>(),
+                    publicCollection: Type<&CreatureNFTV6.Collection>(),
+                    publicLinkedType: Type<&CreatureNFTV6.Collection>(),
                     createEmptyCollectionFunction: (fun(): @{NonFungibleToken.Collection} {
-                        return <-CreatureNFTV5.createEmptyCollection(nftType: Type<@CreatureNFTV5.NFT>())
+                        return <-CreatureNFTV6.createEmptyCollection(nftType: Type<@CreatureNFTV6.NFT>())
                     })
                 )
             case Type<MetadataViews.NFTCollectionDisplay>():
@@ -1198,21 +1198,21 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
     }
 
     init() {
-        log("CreatureNFTV5: init() STARTED")
+        log("CreatureNFTV6: init() STARTED")
 
         // Initialize the total supply
         self.totalSupply = 0
-        log("CreatureNFTV5: totalSupply initialized")
+        log("CreatureNFTV6: totalSupply initialized")
         
         // Inicializar el límite de criaturas vivas por cuenta
         self.MAX_ACTIVE_CREATURES = 5
-        log("CreatureNFTV5: MAX_ACTIVE_CREATURES initialized")
+        log("CreatureNFTV6: MAX_ACTIVE_CREATURES initialized")
 
         // Set the named paths
-        self.CollectionStoragePath = /storage/CreatureNFTV5Collection
-        self.CollectionPublicPath = /public/CreatureNFTV5Collection
-        self.MinterStoragePath = /storage/CreatureNFTV5Minter
-        log("CreatureNFTV5: Paths initialized")
+        self.CollectionStoragePath = /storage/CreatureNFTV6Collection
+        self.CollectionPublicPath = /public/CreatureNFTV6Collection
+        self.MinterStoragePath = /storage/CreatureNFTV6Minter
+        log("CreatureNFTV6: Paths initialized")
 
         // --- START Initialize Evolution Constants & Gene Ranges ---
         self.TASA_APRENDIZAJE_HOMEOSTASIS_BASE = 0.05
@@ -1239,7 +1239,7 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
         ocultosRanges["defensaBase"] = {"min": 5.0, "max": 25.0}
         ocultosRanges["agilidadCombate"] = {"min": 0.5, "max": 2.0}
         self.GENES_OCULTOS_RANGES = ocultosRanges
-        log("CreatureNFTV5: Constants and Ranges initialized")
+        log("CreatureNFTV6: Constants and Ranges initialized")
         // --- END Initialize Evolution Constants & Gene Ranges ---
 
         // --- START Initialize Mitosis Constants ---
@@ -1248,26 +1248,26 @@ access(all) contract CreatureNFTV5: NonFungibleToken {
         self.MITOSIS_POTENCIAL_BASE_INHERITANCE_FACTOR = 0.75 
         self.MITOSIS_POTENCIAL_EP_BONUS_FACTOR = 0.001 // Ej: 100 EP = +0.1 al potencial
         // --- END Initialize Mitosis Constants ---
-        log("CreatureNFTV5: Mitosis constants initialized") // Added log for this section too
+        log("CreatureNFTV6: Mitosis constants initialized") // Added log for this section too
 
         // Create and save the NFTMinter resource
-        log("CreatureNFTV5: Attempting to create and save NFTMinter")
+        log("CreatureNFTV6: Attempting to create and save NFTMinter")
         let minter <- create NFTMinter()
         self.account.storage.save(<-minter, to: self.MinterStoragePath)
-        log("CreatureNFTV5: NFTMinter saved to storage")
+        log("CreatureNFTV6: NFTMinter saved to storage")
 
         // Attempt to unlink first, in case of a bad existing capability (for debugging)
-        log("CreatureNFTV5: Attempting to unpublish /public/CreatureNFTV5Minter")
-        self.account.capabilities.unpublish(/public/CreatureNFTV5Minter)
-        log("Attempted to unpublish /public/CreatureNFTV5Minter (if it existed)")
+        log("CreatureNFTV6: Attempting to unpublish /public/CreatureNFTV6Minter")
+        self.account.capabilities.unpublish(/public/CreatureNFTV6Minter)
+        log("Attempted to unpublish /public/CreatureNFTV6Minter (if it existed)")
 
         // Publish a capability to the NFTMinter for the contract owner
-        log("CreatureNFTV5: Attempting to publish Minter capability")
-        let minterCapability = self.account.capabilities.storage.issue<&CreatureNFTV5.NFTMinter>(self.MinterStoragePath)
-        self.account.capabilities.publish(minterCapability, at: /public/CreatureNFTV5Minter)
-        log("Minter capability published to /public/CreatureNFTV5Minter")
+        log("CreatureNFTV6: Attempting to publish Minter capability")
+        let minterCapability = self.account.capabilities.storage.issue<&CreatureNFTV6.NFTMinter>(self.MinterStoragePath)
+        self.account.capabilities.publish(minterCapability, at: /public/CreatureNFTV6Minter)
+        log("Minter capability published to /public/CreatureNFTV6Minter")
 
         emit ContractInitialized()
-        log("CreatureNFTV5: init() COMPLETED")
+        log("CreatureNFTV6: init() COMPLETED")
     }
 } 

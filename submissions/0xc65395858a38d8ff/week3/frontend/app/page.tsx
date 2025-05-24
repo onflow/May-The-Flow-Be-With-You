@@ -5,6 +5,8 @@ import NextLink from 'next/link';
 import Header from '@/components/Header'; 
 import { FiLogIn, FiZap, FiEye, FiShield, FiHexagon } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import * as fcl from '@onflow/fcl';
 
 // Motion-wrapped Chakra components
 const MotionBox = motion(Box);
@@ -62,6 +64,26 @@ export default function HomePage() {
   const borderColor = useColorModeValue('neutral.300', 'neutral.700');
   const cardBorderColor = useColorModeValue('neutral.200', 'neutral.600');
 
+  const [user, setUser] = useState<{ addr?: string; loggedIn?: boolean }>({});
+  const [isAccountConfigured, setIsAccountConfigured] = useState(false);
+
+  useEffect(() => {
+    fcl.currentUser.subscribe(setUser);
+  }, []);
+
+  useEffect(() => {
+    if (user.addr) {
+      const configuredStatus = localStorage.getItem(`primordia_account_configured_${user.addr}`);
+      if (configuredStatus === 'true') {
+        setIsAccountConfigured(true);
+      } else {
+        setIsAccountConfigured(false);
+      }
+    } else {
+      setIsAccountConfigured(false);
+    }
+  }, [user.addr]);
+
   const cardHover = {
     hover: {
       y: -6,
@@ -81,6 +103,8 @@ export default function HomePage() {
   
   const backgroundImage = "/assets/primordia-nebula-bg.png";
   const sigilImage = "/assets/primordia-sigil.png";
+
+  const canEnterEnvironment = user.loggedIn && isAccountConfigured;
 
   return (
     <MotionBox 
@@ -201,26 +225,29 @@ export default function HomePage() {
 
           {/* CTA Button */}
           <MotionVStack variants={sectionVariants} custom={5} pt={{base:12, md:20}}>
-            <MotionButton 
-              size="lg"
-              px={10}
-              py={8}
-              fontSize="xl"
-              colorScheme="primary"
-              variant="solid"
-              isDisabled 
-              _hover={!true ? { // Using !true as it's always disabled for now
-                bg: useColorModeValue('primary.600', 'primary.500'), 
-                shadow: 'xl',
-                transform: 'translateY(-3px) scale(1.03)'
-              } : {}}
-              boxShadow="lg"
-              leftIcon={<FiEye/>}
-              animate={ true ? { scale: [1, 1.02, 1], transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }} : {} } // Using true for the pulse animation
-              whileTap={{ scale: 0.95 }}
-            >
-              Enter the Environment (Coming Soon)
-            </MotionButton>
+            <NextLink href={canEnterEnvironment ? "/environment" : "#"} passHref legacyBehavior>
+              <MotionButton 
+                as="a"
+                size="lg"
+                px={10}
+                py={8}
+                fontSize="xl"
+                colorScheme="primary"
+                variant="solid"
+                isDisabled={!canEnterEnvironment} 
+                _hover={canEnterEnvironment ? { 
+                  bg: useColorModeValue('primary.600', 'primary.500'), 
+                  shadow: 'xl',
+                  transform: 'translateY(-3px) scale(1.03)'
+                } : {cursor: 'not-allowed'}}
+                boxShadow="lg"
+                leftIcon={<FiEye/>}
+                animate={!canEnterEnvironment ? { scale: [1, 1.02, 1], transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }} : {} }
+                whileTap={canEnterEnvironment ? { scale: 0.95 } : {}}
+              >
+                {canEnterEnvironment ? "Enter the Environment" : "Connect & Setup Account to Enter"}
+              </MotionButton>
+            </NextLink>
           </MotionVStack>
 
         </Container>

@@ -4,14 +4,14 @@
 			"source": "week2/ElementalStrikers/cadence/contracts/ElementalStrikers.cdc",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
-				"testnet": "0xbeb2f48c3293e514"
+				"testnet": "2444e6b4d9327f09"
 			}
 		},
 		"EvolvingCreatures": {
 			"source": "week3/cadence/contracts/EvolvingCreatures.cdc",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
-				"testnet": "0xbeb2f48c3293e514"
+				"testnet": "2444e6b4d9327f09"
 			}
 		}
 	},
@@ -200,11 +200,12 @@
 				"location": "emulator-account.pkey"
 			}
 		},
-		"player2-account": {
-			"address": "0xad7388f34dd6bdef"
-		},
 		"testnet-deployer": {
-			"address": "0xbeb2f48c3293e514"
+			"address": "2444e6b4d9327f09",
+			"key": {
+				"type": "file",
+				"location": "testnet-deployer.pkey"
+			}
 		}
 	},
 	"deployments": {
@@ -216,7 +217,6 @@
 		},
 		"testnet": {
 			"testnet-deployer": [
-				"ElementalStrikers",
 				"EvolvingCreatures"
 			]
 		}

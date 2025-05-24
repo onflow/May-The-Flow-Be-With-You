@@ -1,4 +1,4 @@
-import EvolvingCreatures from 0xbeb2f48c3293e514 
+import EvolvingCreatures from 0x2444e6b4d9327f09 // Deployed EvolvingCreatures contract address 
 import RandomBeaconHistory from 0x8c5303eaa26202d6
 
 // This transaction processes the evolution update for a creature.

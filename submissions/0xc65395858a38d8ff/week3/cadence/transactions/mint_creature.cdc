@@ -1,5 +1,5 @@
 import NonFungibleToken from 0x631e88ae7f1d7c20
-import EvolvingCreatures from 0xbeb2f48c3293e514 // Assuming EvolvingCreatures will be deployed here
+import EvolvingCreatures from 0x2444e6b4d9327f09 // Deployed EvolvingCreatures contract address
 
 // This transaction mints a new EvolvingCreature NFT and deposits it into a recipient's Collection.
 // It assumes the signer of the transaction has minting capabilities or that the
@@ -21,12 +21,15 @@ transaction(
     let recipientCollectionRef: &{NonFungibleToken.Receiver}
 
     prepare(signer: auth(BorrowValue) &Account) {
+        // Define public path
+        let publicPath: PublicPath = /public/EvolvingCreaturesCollectionPublicV2
+
         // Get the recipient's public account object
         let recipient = getAccount(recipientAddress)
 
         // Borrow a reference to the recipient's NFT Collection receiver capability
         self.recipientCollectionRef = recipient.capabilities.borrow<&{NonFungibleToken.Receiver}>(
-            EvolvingCreatures.CollectionPublicPath
+            publicPath
         ) ?? panic("Could not borrow receiver reference to the recipient's Collection")
     }
 

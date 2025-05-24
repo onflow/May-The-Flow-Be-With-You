@@ -1,4 +1,4 @@
-import EvolvingCreatures from 0xbeb2f48c3293e514 // Assuming EvolvingCreatures will be deployed here
+import EvolvingCreatures from 0x2444e6b4d9327f09 // Deployed EvolvingCreatures contract address
 
 // This transaction allows a creature owner to set a homeostasis target for a specific gene.
 

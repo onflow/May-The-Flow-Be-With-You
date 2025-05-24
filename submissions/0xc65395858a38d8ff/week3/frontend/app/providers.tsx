@@ -15,7 +15,6 @@ const theme = extendTheme({
   styles: {
     global: (props: any) => ({
       body: {
-        fontFamily: 'body',
         color: mode('gray.800', 'whiteAlpha.900')(props),
         bg: mode('gray.50', 'gray.800')(props),
         lineHeight: 'base',
@@ -92,8 +91,8 @@ const theme = extendTheme({
     }
   },
   fonts: {
-    heading: `var(--font-inter, 'Helvetica Neue', sans-serif)`,
-    body: `var(--font-inter, 'Roboto', sans-serif)`,
+    heading: `var(--font-exo2), sans-serif`,
+    body: `var(--font-roboto), sans-serif`,
   },
   components: {
     Button: {

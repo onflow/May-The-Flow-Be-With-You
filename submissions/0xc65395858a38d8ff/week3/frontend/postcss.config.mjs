@@ -1,7 +1,7 @@
 /** @type {import('postcss-load-config').Config} */
 const config = {
   plugins: {
-    tailwindcss: {},
+    // tailwindcss: {}, // Removed as we are primarily using Chakra UI
     autoprefixer: {},
   },
 };

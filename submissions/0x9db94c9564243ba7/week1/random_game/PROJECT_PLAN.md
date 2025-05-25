@@ -35,6 +35,7 @@ A simple dice game built with Phaser 3 and integrated with Flow blockchain for t
 - [x] Add score display
 - [ ] Create game instructions
 - [ ] Implement game over screen
+- [ ] Develop responsive web layout to house the game (using v0.dev for cyberpunk-themed UI)
 
 ### Phase 3: Flow Blockchain Integration (2-3 days)
 #### Smart Contract
@@ -70,13 +71,13 @@ A simple dice game built with Phaser 3 and integrated with Flow blockchain for t
 
 ### Phase 5: Deployment (1-2 days)
 #### Next.js Setup
-- [ ] Configure Next.js build settings
+- [x] Configure Next.js build settings
 - [ ] Set up environment variables
-- [ ] Optimize assets for production
-- [ ] Configure static file serving
+- [x] Optimize assets for production
+- [x] Configure static file serving
 
 #### Deployment
-- [ ] Set up deployment pipeline
+- [x] Set up deployment pipeline for Vercel
 - [ ] Configure domain settings
 - [ ] Set up SSL certificates
 - [ ] Implement CI/CD workflow
@@ -86,15 +87,28 @@ A simple dice game built with Phaser 3 and integrated with Flow blockchain for t
 - [x] Add animations and transitions
 - [ ] Implement sound effects
 - [x] Add visual feedback
-- [ ] Optimize performance
+- [x] Optimize performance
 
 #### Testing
 - [x] Test game mechanics
 - [x] Test basic Flow integration
 - [ ] Test blockchain integration
 - [ ] Test wallet integration
-- [ ] Cross-browser testing
-- [ ] Mobile responsiveness
+- [x] Cross-browser testing
+- [x] Mobile responsiveness
+
+### Phase 7: Responsive Design and Layout (1-2 days)
+#### Mobile Optimization
+- [x] Implement responsive layout for mobile devices
+- [x] Add dynamic scaling using Phaser's Scale.FIT mode
+- [x] Create mobile-friendly UI with appropriate button sizes
+- [x] Add proper viewport meta tags for mobile web experience
+
+#### Layout Structure
+- [x] Design flexible layout with sidebar and game area
+- [x] Create responsive CSS for different screen sizes
+- [x] Implement proper game positioning at the top of the viewport
+- [x] Add media queries for adaptive layout on different devices
 
 ## Technical Implementation Details
 
@@ -124,6 +138,8 @@ class DiceGameScene extends Phaser.Scene {
     }
 }
 ```
+
+Note: The game is configured for a 1024x768 resolution, optimized for both desktop and mobile viewing. The layout is designed to be responsive while maintaining the cyberpunk aesthetic.
 
 ### Flow Integration
 ```typescript
@@ -165,6 +181,24 @@ export const WalletProvider: React.FC = ({ children }) => {
   );
 };
 ```
+
+### Responsive Design (New)
+The responsive design implementation uses Phaser's Scale.FIT mode to automatically scale the game canvas to fit different screen sizes while maintaining aspect ratio. Key properties include horizontal centering and size constraints for various devices.
+
+**Key Files:**
+- `src/game/main.ts` - Contains Phaser game configuration with scale settings
+- `src/pages/index.tsx` - Contains viewport meta tags for mobile optimization
+- `src/game/scenes/DiceGameScene.ts` - Implements responsive element positioning
+- `src/game/scenes/MainMenu.ts` - Handles responsive UI layout
+
+### Layout Structure (New)
+The layout uses a flexible CSS design with a sidebar for controls and a main game area. On desktop, these are arranged horizontally, while on mobile they stack vertically with the game on top. Media queries handle responsive adjustments based on screen size.
+
+**Key Files:**
+- `src/styles/globals.css` - Contains flex layout and media queries
+- `src/App.tsx` - Defines the main application structure with sidebar
+- `src/PhaserGame.tsx` - Implements the game container wrapper
+- `src/styles/Home.module.css` - Styles for the main page layout
 
 ## Project Structure
 ```
@@ -225,4 +259,8 @@ src/
 - Added visual effects (rotation and bounce) during dice rolling
 - Successfully integrated Flow with React components
 - Set up Flow query integration with VRF for random numbers
-- Next steps: Implement wallet integration and deploy to Next.js 
+- Implemented responsive layout for both mobile and desktop devices
+- Added dynamic game scaling with proper positioning
+- Set up Vercel deployment configuration
+- Created flexible sidebar layout that adapts to different screen sizes
+- Next steps: Implement wallet integration and finalize deployment 

@@ -87,11 +87,13 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(function PhaserGame
     });
 
     return (
-        <>
-            <div id="game-container"></div>
-            {isDiceGame && currentScene && (
-                <DiceGame scene={currentScene} />
-            )}
-        </>
+        <div className="game-wrapper">
+            <div className="game-container-wrapper">
+                <div id="game-container"></div>
+                {isDiceGame && currentScene && (
+                    <DiceGame scene={currentScene} />
+                )}
+            </div>
+        </div>
     );
 });

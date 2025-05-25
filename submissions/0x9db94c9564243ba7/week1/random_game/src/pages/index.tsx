@@ -11,9 +11,12 @@ export default function Home() {
     return (
         <>
             <Head>
-                <title>Phaser Nextjs Template</title>
-                <meta name="description" content="A Phaser 3 Next.js project template that demonstrates Next.js with React communication and uses Vite for bundling." />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <title>Flow Dice Game</title>
+                <meta name="description" content="A dice game built with Phaser 3 and integrated with Flow blockchain." />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+                <meta name="theme-color" content="#000000" />
+                <meta name="apple-mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
                 <link rel="icon" href="/favicon.png" />
             </Head>
             <main className={`${styles.main} ${inter.className}`}>

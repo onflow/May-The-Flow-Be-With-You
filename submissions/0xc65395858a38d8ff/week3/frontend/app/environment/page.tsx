@@ -190,8 +190,8 @@ transaction {
 
         self.genesVisibles = {
             "colorR": UFix64( (timestampInt + blockHeightInt) % 256) / 255.0,
-            "colorG": UFix64( ( (timestampInt / 2) + (blockHeightInt * 2) ) % 256) / 255.0,
-            "colorB": UFix64( ( (timestampInt * 2) + (blockHeightInt / 2) ) % 256) / 255.0,
+            "colorG": UFix64( ( (timestampInt % 128) * 2 + (blockHeightInt % 128) ) % 256) / 255.0,
+            "colorB": UFix64( ( (blockHeightInt % 128) * 2 + (timestampInt % 128) ) % 256) / 255.0,
             "tamanoBase": 0.8 + (UFix64( (blockHeightInt + timestampInt) % 1701 ) / 1000.0), // 0.8 to 2.5 (inclusive of 0.8, exclusive of 2.501)
             "formaPrincipal": 1.0 + UFix64( (timestampInt + blockHeightInt + 77) % 3), // 1.0, 2.0, or 3.0
             "numApendices": UFix64( (blockHeightInt + timestampInt + 123) % 9), // 0 to 8

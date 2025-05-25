@@ -1,6 +1,6 @@
 # Flow Defi Spring - Week 2 Submission  
-**Date:** [18 May 2025]  
-**Theme:** Actually Fun Games  
+**Date:** [25 May 2025]  
+**Theme:** Defi 
 
 ## Overview  
 A **decentralized Defi Vault - User Create Pools, Admin Add reward users for delegating their flow token to the pool** built on Flow EVM ., powered by Flow’s secure smart contracts. Designed to be **fun and interactive**.  

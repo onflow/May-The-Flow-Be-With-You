@@ -19,11 +19,11 @@ A **decentralized Defi Vault - User Create Pools, Admin Add reward users for del
 
 ### 1. Clone the Repository  
 ```bash
-git clone https://github.com/Josh0007-sunday/FlowThriviaGame.git
+https://github.com/Josh0007-sunday/flow-defi-spring.git
 ```
 ### 2. Change Redirectory  
 ```bash
-cd FlowThriviaGame
+cd flow-defi-spring
 ```
 ### 3. Install Package  
 ```bash

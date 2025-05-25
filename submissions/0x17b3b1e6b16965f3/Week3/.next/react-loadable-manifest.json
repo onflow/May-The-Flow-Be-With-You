@@ -1,0 +1,28 @@
+{
+  "../../node_modules/@onflow/fcl-wc/dist/index.module.mjs -> @walletconnect/modal": {
+    "id": "../../node_modules/@onflow/fcl-wc/dist/index.module.mjs -> @walletconnect/modal",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_walletconnect_modal_dist_index_js.js"
+    ]
+  },
+  "../../node_modules/@walletconnect/modal/dist/index.js -> @walletconnect/modal-ui": {
+    "id": "../../node_modules/@walletconnect/modal/dist/index.js -> @walletconnect/modal-ui",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_walletconnect_modal-ui_dist_index_js.js"
+    ]
+  },
+  "../../node_modules/viem/_esm/actions/public/call.js -> ../../utils/ccip.js": {
+    "id": "../../node_modules/viem/_esm/actions/public/call.js -> ../../utils/ccip.js",
+    "files": []
+  },
+  "../../node_modules/viem/_esm/utils/rpc/webSocket.js -> isows": {
+    "id": "../../node_modules/viem/_esm/utils/rpc/webSocket.js -> isows",
+    "files": []
+  },
+  "../../node_modules/viem/_esm/utils/signature/recoverPublicKey.js -> @noble/curves/secp256k1": {
+    "id": "../../node_modules/viem/_esm/utils/signature/recoverPublicKey.js -> @noble/curves/secp256k1",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_viem_node_modules_noble_curves_esm_secp256k1_js.js"
+    ]
+  }
+}

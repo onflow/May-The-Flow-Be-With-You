@@ -7,7 +7,7 @@ This repository documents my progress in the **May the Flow Be With You** coding
 
 ---
 
-## 📅 Week 1 — WheelOfFortune🎲
+## 📅 Week 1 — WheelOfFortune 🎲
 
 **Theme:** The Randomness Revolution
 

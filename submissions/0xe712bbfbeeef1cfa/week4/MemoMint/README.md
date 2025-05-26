@@ -12,16 +12,71 @@ MemoMint is a reflective journaling dApp that transforms meaningful conversation
 
 ## 📦 Prerequisites
 
-- Python 3.9+ (for backend)
-- Node.js 14+ and npm (for frontend)
+- Node.js 14+ and npm
 - Flow CLI for contract deployment and minting
+- OpenAI API key
 
 ## 🚀 Getting Started
 
-### Backend Setup (FastAPI)
+1. Clone the repository:
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows use `venv\\Scripts\\activate`
-pip install -r requirements.txt
-uvicorn main:app --reload
+git clone <repository-url>
+cd MemoMint
+```
+
+2. Install dependencies:
+```bash
+npm run install:all
+```
+
+3. Set up environment variables:
+```bash
+# Backend (.env in src/backend)
+PORT=3001
+OPENAI_API_KEY=your_openai_api_key_here
+FLOW_ACCESS_NODE=https://access-testnet.onflow.org
+NON_FUNGIBLE_TOKEN_ADDRESS=0x631e88ae7f1d7c20
+MEMO_MINT_ADDRESS=your_deployed_contract_address
+
+# Frontend (.env in src/frontend)
+REACT_APP_FLOW_ACCESS_NODE=https://access-testnet.onflow.org
+REACT_APP_NON_FUNGIBLE_TOKEN_ADDRESS=0x631e88ae7f1d7c20
+REACT_APP_MEMO_MINT_ADDRESS=your_deployed_contract_address
+```
+
+4. Deploy the smart contract:
+```bash
+cd src/cadence
+flow deploy
+```
+
+5. Start the development servers:
+```bash
+# Start both frontend and backend
+npm run dev
+
+# Or start them separately
+npm run start:backend
+npm run start:frontend
+```
+
+The frontend will be available at `http://localhost:3000` and the backend at `http://localhost:3001`.
+
+## 📝 Usage
+
+1. Connect your Flow wallet using the "Connect Wallet" button
+2. Start a conversation with the AI assistant
+3. When you're done, click "Generate Summary"
+4. Review the summary and click "Mint as NFT" to create your NFT
+
+## 🛠️ Tech Stack
+
+- Frontend: React, TypeScript, TailwindCSS
+- Backend: Node.js, Express
+- AI: OpenAI API
+- Blockchain: Flow
+- Smart Contracts: Cadence
+
+## 📄 License
+
+MIT

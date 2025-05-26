@@ -15,7 +15,7 @@ The goal of this project is to explore and leverage the **Flow blockchain's capa
 
 - **Week 1** –  
 - **Week 2** – Actually Fun Games | Thrivia Games ✅  
-- **Week 3** – (To be updated)  
+- **Week 3** – Defi | Flow Defi Spring  
 - **Week 4** – (To be updated)  
 
 ## Weekly Progress  
@@ -23,6 +23,6 @@ Check each weekly folder for daily submissions and updates:
 
 📂 **Week 1**:   
 📂 **Week 2**: Actually Fun Games  
-📂 **Week 3**: (Upcoming)  
+📂 **Week 3**: Defi
 📂 **Week 4**: (Upcoming)  
  

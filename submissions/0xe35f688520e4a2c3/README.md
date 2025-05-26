@@ -30,9 +30,15 @@ _(Project details coming soon)_
 
 ---
 
-## 📅 Week 3 — _TBD_
+## 📅 Week 3 — Generative Art and Worlds (May 18-24)
 
-_(Coming soon)_
+### Bag [🔗 View on Flow Testnet](https://contractbrowser.com/A.36e0dc989fe11d54.Bag)
+
+**Bag** is a fully on-chain NFT on Flow, crafted with Flow VRF randomness. Each Bag holds 7 unique traits, forming a one-of-a-kind warrior identity. But it’s more than art — all mint proceeds are staked, and the yield goes directly to holders. Bag is identity, utility, and rewards — all packed into a single Bag.
+
+**Collection Preview** - [here](https://testnet.flowview.app/account/0x6d9e6334ddad7844/collection/GullyBagCollection)
+
+**Contract Address (Testnet):** `0x36e0dc989fe11d54`
 
 ---
 

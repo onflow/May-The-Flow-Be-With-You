@@ -12,9 +12,12 @@ import { FaUser, FaRobot, FaMagic, FaSignOutAlt, FaSignInAlt } from 'react-icons
 import './App.css';
 
 config()
-  .put('accessNode.api', process.env.REACT_APP_FLOW_ACCESS_NODE)
+  .put('accessNode.api', process.env.REACT_APP_FLOW_ACCESS_NODE || 'https://rest-testnet.onflow.org')
   .put('0xNonFungibleToken', process.env.REACT_APP_NON_FUNGIBLE_TOKEN_ADDRESS)
-  .put('0xMemoMint', process.env.REACT_APP_MEMO_MINT_ADDRESS);
+  .put('0xMemoMint', process.env.REACT_APP_MEMO_MINT_ADDRESS)
+  .put('discovery.wallet', 'https://fcl-discovery.onflow.org/testnet/authn')
+  .put('discovery.authn.endpoint', 'https://fcl-discovery.onflow.org/testnet/authn')
+  .put('discovery.authn.include', ['0x82ec283f88a62e65', '0x9d2e44203cb13051']);
 
 function App() {
   const [user, setUser] = useState(null);
@@ -77,11 +80,16 @@ function App() {
         </span>
         <div className="flex gap-2">
           {user?.addr ? (
-            <button onClick={unauthenticate} className="flex items-center gap-2 bg-white/20 hover:bg-white/40 text-white font-semibold px-5 py-2 rounded-full shadow transition">
-              <FaSignOutAlt /> Logout
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-white/80 text-sm">
+                {user.addr.slice(0, 6)}...{user.addr.slice(-4)}
+              </span>
+              <button onClick={unauthenticate} className="flex items-center gap-2 bg-white/20 hover:bg-white/40 text-white font-semibold px-5 py-2 rounded-full shadow transition">
+                <FaSignOutAlt /> Disconnect
+              </button>
+            </div>
           ) : (
-            <button onClick={authenticate} className="flex items-center gap-2 bg-white/20 hover:bg-white/40 text-white font-semibold px-5 py-2 rounded-full shadow transition">
+            <button onClick={authenticate} className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-semibold px-5 py-2 rounded-full shadow transition">
               <FaSignInAlt /> Connect Wallet
             </button>
           )}
@@ -175,7 +183,7 @@ function App() {
 
       {/* Footer */}
       <footer className="w-full max-w-3xl mx-auto mt-10 mb-6 rounded-3xl p-4 text-center text-xs text-gray-500 bg-gradient-to-r from-white/60 via-pink-100/60 to-indigo-100/60 shadow">
-        &copy; {new Date().getFullYear()} MemoMint &mdash; Crafted with <span className="text-pink-400">♥</span> for Flow Hackathon
+        &copy; {new Date().getFullYear()} MemoMint &mdash; Crafted with <span className="text-pink-400">♥</span> for May the Flow be with You!
       </footer>
     </div>
   );

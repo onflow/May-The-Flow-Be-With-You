@@ -1,4 +1,0 @@
-            } else { // Draw overall match - return stakes in PvP
-                finalWinnerAddress = nil // No winner in draw
-                finalLoserAddress = nil
-                // Each player gets their current stake back

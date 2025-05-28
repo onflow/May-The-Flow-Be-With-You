@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import * as fcl from '@onflow/fcl';
+import {
+  authenticate,
+  unauthenticate,
+  currentUser,
+  config
+} from '@onflow/fcl';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { v4 as uuidv4 } from 'uuid';
+import { FaUser, FaRobot, FaMagic, FaSignOutAlt, FaSignInAlt } from 'react-icons/fa';
+import './App.css';
 
-// Initialize Flow
-fcl.config()
+config()
   .put('accessNode.api', process.env.REACT_APP_FLOW_ACCESS_NODE)
   .put('0xNonFungibleToken', process.env.REACT_APP_NON_FUNGIBLE_TOKEN_ADDRESS)
   .put('0xMemoMint', process.env.REACT_APP_MEMO_MINT_ADDRESS);
@@ -19,180 +25,160 @@ function App() {
   const [sessionId] = useState(uuidv4());
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  useEffect(() => {
+    currentUser().subscribe(setUser);
+  }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleLogin = async () => {
-    try {
-      const user = await fcl.logIn();
-      setUser(user);
-    } catch (error) {
-      console.error('Login failed:', error);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fcl.unauthenticate();
-      setUser(null);
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
-
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
+  const sendMessage = async () => {
     if (!input.trim()) return;
-
-    const userMessage = input;
+    const userMessage = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
-
     try {
-      const response = await axios.post('http://localhost:3001/api/chat', {
-        message: userMessage,
+      const res = await axios.post('/chat', {
+        messages: [...messages, userMessage],
         sessionId
       });
-
-      setMessages(prev => [...prev, { role: 'assistant', content: response.data.response }]);
-    } catch (error) {
-      console.error('Error sending message:', error);
+      const aiMessage = res.data.choices[0].message;
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGenerateSummary = async () => {
+  const handleSummarize = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/api/summarize', {
+      const res = await axios.post('/summarize', {
+        messages,
         sessionId
       });
-      setSummary(response.data.summary);
-    } catch (error) {
-      console.error('Error generating summary:', error);
+      setSummary(res.data.choices[0].message.content);
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleMintNFT = async () => {
-    if (!user || !summary) return;
-
-    try {
-      const response = await axios.post('http://localhost:3001/api/mint', {
-        summary,
-        address: user.addr
-      });
-
-      alert(`NFT minted successfully! Transaction ID: ${response.data.transactionId}`);
-    } catch (error) {
-      console.error('Error minting NFT:', error);
-      alert('Failed to mint NFT. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-800">MemoMint</h1>
-            {user ? (
-              <div className="flex items-center space-x-4">
-                <span className="text-gray-600">Connected: {user.addr}</span>
-                <button
-                  onClick={handleLogout}
-                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                >
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleLogin}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              >
-                Connect Wallet
-              </button>
-            )}
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <div className="h-[500px] overflow-y-auto mb-4 space-y-4">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`p-4 rounded-lg ${
-                  message.role === 'user' ? 'bg-blue-100 ml-auto' : 'bg-gray-100'
-                } max-w-[80%]`}
-              >
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="text-center text-gray-500">Thinking...</div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <form onSubmit={handleSendMessage} className="flex space-x-4">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-              className="flex-1 p-2 border rounded"
-              disabled={!user || isLoading}
-            />
-            <button
-              type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-              disabled={!user || isLoading}
-            >
-              Send
+    <div className="min-h-screen app-ecstatic-bg font-sans flex flex-col justify-center items-center">
+      {/* Header */}
+      <header className="app-header-ecstatic shadow-lg p-6 flex flex-row justify-between items-center rounded-3xl w-full max-w-3xl mx-auto mt-10 mb-10">
+        <span className="text-3xl font-extrabold text-white tracking-tight drop-shadow-lg flex items-center gap-2">
+          <FaMagic className="inline-block mb-1" /> MemoMint
+        </span>
+        <div className="flex gap-2">
+          {user?.addr ? (
+            <button onClick={unauthenticate} className="flex items-center gap-2 bg-white/20 hover:bg-white/40 text-white font-semibold px-5 py-2 rounded-full shadow transition">
+              <FaSignOutAlt /> Logout
             </button>
-          </form>
+          ) : (
+            <button onClick={authenticate} className="flex items-center gap-2 bg-white/20 hover:bg-white/40 text-white font-semibold px-5 py-2 rounded-full shadow transition">
+              <FaSignInAlt /> Connect Wallet
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Main Chat Area */}
+      <main className="flex flex-col items-center justify-center w-full max-w-2xl px-2 gap-8 flex-grow">
+        <div className="app-chat-card rounded-3xl shadow-xl p-8 flex flex-col gap-4 max-h-[60vh] overflow-y-auto custom-scrollbar w-full">
+          {messages.length === 0 && (
+            <div className="text-center text-gray-400 italic py-12">Start a conversation with MemoMint!</div>
+          )}
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {msg.role === 'assistant' && (
+                <span className="bubble-icon-ai">
+                  <FaRobot />
+                </span>
+              )}
+              <div
+                className={`app-bubble px-6 py-4 rounded-2xl max-w-[75%] shadow-md text-base font-medium whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'app-bubble-user'
+                    : 'app-bubble-ai'
+                }`}
+              >
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              </div>
+              {msg.role === 'user' && (
+                <span className="bubble-icon-user">
+                  <FaUser />
+                </span>
+              )}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
         </div>
 
-        {messages.length > 0 && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-bold mb-4">Summary</h2>
-            {summary ? (
-              <div className="mb-4">
-                <ReactMarkdown>{summary}</ReactMarkdown>
-                {user && (
-                  <button
-                    onClick={handleMintNFT}
-                    className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                  >
-                    Mint as NFT
-                  </button>
-                )}
-              </div>
-            ) : (
-              <button
-                onClick={handleGenerateSummary}
-                className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
-                disabled={isLoading}
-              >
-                Generate Summary
-              </button>
-            )}
+        {/* Input Bar */}
+        <div className="flex gap-2 w-full">
+          <input
+            className="flex-1 px-6 py-4 rounded-full border-2 border-indigo-200 bg-white/80 shadow focus:outline-none focus:ring-2 focus:ring-pink-400 text-lg placeholder:text-gray-400"
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Share your thoughts..."
+            onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            disabled={isLoading}
+          />
+          <button
+            className="bg-gradient-to-r from-pink-500 to-indigo-500 text-white px-8 py-4 rounded-full font-bold shadow-lg hover:from-pink-600 hover:to-indigo-600 transition text-lg flex items-center gap-2 disabled:opacity-50"
+            onClick={sendMessage}
+            disabled={isLoading || !input.trim()}
+          >
+            Send
+          </button>
+        </div>
+
+        {/* Summarize & Mint Button */}
+        <button
+          onClick={handleSummarize}
+          className="app-summarize-btn mt-2 self-center flex items-center gap-2 text-lg disabled:opacity-50"
+          disabled={isLoading || messages.length === 0}
+        >
+          <FaMagic className="text-xl" /> Summarize & Mint
+        </button>
+
+        {/* Summary Card */}
+        {summary && (
+          <div className="app-summary-card p-8 mt-4 rounded-3xl shadow-xl flex flex-col gap-2 animate-fade-in w-full">
+            <h2 className="font-extrabold text-yellow-600 text-xl flex items-center gap-2 mb-2">
+              <FaMagic /> Summary
+            </h2>
+            <ReactMarkdown className="prose prose-lg max-w-none text-gray-800">{summary}</ReactMarkdown>
+          </div>
+        )}
+
+        {/* Loading Spinner */}
+        {isLoading && (
+          <div className="flex justify-center items-center mt-4">
+            <svg className="animate-spin h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="w-full max-w-3xl mx-auto mt-10 mb-6 rounded-3xl p-4 text-center text-xs text-gray-500 bg-gradient-to-r from-white/60 via-pink-100/60 to-indigo-100/60 shadow">
+        &copy; {new Date().getFullYear()} MemoMint &mdash; Crafted with <span className="text-pink-400">♥</span> for Flow Hackathon
+      </footer>
     </div>
   );
 }
 
-export default App; 
+export default App;

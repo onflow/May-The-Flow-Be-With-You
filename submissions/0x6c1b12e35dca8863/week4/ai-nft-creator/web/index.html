@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI NFT Creator - Flow Blockchain</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+           -webkit-background-clip: text;
+background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .wallet-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .creation-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .preview-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .ai-models {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .model-option {
+            padding: 10px;
+            text-align: center;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .model-option:hover, .model-option.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .preview-area {
+            border: 2px dashed #e1e1e1;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px 0;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .nft-details {
+            background: rgba(240, 240, 240, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        
+        .attributes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .attribute {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .attribute-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .attribute-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .message.success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 2px solid af50;
+color: #2e7d32;
+}
+            .message.error {
+        background: rgba(244, 67, 54, 0.1);
+        border: 2px solid #f44336;
+        color: #c62828;
+    }
+    
+    .message.info {
+        background: rgba(33, 150, 243, 0.1);
+        border: 2px solid #2196f3;
+        color: #1565c0;
+    }
+    
+    @media (max-width: 768px) {
+        .main-content {
+            grid-template-columns: 1fr;
+        }
+        
+        h1 {
+            font-size: 2rem;
+        }
+        
+        .container {
+            padding: 10px;
+        }
+    }
+</style>
+<div class="wallet-section">
+            <button id="connect-wallet" class="btn">Connect Wallet</button>
+            <div id="wallet-status" style="margin-top: 10px; color: #666;"></div>
+        </div>
+    </header>
+    
+    <div class="main-content">
+        <div class="creation-panel">
+            <h2>Create Your AI NFT</h2>
+            
+            <div class="form-group">
+                <label for="prompt">Describe Your NFT</label>
+                <textarea 
+                    id="prompt" 
+                    placeholder="Enter a detailed description of the NFT you want to create..."
+                    rows="4"
+                ></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="style">Art Style</label>
+                <select id="style">
+                    <option value="digital art">Digital Art</option>
+                    <option value="abstract">Abstract</option>
+                    <option value="photorealistic">Photorealistic</option>
+                    <option value="minimalist">Minimalist</option>
+                    <option value="surreal">Surreal</option>
+                    <option value="cyberpunk">Cyberpunk</option>
+                    <option value="fantasy">Fantasy</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>AI Models</label>
+                <div class="ai-models">
+                    <div class="model-option active" data-model="gpt4-dalle3">
+                        <strong>GPT-4</strong><br>
+                        <small>+ DALL-E 3</small>
+                    </div>
+                    <div class="model-option" data-model="claude-stable">
+                        <strong>Claude</strong><br>
+                        <small>+ Stable Diffusion</small>
+                    </div>
+                    <div class="model-option" data-model="custom">
+                        <strong>Custom</strong><br>
+                        <small>Fine-tuned</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="rarity">Rarity Level</label>
+                <select id="rarity">
+                    <option value="common">Common</option>
+                    <option value="uncommon">Uncommon</option>
+                    <option value="rare">Rare</option>
+                    <option value="epic">Epic</option>
+                    <option value="legendary">Legendary</option>
+                </select>
+            </div>
+            
+            <button id="generate-concept" class="btn" style="width: 100%; margin-bottom: 15px;">
+                Generate AI Concept
+            </button>
+            
+            <button id="mint-nft" class="btn" style="width: 100%;" disabled>
+                Mint NFT
+            </button>
+        </div>
+        
+        <div class="preview-panel">
+            <h2>Preview & Details</h2>
+            
+            <div class="preview-area" id="preview-area">
+                <p style="color: #999;">Your AI-generated NFT will appear here</p>
+            </div>
+            
+            <div id="nft-details" class="nft-details" style="display: none;">
+                <h3 id="nft-title">NFT Title</h3>
+                <p id="nft-description">NFT Description</p>
+                
+                <div class="attributes" id="attributes-container">
+                    <!-- Attributes will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="message" class="message"></div>
+    
+    <div id="recent-nfts" style="margin-top: 40px;">
+        <h2 style="text-align: center; color: white; margin-bottom: 20px;">Recent AI NFTs</h2>
+        <div id="nft-gallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
+            <!-- Recent NFTs will be populated here -->
+        </div>
+    </div>
+</div>
+
+<!-- FCL Library -->
+<script src="https://cdn.jsdelivr.net/npm/@onflow/fcl@1.3.2/dist/fcl.min.js"></script>
+
+<script>
+    // FCL Configuration (replace with your contract address)
+    fcl.config({
+        "app.detail.title": "AI NFT Creator",
+        "app.detail.icon": "https://placeholder.com/icon.png",
+        "accessNode.api": "https://rest-testnet.onflow.org", // Use testnet for development
+        "discovery.wallet": "https://fcl-discovery.onflow.org/testnet/authn",
+        "0xAINFTCreator": "0xYOUR_CONTRACT_ADDRESS" // Replace with actual address
+    });
+    
+    // Global state
+    let currentUser = null;
+    let selectedModel = 'gpt4-dalle3';
+    let generatedConcept = null;
+    let generatedImageUrl = null;
+    
+    // DOM Elements
+    const connectWalletBtn = document.getElementById('connect-wallet');
+    const walletStatus = document.getElementById('wallet-status');
+    const promptInput = document.getElementById('prompt');
+    const styleSelect = document.getElementById('style');
+    const raritySelect = document.getElementById('rarity');
+    const generateBtn = document.getElementById('generate-concept');
+    const mintBtn = document.getElementById('mint-nft');
+    const previewArea = document.getElementById('preview-area');
+    const nftDetails = document.getElementById('nft-details');
+    const messageDiv = document.getElementById('message');
+    const modelOptions = document.querySelectorAll('.model-option');
+    
+    // Event Listeners
+    connectWalletBtn.addEventListener('click', handleWalletConnection);
+    generateBtn.addEventListener('click', generateAIConcept);
+    mintBtn.addEventListener('click', mintNFT);
+    
+    // Model selection
+    modelOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            modelOptions.forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+            selectedModel = option.dataset.model;
+        });
+    });
+    
+    // FCL User subscription
+    fcl.currentUser().subscribe(user => {
+        currentUser = user;
+        updateWalletUI(user);
+    });
+    
+    // Wallet connection handler
+    async function handleWalletConnection() {
+        if (currentUser && currentUser.loggedIn) {
+            fcl.unauthenticate();
+        } else {
+            fcl.authenticate();
+        }
+    }
+    
+    // Update wallet UI
+    function updateWalletUI(user) {
+        if (user.loggedIn) {
+            connectWalletBtn.textContent = 'Disconnect Wallet';
+            walletStatus.textContent = `Connected: ${user.addr}`;
+            walletStatus.style.color = '#4caf50';
+        } else {
+            connectWalletBtn.textContent = 'Connect Wallet';
+            walletStatus.textContent = 'Not connected';
+            walletStatus.style.color = '#666';
+        }
+    }
+    
+    // Generate AI concept
+    async function generateAIConcept() {
+        if (!promptInput.value.trim()) {
+            showMessage('Please enter a prompt for your NFT', 'error');
+            return;
+        }
+        
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'Generating...';
+        
+        // Show loading in preview
+        previewArea.innerHTML = '<div class="loading"></div><p>AI is creating your concept...</p>';
+        
+        try {
+            // Call your AI service API
+            const response = await fetch('/api/generate-concept', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prompt: promptInput.value,
+                    style: styleSelect.value,
+                    model: selectedModel,
+                    rarity: raritySelect.value
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to generate concept');
+            }
+            
+            const result = await response.json();
+            generatedConcept = result.concept;
+            generatedImageUrl = result.imageUrl;
+            
+            displayConcept(result);
+            mintBtn.disabled = false;
+            
+            showMessage('AI concept generated successfully!', 'success');
+            
+        } catch (error) {
+            console.error('Error generating concept:', error);
+            showMessage('Error generating AI concept. Please try again.', 'error');
+            previewArea.innerHTML = '<p style="color: #999;">Failed to generate concept</p>';
+        } finally {
+            generateBtn.disabled = false;
+            generateBtn.textContent = 'Generate AI Concept';
+        }
+    }
+    
+    // Display generated concept
+    function displayConcept(result) {
+        // Show generated image
+        previewArea.innerHTML = `
+            <img src="${result.imageUrl}" alt="Generated NFT" class="preview-image">
+        `;
+        
+        // Show NFT details
+        document.getElementById('nft-title').textContent = result.concept.title;
+        document.getElementById('nft-description').textContent = result.concept.description;
+        
+        // Show attributes
+        const attributesContainer = document.getElementById('attributes-container');
+        attributesContainer.innerHTML = '';
+        
+        Object.entries(result.concept.attributes || {}).forEach(([key, value]) => {
+            const attributeDiv = document.createElement('div');
+            attributeDiv.className = 'attribute';
+            attributeDiv.innerHTML = `
+                <div class="attribute-label">${key}</div>
+                <div class="attribute-value">${value}</div>
+            `;
+            attributesContainer.appendChild(attributeDiv);
+        });
+        
+        nftDetails.style.display = 'block';
+    }
+    
+    // Mint NFT
+    async function mintNFT() {
+        if (!currentUser || !currentUser.loggedIn) {
+            showMessage('Please connect your wallet first', 'error');
+            return;
+        }
+        
+        if (!generatedConcept) {
+            showMessage('Please generate a concept first', 'error');
+            return;
+        }
+        
+        mintBtn.disabled = true;
+        mintBtn.textContent = 'Minting...';
+        
+        try {
+            // First, set up user's collection if needed
+            await setupAccount();
+            
+            // Mint the NFT
+            const txId = await fcl.mutate({
+                cadence: `
+                    import AINFTCreator from 0xAINFTCreator
+                    import NonFungibleToken from 0x1d7e57aa55817448
+                    
+                    transaction(
+                        aiModel: String,
+                        originalPrompt: String,
+                        name: String,
+                        description: String,
+                        imageURL: String
+                    ) {
+                        let minter: &AINFTCreator.NFTMinter
+                        let recipientCollection: &{NonFungibleToken.CollectionPublic}
+                        
+                        prepare(signer: AuthAccount) {
+                            self.minter = signer.borrow<&AINFTCreator.NFTMinter>(from: AINFTCreator.MinterStoragePath)
+                                ?? panic("Could not borrow minter reference")
+                            
+                            let recipientCollectionCap = signer.getCapability<&{NonFungibleToken.CollectionPublic}>(
+                                AINFTCreator.CollectionPublicPath
+                            )
+                            
+                            self.recipientCollection = recipientCollectionCap.borrow()
+                                ?? panic("Could not borrow receiver collection reference")
+                        }
+                        
+                        execute {
+                            let generationParameters: {String: String} = {
+                                "style": "${styleSelect.value}",
+                                "rarity": "${raritySelect.value}",
+                                "model": aiModel
+                            }
+                            
+                            let attributes: {String: String} = ${JSON.stringify(generatedConcept.attributes || {})}
+                            
+                            self.minter.mintAINFT(
+                                recipient: self.recipientCollection,
+                                aiModel: aiModel,
+                                originalPrompt: originalPrompt,
+                                generationParameters: generationParameters,
+                                name: name,
+                                description: description,
+                                imageURL: imageURL,
+                                attributes: attributes
+                            )
+                        }
+                    }
+                `,
+                args: (arg, t) => [
+                    arg(selectedModel, t.String),
+                    arg(promptInput.value, t.String),
+                    arg(generatedConcept.title, t.String),
+                    arg(generatedConcept.description, t.String),
+                    arg(generatedImageUrl, t.String)
+                ],
+                payer: fcl.authz,
+                proposer: fcl.authz,
+                authorizations: [fcl.authz],
+                limit: 1000
+            });
+            
+            // Wait for transaction to be sealed
+            await fcl.tx(txId).onceSealed();
+            
+            showMessage('NFT minted successfully!', 'success');
+            
+            // Reset form
+            resetForm();
+            
+            // Refresh recent NFTs
+            loadRecentNFTs();
+            
+        } catch (error) {
+            console.error('Error minting NFT:', error);
+            showMessage(`Error minting NFT: ${error.message}`, 'error');
+        } finally {
+            mintBtn.disabled = false;
+            mintBtn.textContent = 'Mint NFT';
+        }
+    }
+    
+    // Set up user account
+    async function setupAccount() {
+        try {
+            const txId = await fcl.mutate({
+                cadence: `
+                    import AINFTCreator from 0xAINFTCreator
+                    import NonFungibleToken from 0x1d7e57aa55817448
+                    
+                    transaction {
+                        prepare(signer: AuthAccount) {
+                            if signer.borrow<&AINFTCreator.Collection>(from: AINFTCreator.CollectionStoragePath) != nil {
+                                return
+                            }
+                            
+                            let collection <- AINFTCreator.createEmptyCollection()
+                            signer.save(<-collection, to: AINFTCreator.CollectionStoragePath)
+                            
+                            signer.link<&{NonFungibleToken.CollectionPublic, AINFTCreator.AINFTCreatorCollectionPublic}>(
+                                AINFTCreator.CollectionPublicPath,
+                                target: AINFTCreator.CollectionStoragePath
+                            )
+                        }
+                    }
+                `,
+                payer: fcl.authz,
+                proposer: fcl.authz,
+                authorizations: [fcl.authz],
+                limit: 500
+            });
+            
+            await fcl.tx(txId).onceSealed();
+        } catch (error) {
+            console.error('Error setting up account:', error);
+            // Continue anyway, account might already be set up
+        }
+    }
+    
+    // Load recent NFTs
+    async function loadRecentNFTs() {
+        try {
+            const response = await fetch('/api/recent-nfts');
+            const nfts = await response.json();
+            
+            const gallery = document.getElementById('nft-gallery');
+            gallery.innerHTML = '';
+            
+            nfts.forEach(nft => {
+                const nftCard = document.createElement('div');
+                nftCard.style.cssText = `
+                    background: white;
+                    border-radius: 15px;
+                    padding: 20px;
+                    text-align: center;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                `;
+                
+                nftCard.innerHTML = `
+                    <img src="${nft.imageURL}" alt="${nft.name}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 15px;">
+                    <h3 style="margin-bottom: 10px;">${nft.name}</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">${nft.description.substring(0, 100)}...</p>
+                    <div style="background: rgba(102, 126, 234, 0.1); padding: 5px 10px; border-radius: 15px; display: inline-block;">
+                        <small style="color: #667eea;">${nft.aiModel}</small>
+                    </div>
+                `;
+                
+                gallery.appendChild(nftCard);
+            });
+        } catch (error) {
+            console.error('Error loading recent NFTs:', error);
+        }
+    }
+    
+    // Reset form
+    function resetForm() {
+        promptInput.value = '';
+        generatedConcept = null;
+        generatedImageUrl = null;
+        previewArea.innerHTML = '<p style="color: #999;">Your AI-generated NFT will appear here</p>';
+        nftDetails.style.display = 'none';
+        mintBtn.disabled = true;
+    }
+    
+    // Show message
+    function showMessage(text, type) {
+        messageDiv.textContent = text;
+        messageDiv.className = `message ${type}`;
+        messageDiv.style.display = 'block';
+        
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', () => {
+        loadRecentNFTs();
+    });
+</script>

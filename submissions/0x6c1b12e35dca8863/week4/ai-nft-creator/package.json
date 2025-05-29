@@ -1,0 +1,31 @@
+{
+  "name": "ai-nft-creator",
+  "version": "1.0.0",
+  "description": "AI-powered NFT creation platform on Flow blockchain",
+  "main": "api/server.js",
+  "scripts": {
+    "start": "node api/server.js",
+    "dev": "nodemon api/server.js",
+    "install-deps": "npm install express cors dotenv node-fetch",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "flow",
+    "blockchain", 
+    "nft",
+    "ai",
+    "llm",
+    "generative-art"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

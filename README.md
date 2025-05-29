@@ -43,8 +43,12 @@ Useful Links:
 - Winners announced: May 26
 - End of Week 3 will be May 24th, 11:59pm PST
 
-### Week 4: To be announced (May 25-31)
+### Week 4: AI and LLMs (May 25 - June 1st)
+- Twitter Space: May 29 (Thurs) @ 2:00 PM PST - "How to Create Perfect NPCs"
+- Winners announced: June 2nd
+- End of Week 4 will be June 1st, 11:59pm PST
 
+  
 Note: Think about the weekly themes as suggestions, you are welcome to continue working on your original week's idea into later weeks and aren't strictly required to follow the new week's theme.
 
 ## How to Participate

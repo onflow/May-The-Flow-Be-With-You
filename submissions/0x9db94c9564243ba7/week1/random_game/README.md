@@ -230,3 +230,77 @@ Created by [Phaser Studio](mailto:support@phaser.io). Powered by coffee, anime, 
 The Phaser logo and characters are &copy; 2011 - 2025 Phaser Studio Inc.
 
 All rights reserved.
+
+# Flow Dice Game
+
+A simple dice game built with Phaser 3 and integrated with Flow blockchain for the May The Flow Be With You contest.
+
+## Features
+
+- Dice rolling game with animated dice
+- Flow blockchain integration for random number generation
+- Mobile and desktop responsive design
+- Built with Next.js, TypeScript, and Phaser 3
+
+## Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+```
+
+## Deploying to Vercel
+
+This project is configured for easy deployment on Vercel. Follow these steps:
+
+1. Create a Vercel account if you don't have one already at [vercel.com](https://vercel.com)
+2. Install the Vercel CLI: `npm install -g vercel`
+3. Login to Vercel: `vercel login`
+4. From the project root directory, run: `vercel`
+5. Follow the prompts to deploy
+
+Alternatively, you can connect your GitHub repository to Vercel for automatic deployments:
+
+1. Push your code to GitHub
+2. Go to [vercel.com/new](https://vercel.com/new)
+3. Import your repository
+4. Vercel will detect Next.js automatically
+5. Click "Deploy"
+
+## Mobile Optimization
+
+The game has been optimized for both mobile and desktop devices:
+
+- Responsive scaling using Phaser's Scale.FIT mode
+- Touch-friendly UI elements
+- Automatic layout adjustments based on screen size
+- Proper meta tags for mobile web experience
+
+## Project Structure
+
+```
+src/
+├── game/
+│   ├── scenes/           # Game scenes including DiceGameScene
+│   ├── components/       # React components for game integration
+│   └── main.ts           # Phaser game configuration
+├── lib/
+│   └── flow/             # Flow blockchain integration
+├── pages/                # Next.js pages
+└── styles/               # CSS styles
+```
+
+## Environment Variables
+
+For Flow blockchain integration, you'll need to set these variables in your Vercel project:
+
+- `NEXT_PUBLIC_FLOW_ACCESS_NODE`: Flow access node URL
+- `NEXT_PUBLIC_FLOW_NETWORK`: Flow network (testnet/mainnet)
+
+These can be set in the Vercel dashboard under Project → Settings → Environment Variables.

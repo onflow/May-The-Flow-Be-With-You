@@ -6,6 +6,31 @@ import * as fcl from '@onflow/fcl';
 import Header from '@/components/Header';
 import NextLink from 'next/link';
 import CreatureVisualizerHub from '@/components/CreatureVisualizerHub';
+import { motion } from 'framer-motion';
+
+// Motion components
+const MotionBox = motion(Box);
+const MotionVStack = motion(VStack);
+const MotionHeading = motion(Heading);
+const MotionText = motion(Text);
+
+// Animation variants
+const sectionVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (custom: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: custom * 0.1,
+      duration: 0.6,
+      ease: "easeOut"
+    }
+  })
+};
+
+// Colors
+const headingColor = 'blue.600';
+const loreTextColor = 'gray.600';
 
 const parseFloatSafe = (value: string | number | undefined | null, defaultValue: number): number => {
   if (value === undefined || value === null || typeof value === 'string' && value.trim() === '') {
@@ -808,7 +833,6 @@ export default function EnvironmentPage() {
               fontSize={{ base: '3xl', md: '4xl', lg: '5xl' }}
               fontWeight="extrabold"
               color={headingColor}
-              textShadow={useColorModeValue("1px 1px 3px rgba(0,0,0,0.3)", "0px 0px 15px rgba(0, 144, 255, 0.6)")}
             >
               Primordia Environment
             </MotionHeading>
@@ -829,14 +853,6 @@ export default function EnvironmentPage() {
                   Connect Wallet to View Environment
                 </Button>
               </Flex>
-            ) : !isAccountConfigured ? (
-              <Flex justify="center">
-                <NextLink href="/" passHref>
-                  <Button as="a" colorScheme="orange" size="lg">
-                    Configure Account First
-                  </Button>
-                </NextLink>
-              </Flex>
             ) : (
               <VStack spacing={6}>
                 {/* Action Buttons */}
@@ -844,7 +860,7 @@ export default function EnvironmentPage() {
                   <Button 
                     onClick={handleMintCreature} 
                     colorScheme="green" 
-                    isLoading={isLoading}
+                    isLoading={isLoadingMint}
                     isDisabled={creatures.filter(c => c.estaViva).length >= 5}
                   >
                     Mint New Creature (0.1 FLOW)
@@ -852,14 +868,20 @@ export default function EnvironmentPage() {
                   <Button 
                     onClick={handleProcessEvolutionAllCreatures} 
                     colorScheme="purple"
-                    isLoading={isLoading}
+                    isLoading={isProcessingEvolution}
                   >
                     Process Evolution
                   </Button>
                   <Button 
-                    onClick={handlePerformMitosis} 
+                    onClick={() => {
+                      const availableCreatures = creatures.filter(c => c.estaViva && parseFloat(c.puntosEvolucion) >= MINIMUM_EP_FOR_MITOSIS);
+                      if (availableCreatures.length > 0) {
+                        setMitosisTargetCreature(availableCreatures[0]);
+                        onOpenMitosisModal();
+                      }
+                    }} 
                     colorScheme="cyan"
-                    isLoading={isLoading}
+                    isLoading={processingMitosisForId !== null}
                     isDisabled={creatures.filter(c => c.estaViva && parseFloat(c.puntosEvolucion) >= MINIMUM_EP_FOR_MITOSIS).length === 0}
                   >
                     Perform Mitosis
@@ -868,7 +890,7 @@ export default function EnvironmentPage() {
                     onClick={fetchCreatures} 
                     colorScheme="blue"
                     variant="outline"
-                    isLoading={isLoading}
+                    isLoading={isLoadingCreatures}
                   >
                     Refresh Data
                   </Button>
@@ -878,61 +900,46 @@ export default function EnvironmentPage() {
                 <CreatureVisualizerHub
                   creatures={creatures}
                   onRefresh={fetchCreatures}
-                  isLoading={isLoading}
+                  isLoading={isLoadingCreatures}
                 />
 
-                {/* Creature Details Modal */}
-                <Modal isOpen={isOpen} onClose={onClose} size="xl">
+                {/* Mitosis Modal */}
+                <Modal isOpen={isMitosisModalOpen} onClose={onCloseMitosisModal} size="md">
                   <ModalOverlay />
                   <ModalContent>
                     <ModalHeader>
-                      {selectedCreature && `Creature #${selectedCreature.id} Details`}
+                      Perform Mitosis
                     </ModalHeader>
                     <ModalCloseButton />
                     <ModalBody>
-                      {selectedCreature && (
+                      {mitosisTargetCreature && (
                         <VStack spacing={4} align="stretch">
-                          <HStack justify="space-between">
-                            <Text><strong>Name:</strong> {selectedCreature.name || 'Unnamed'}</Text>
-                            <Tag colorScheme={selectedCreature.estaViva ? 'green' : 'red'}>
-                              {selectedCreature.estaViva ? 'Alive' : 'Dead'}
-                            </Tag>
-                          </HStack>
-                          
-                          <Text><strong>Age:</strong> {parseFloat(selectedCreature.edadDiasCompletos).toFixed(2)} / {parseFloat(selectedCreature.lifespanTotalSimulatedDays).toFixed(2)} days</Text>
-                          <Text><strong>Evolution Points:</strong> {parseFloat(selectedCreature.puntosEvolucion).toFixed(2)}</Text>
-                          
-                          <Box>
-                            <Text fontWeight="bold" mb={2}>Visible Genes:</Text>
-                            <VStack spacing={2} align="stretch">
-                              {Object.entries(selectedCreature.genesVisibles).map(([gene, value]) => (
-                                <HStack key={gene} justify="space-between">
-                                  <Text fontSize="sm">{gene}:</Text>
-                                  <Code fontSize="sm">{parseFloat(value).toFixed(3)}</Code>
-                                </HStack>
-                              ))}
-                            </VStack>
-                          </Box>
-                          
-                          {selectedCreature.genesOcultos && Object.keys(selectedCreature.genesOcultos).length > 0 && (
-                            <Box>
-                              <Text fontWeight="bold" mb={2}>Hidden Genes:</Text>
-                              <VStack spacing={2} align="stretch">
-                                {Object.entries(selectedCreature.genesOcultos).map(([gene, value]) => (
-                                  <HStack key={gene} justify="space-between">
-                                    <Text fontSize="sm">{gene}:</Text>
-                                    <Code fontSize="sm">{parseFloat(value).toFixed(3)}</Code>
-                                  </HStack>
-                                ))}
-                              </VStack>
-                            </Box>
-                          )}
+                          <Text>
+                            <strong>Creature #{mitosisTargetCreature.id}</strong>
+                          </Text>
+                          <Text>
+                            Current EP: {parseFloat(mitosisTargetCreature.puntosEvolucion).toFixed(1)}
+                          </Text>
+                          <FormControl>
+                            <FormLabel>EP Cost for Mitosis</FormLabel>
+                            <Input
+                              type="number"
+                              value={mitosisEpInput}
+                              onChange={(e) => setMitosisEpInput(e.target.value)}
+                              min={MINIMUM_EP_FOR_MITOSIS}
+                              max={parseFloat(mitosisTargetCreature.puntosEvolucion)}
+                              step="0.1"
+                            />
+                          </FormControl>
                         </VStack>
                       )}
                     </ModalBody>
                     <ModalFooter>
-                      <Button colorScheme="blue" mr={3} onClick={onClose}>
-                        Close
+                      <Button colorScheme="blue" mr={3} onClick={handlePerformMitosis}>
+                        Perform Mitosis
+                      </Button>
+                      <Button variant="ghost" onClick={onCloseMitosisModal}>
+                        Cancel
                       </Button>
                     </ModalFooter>
                   </ModalContent>

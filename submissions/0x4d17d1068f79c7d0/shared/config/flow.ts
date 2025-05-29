@@ -5,6 +5,7 @@ const fclConfigInfo = {
   emulator: {
     accessNode: 'http://127.0.0.1:8888',
     discoveryWallet: 'http://localhost:8701/fcl/authn',
+    discoveryAuthnEndpoint: undefined, // Not needed for emulator
     discoveryAuthInclude: [],
   },
   testnet: {
@@ -26,25 +27,34 @@ const fclConfigInfo = {
 // Get network from environment or default to emulator for development
 const network = process.env.NEXT_PUBLIC_FLOW_NETWORK || 'emulator';
 
+// Get network configuration
+const networkConfig = fclConfigInfo[network as keyof typeof fclConfigInfo];
+
 // Configure FCL
-fcl.config({
+const fclConfig: Record<string, any> = {
   'walletconnect.projectId': process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '', // your WalletConnect project ID
   'app.detail.title': 'Memoreee', // the name of your DApp
   'app.detail.icon': '/icon.png', // your DApps icon
   'app.detail.description': 'Ancient memory wisdom meets modern mastery', // a description of your DApp
   'app.detail.url': 'https://memoreee.vercel.app', // the URL of your DApp
   'flow.network': network,
-  'accessNode.api': fclConfigInfo[network as keyof typeof fclConfigInfo].accessNode,
-  'discovery.wallet': fclConfigInfo[network as keyof typeof fclConfigInfo].discoveryWallet,
-  'discovery.authn.endpoint': fclConfigInfo[network as keyof typeof fclConfigInfo].discoveryAuthnEndpoint,
+  'accessNode.api': networkConfig.accessNode,
+  'discovery.wallet': networkConfig.discoveryWallet,
   // adds in opt-in wallets like Dapper and Ledger
-  'discovery.authn.include': fclConfigInfo[network as keyof typeof fclConfigInfo].discoveryAuthInclude,
+  'discovery.authn.include': networkConfig.discoveryAuthInclude,
   'discovery.authn.exclude': [], // excludes chosen wallets by address
   "0xProfile": network === 'testnet' ? "0xba1132bc08f82fe2" : "0xf8d6e0586b0a20c7", // Profile contract address
   // EVM support on Flow
   'evm.enabled': true,
   'evm.gasLimit': 9999999,
-});
+};
+
+// Only add discovery.authn.endpoint if it exists
+if (networkConfig.discoveryAuthnEndpoint) {
+  fclConfig['discovery.authn.endpoint'] = networkConfig.discoveryAuthnEndpoint;
+}
+
+fcl.config(fclConfig);
 
 // Network and wallet type detection
 export const getWalletType = (user: any) => {

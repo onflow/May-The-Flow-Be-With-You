@@ -6,7 +6,12 @@ import "NonFungibleToken"
 
 transaction() {
     
-    prepare(signer: &Account) {
+    let signerAddress: Address
+    
+    prepare(signer: auth(Storage, Capabilities) &Account) {
+        // Store signer address for use in execute
+        self.signerAddress = signer.address
+        
         // Check if collection already exists
         if signer.storage.borrow<&EvolvingNFT.Collection>(from: EvolvingNFT.CollectionStoragePath) == nil {
             // Create a new collection
@@ -27,7 +32,7 @@ transaction() {
     
     execute {
         // Verify collection is accessible
-        let collectionRef = getAccount(signer.address)
+        let collectionRef = getAccount(self.signerAddress)
             .capabilities.borrow<&{NonFungibleToken.Collection}>(EvolvingNFT.CollectionPublicPath)
             ?? panic("Could not borrow collection reference")
         

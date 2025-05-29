@@ -5,13 +5,14 @@ import "EvolvingNFT"
 import "ColorModule"
 import "SizeModule"
 import "NonFungibleToken"
+import "TraitModule"
 
 transaction(recipient: Address, name: String, description: String) {
     
     let minterRef: &EvolvingNFT.NFTMinter
     let recipientCollectionRef: &{NonFungibleToken.Collection}
     
-    prepare(signer: &Account) {
+    prepare(signer: auth(Storage) &Account) {
         // Get minter reference
         self.minterRef = signer.storage.borrow<&EvolvingNFT.NFTMinter>(from: EvolvingNFT.MinterStoragePath)
             ?? panic("Could not borrow minter reference")

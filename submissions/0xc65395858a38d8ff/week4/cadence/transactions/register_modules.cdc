@@ -26,6 +26,9 @@ transaction(deployerAddress: Address) {
     execute {
         // Verify modules were registered
         let registeredModules = EvolvingNFT.getRegisteredModules()
-        log("Registered modules: ".concat(registeredModules.toString()))
+        log("Registered modules count: ".concat(registeredModules.length.toString()))
+        for moduleType in registeredModules {
+            log("- ".concat(moduleType))
+        }
     }
 } 

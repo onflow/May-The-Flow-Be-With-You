@@ -60,3 +60,9 @@ dist-ssr
 *.sln
 *.sw?
 submissions/0xc65395858a38d8ff/testnet-deployer.pkey
+
+# Ignore unwanted submission files
+submissions/.init
+submissions/.keep
+submissions/memoreee
+submissions/0x0012a1ef98accd88

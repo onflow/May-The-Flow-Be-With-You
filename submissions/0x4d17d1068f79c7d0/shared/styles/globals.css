@@ -1,0 +1,52 @@
+/* Silk Components - for premium UI/UX */
+@import "@silk-hq/components/unlayered-styles";
+
+/* Tailwind CSS v4 imports */
+@import "tailwindcss";
+
+/* Custom base styles */
+@layer base {
+  :root {
+    --memory-primary: #6366f1;
+    --memory-secondary: #8b5cf6;
+    --memory-accent: #06b6d4;
+    --memory-dark: #1e1b4b;
+    --memory-light: #f8fafc;
+  }
+
+  body {
+    font-family: 'Inter', 'ui-sans-serif', 'system-ui', sans-serif;
+    background-color: var(--memory-light);
+    color: var(--memory-dark);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  .memory-card {
+    @apply bg-white rounded-lg shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow duration-300;
+  }
+
+  .memory-button {
+    background-color: var(--memory-primary);
+    @apply text-white px-4 py-2 rounded-md hover:opacity-90 transition-all duration-200 font-medium;
+  }
+
+  .memory-button:hover {
+    background-color: var(--memory-secondary);
+  }
+
+  .memory-input {
+    @apply border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:border-transparent;
+    focus-ring-color: var(--memory-primary);
+  }
+
+  /* Silk integration styles */
+  .silk-sheet {
+    @apply backdrop-blur-sm;
+  }
+}

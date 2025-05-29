@@ -11,13 +11,12 @@ import {
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { v4 as uuidv4 } from 'uuid';
-import { FaUser, FaRobot, FaMagic, FaSignOutAlt, FaSignInAlt } from 'react-icons/fa';
+import { FaUser, FaRobot, FaMagic, FaSignOutAlt, FaSignInAlt, FaHistory } from 'react-icons/fa';
 import './App.css';
 
 config()
   .put('accessNode.api', process.env.REACT_APP_FLOW_ACCESS_NODE || 'https://rest-testnet.onflow.org')
-  .put('0xNonFungibleToken', '0x631e88ae7f1d7c20')
-  .put('0xMemoMint', process.env.REACT_APP_MEMO_MINT_ADDRESS)
+  .put('0xMemoMint', '0x48b91e4148b1a831')
   .put('discovery.wallet', 'https://fcl-discovery.onflow.org/testnet/authn')
   .put('discovery.authn.endpoint', 'https://fcl-discovery.onflow.org/testnet/authn')
   .put('discovery.authn.include', ['0x82ec283f88a62e65', '0x9d2e44203cb13051']);
@@ -29,6 +28,7 @@ function App() {
   const [summary, setSummary] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(uuidv4());
+  const [memos, setMemos] = useState([]);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -38,6 +38,38 @@ function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    if (user?.addr) {
+      fetchMemos();
+    }
+  }, [user]);
+
+  const fetchMemos = async () => {
+    try {
+      const result = await query({
+        cadence: `
+          import MemoMint from 0xMemoMint
+          
+          pub fun main(): [MemoMint.Memo] {
+            let ids = MemoMint.getAllMemoIDs()
+            let memos: [MemoMint.Memo] = []
+            
+            for id in ids {
+              if let memo = MemoMint.getMemo(id: id) {
+                memos.append(memo)
+              }
+            }
+            
+            return memos
+          }
+        `,
+      });
+      setMemos(result);
+    } catch (err) {
+      console.error('Error fetching memos:', err);
+    }
+  };
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -75,34 +107,19 @@ function App() {
       const summary = res.data.choices[0].message.content;
       setSummary(summary);
 
-      // Mint NFT with summary
-      const mintTransaction = `
+      // Create memo with summary
+      const createMemoTransaction = `
         import MemoMint from 0xMemoMint
-        import NonFungibleToken from 0xNonFungibleToken
 
-        transaction(summary: String) {
+        transaction(content: String) {
           prepare(signer: AuthAccount) {
-            // Get or create the collection
-            let collection = signer.borrow<&MemoMint.Collection>(from: /storage/MemoMintCollection)
-            if collection == nil {
-              collection = signer.save(<- MemoMint.createEmptyCollection(), to: /storage/MemoMintCollection)
-              signer.link<&{NonFungibleToken.CollectionPublic}>(/public/MemoMintCollection, target: /storage/MemoMintCollection)
-            }
-
-            // Get the minter
-            let minter = signer.borrow<&MemoMint.Minter>(from: /storage/MemoMintMinter)
-            if minter == nil {
-              minter = signer.save(<- MemoMint.getMinter(), to: /storage/MemoMintMinter)
-            }
-
-            // Mint the NFT
-            minter.mintNFT(summary: summary, recipient: collection)
+            MemoMint.createMemo(content: content)
           }
         }
       `;
 
       const transactionId = await mutate({
-        cadence: mintTransaction,
+        cadence: createMemoTransaction,
         args: (arg, t) => [arg(summary, t.String)],
         limit: 9999
       });
@@ -111,10 +128,13 @@ function App() {
       const transaction = await tx(transactionId).onceSealed();
       console.log('Transaction sealed:', transaction);
 
-      alert('Summary minted as NFT successfully!');
+      // Refresh memos
+      await fetchMemos();
+
+      alert('Summary saved as memo successfully!');
     } catch (err) {
       console.error(err);
-      alert('Error minting NFT: ' + err.message);
+      alert('Error saving memo: ' + err.message);
     } finally {
       setIsLoading(false);
     }
@@ -200,13 +220,13 @@ function App() {
           </button>
         </div>
 
-        {/* Summarize & Mint Button */}
+        {/* Summarize & Save Button */}
         <button
           onClick={handleSummarize}
           className="app-summarize-btn mt-2 self-center flex items-center gap-2 text-lg disabled:opacity-50"
           disabled={isLoading || messages.length === 0}
         >
-          <FaMagic className="text-xl" /> Summarize & Mint
+          <FaMagic className="text-xl" /> Summarize & Save
         </button>
 
         {/* Summary Card */}
@@ -216,6 +236,27 @@ function App() {
               <FaMagic /> Summary
             </h2>
             <ReactMarkdown className="prose prose-lg max-w-none text-gray-800">{summary}</ReactMarkdown>
+          </div>
+        )}
+
+        {/* Memos Section */}
+        {memos.length > 0 && (
+          <div className="w-full mt-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FaHistory /> Your Memos
+            </h2>
+            <div className="grid gap-4">
+              {memos.map((memo) => (
+                <div key={memo.id} className="bg-white/90 p-6 rounded-2xl shadow-lg">
+                  <div className="text-sm text-gray-500 mb-2">
+                    ID: {memo.id} • {new Date(Number(memo.timestamp) * 1000).toLocaleString()}
+                  </div>
+                  <ReactMarkdown className="prose prose-lg max-w-none text-gray-800">
+                    {memo.content}
+                  </ReactMarkdown>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

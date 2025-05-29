@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "dev:local": "node dev.js",
+    "dev:flow": "node dev-flow.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -13,6 +14,9 @@
     "build:analyze": "ANALYZE=true next build",
     "preview": "next build && next start",
     "clean": "rm -rf .next node_modules/.cache",
+    "flow:emulator": "flow emulator start",
+    "flow:dev-wallet": "flow dev-wallet",
+    "flow:deploy": "flow project deploy --network emulator",
     "db:migrate": "supabase db push",
     "db:reset": "supabase db reset",
     "deploy:vercel": "vercel --prod",

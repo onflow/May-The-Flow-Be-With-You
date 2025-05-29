@@ -3,7 +3,10 @@ import {
   authenticate,
   unauthenticate,
   currentUser,
-  config
+  config,
+  query,
+  mutate,
+  tx
 } from '@onflow/fcl';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
@@ -13,7 +16,7 @@ import './App.css';
 
 config()
   .put('accessNode.api', process.env.REACT_APP_FLOW_ACCESS_NODE || 'https://rest-testnet.onflow.org')
-  .put('0xNonFungibleToken', process.env.REACT_APP_NON_FUNGIBLE_TOKEN_ADDRESS)
+  .put('0xNonFungibleToken', '0x631e88ae7f1d7c20')
   .put('0xMemoMint', process.env.REACT_APP_MEMO_MINT_ADDRESS)
   .put('discovery.wallet', 'https://fcl-discovery.onflow.org/testnet/authn')
   .put('discovery.authn.endpoint', 'https://fcl-discovery.onflow.org/testnet/authn')
@@ -57,15 +60,61 @@ function App() {
   };
 
   const handleSummarize = async () => {
+    if (!user?.addr) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
     setIsLoading(true);
     try {
+      // Get summary from AI
       const res = await axios.post('/summarize', {
         messages,
         sessionId
       });
-      setSummary(res.data.choices[0].message.content);
+      const summary = res.data.choices[0].message.content;
+      setSummary(summary);
+
+      // Mint NFT with summary
+      const mintTransaction = `
+        import MemoMint from 0xMemoMint
+        import NonFungibleToken from 0xNonFungibleToken
+
+        transaction(summary: String) {
+          prepare(signer: AuthAccount) {
+            // Get or create the collection
+            let collection = signer.borrow<&MemoMint.Collection>(from: /storage/MemoMintCollection)
+            if collection == nil {
+              collection = signer.save(<- MemoMint.createEmptyCollection(), to: /storage/MemoMintCollection)
+              signer.link<&{NonFungibleToken.CollectionPublic}>(/public/MemoMintCollection, target: /storage/MemoMintCollection)
+            }
+
+            // Get the minter
+            let minter = signer.borrow<&MemoMint.Minter>(from: /storage/MemoMintMinter)
+            if minter == nil {
+              minter = signer.save(<- MemoMint.getMinter(), to: /storage/MemoMintMinter)
+            }
+
+            // Mint the NFT
+            minter.mintNFT(summary: summary, recipient: collection)
+          }
+        }
+      `;
+
+      const transactionId = await mutate({
+        cadence: mintTransaction,
+        args: (arg, t) => [arg(summary, t.String)],
+        limit: 9999
+      });
+
+      // Wait for transaction to be sealed
+      const transaction = await tx(transactionId).onceSealed();
+      console.log('Transaction sealed:', transaction);
+
+      alert('Summary minted as NFT successfully!');
     } catch (err) {
       console.error(err);
+      alert('Error minting NFT: ' + err.message);
     } finally {
       setIsLoading(false);
     }

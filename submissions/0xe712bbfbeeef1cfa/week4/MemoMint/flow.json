@@ -1,0 +1,25 @@
+{
+    "networks": {
+      "emulator": "127.0.0.1:3569",
+      "testnet": "access.devnet.nodes.onflow.org:9000"
+    },
+    "contracts": {
+      "NonFungibleToken": "0x631e88ae7f1d7c20",
+      "MemoMint": "./src/cadence/contracts/MemoMint.cdc"
+    },
+    "accounts": {
+      "testnet-account": {
+        "address": "0x48b91e4148b1a831",
+        "key": {
+          "type": "file",
+          "location": "testnet-account.pkey"
+        }
+      }
+    },
+    "deployments": {
+      "testnet": {
+        "testnet-account": ["MemoMint"]
+      }
+    }
+  }
+  

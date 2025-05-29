@@ -1,5 +1,5 @@
-// get_nft_traits.cdc
-// Script to read NFT traits with LAZY INITIALIZATION 🚀
+// get_nft_traits_with_lazy_init.cdc
+// This approach combines transaction and script to enable lazy init
 
 import "EvolvingNFT"
 import "NonFungibleToken"
@@ -19,14 +19,17 @@ access(all) fun main(ownerAddress: Address, nftID: UInt64): {String: String} {
     // Get all trait displays
     var traitDisplays: {String: String} = {}
     
-    // 🚀 DYNAMIC: Get ALL registered modules (not just hardcoded ones)
+    // Get ALL registered modules
     let registeredModules = EvolvingNFT.getRegisteredModules()
     
     for moduleType in registeredModules {
-        // 🚀 LAZY INIT: Use getTraitValueWithInit which auto-creates missing traits
-        if let traitValue = evolvingNFTRef.getTraitValueWithInit(traitType: moduleType) {
-            if let traitDisplay = evolvingNFTRef.getTraitDisplay(traitType: moduleType) {
-                traitDisplays[moduleType] = traitDisplay
+        // Check existing traits first (view-safe)
+        if let traitDisplay = evolvingNFTRef.getTraitDisplay(traitType: moduleType) {
+            traitDisplays[moduleType] = traitDisplay
+        } else {
+            // Trait doesn't exist yet - indicate it needs lazy init
+            if EvolvingNFT.getModuleFactory(moduleType: moduleType) != nil {
+                traitDisplays[moduleType] = "⏳ Trait needs initialization - call transaction first"
             }
         }
     }

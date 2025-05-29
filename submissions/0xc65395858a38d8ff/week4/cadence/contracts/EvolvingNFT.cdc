@@ -49,8 +49,45 @@ access(all) contract EvolvingNFT: NonFungibleToken {
         
         // === TRAIT MANAGEMENT ===
         access(all) view fun getTraitValue(traitType: String): String? {
+            // Check if trait already exists
             if let traitRef = &self.traits[traitType] as &{TraitModule.Trait}? {
                 return traitRef.getValue()
+            }
+            
+            // 🚀 LAZY INITIALIZATION: If trait doesn't exist but module is registered
+            if EvolvingNFT.registeredModules.containsKey(traitType) {
+                // This is a view function, so we can't modify state here
+                // We'll need to modify this approach for non-view operations
+                return nil  // For now, return nil in view context
+            }
+            
+            return nil
+        }
+        
+        // NEW: Non-view version that can do lazy initialization
+        access(all) fun ensureTraitExists(traitType: String): Bool {
+            // If trait already exists, nothing to do
+            if self.traits.containsKey(traitType) {
+                return true
+            }
+            
+            // 🚀 LAZY INITIALIZATION: Create default trait if module exists
+            if let factory = EvolvingNFT.getModuleFactory(moduleType: traitType) {
+                let defaultTrait <- factory.createDefaultTrait()
+                self.addTrait(traitType: traitType, trait: <- defaultTrait)
+                return true
+            }
+            
+            return false
+        }
+        
+        // Modified to use lazy initialization
+        access(all) fun getTraitValueWithInit(traitType: String): String? {
+            // Ensure trait exists (lazy init if needed)
+            if self.ensureTraitExists(traitType: traitType) {
+                if let traitRef = &self.traits[traitType] as &{TraitModule.Trait}? {
+                    return traitRef.getValue()
+                }
             }
             return nil
         }

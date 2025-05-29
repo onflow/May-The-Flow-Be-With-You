@@ -20,8 +20,9 @@ access(all) contract PersonalityModule: TraitModule {
         access(self) var energy: UInt8
         
         init(initialMood: String, initialEnergy: UInt8) {
-            self.mood = self.validateMood(initialMood) ? initialMood : "Happy"
-            self.energy = self.clampEnergy(initialEnergy)
+            // Initialize directly, validate using static function
+            self.mood = PersonalityModule.isValidMood(initialMood) ? initialMood : "Happy"
+            self.energy = PersonalityModule.clampEnergyValue(initialEnergy)
         }
         
         access(all) view fun getValue(): String {
@@ -69,19 +70,28 @@ access(all) contract PersonalityModule: TraitModule {
         }
         
         access(self) fun validateMood(_ mood: String): Bool {
-            for validMood in PersonalityModule.MOODS {
-                if validMood == mood {
-                    return true
-                }
-            }
-            return false
+            return PersonalityModule.isValidMood(mood)
         }
         
         access(self) fun clampEnergy(_ energy: UInt8): UInt8 {
-            if energy < PersonalityModule.ENERGY_MIN { return PersonalityModule.ENERGY_MIN }
-            if energy > PersonalityModule.ENERGY_MAX { return PersonalityModule.ENERGY_MAX }
-            return energy
+            return PersonalityModule.clampEnergyValue(energy)
         }
+    }
+    
+    // === STATIC HELPER FUNCTIONS ===
+    access(all) view fun isValidMood(_ mood: String): Bool {
+        for validMood in PersonalityModule.MOODS {
+            if validMood == mood {
+                return true
+            }
+        }
+        return false
+    }
+    
+    access(all) view fun clampEnergyValue(_ energy: UInt8): UInt8 {
+        if energy < PersonalityModule.ENERGY_MIN { return PersonalityModule.ENERGY_MIN }
+        if energy > PersonalityModule.ENERGY_MAX { return PersonalityModule.ENERGY_MAX }
+        return energy
     }
     
     // === FACTORY METHODS ===

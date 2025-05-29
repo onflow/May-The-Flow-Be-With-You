@@ -20,7 +20,21 @@ transaction(deployerAddress: Address) {
             contractName: "SizeModule"
         )
         
-        log("Modules registered successfully!")
+        // Register the PersonalityModule
+        EvolvingNFT.registerModule(
+            moduleType: "personality",
+            contractAddress: deployerAddress,
+            contractName: "PersonalityModule"
+        )
+        
+        // Register the NEW COMPLEX StatsModule 🧠💪⚡❤️
+        EvolvingNFT.registerModule(
+            moduleType: "stats",
+            contractAddress: deployerAddress,
+            contractName: "StatsModule"
+        )
+        
+        log("All modules registered successfully!")
     }
     
     execute {

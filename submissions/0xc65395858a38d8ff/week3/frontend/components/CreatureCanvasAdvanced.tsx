@@ -573,9 +573,9 @@ export default function CreatureCanvasAdvanced({
           newMap.set(creature.id, visual);
         }
         
-        // Update animation
-        visual.pulsePhase += 0.05 * animationSpeed;
-        visual.appendageAngle += 0.02 * animationSpeed;
+        // Update animation - más lento y relajado
+        visual.pulsePhase += 0.02 * animationSpeed; // Reducido de 0.05 a 0.02
+        visual.appendageAngle += 0.008 * animationSpeed; // Reducido de 0.02 a 0.008
         visual.movementTimer += 1;
         
         // Update movement
@@ -585,50 +585,50 @@ export default function CreatureCanvasAdvanced({
         
         switch (visual.movementType) {
           case 0: // Guardián Defensivo - Se mueve poco, patrones predecibles
-            const guardianFloat = Math.sin(time * 0.0008 * agilidadMod + visual.id) * (20 / tamanoMod);
-            visual.y += guardianFloat * 0.3;
-            visual.x += Math.cos(time * 0.0005 + visual.id) * (defensaMod * 5);
+            const guardianFloat = Math.sin(time * 0.0003 * agilidadMod + visual.id) * (15 / tamanoMod);
+            visual.y += guardianFloat * 0.1;
+            visual.x += Math.cos(time * 0.0002 + visual.id) * (defensaMod * 2);
             
             // Cambio de posición ocasional basado en defensa alta
-            if (visual.movementTimer % Math.floor(600 / defensaMod) === 0) {
-              visual.targetX = visual.x + (Math.random() - 0.5) * (50 * defensaMod);
-              visual.targetY = visual.y + (Math.random() - 0.5) * (50 * defensaMod);
+            if (visual.movementTimer % Math.floor(1200 / defensaMod) === 0) {
+              visual.targetX = visual.x + (Math.random() - 0.5) * (30 * defensaMod);
+              visual.targetY = visual.y + (Math.random() - 0.5) * (30 * defensaMod);
             }
             break;
             
           case 1: // Cazador Circular - Patrullas en círculos
-            const huntRadius = 30 + visual.movementIntensity * 40 + (agilidadMod * 20);
-            const huntSpeed = 0.001 * agilidadMod * (2 / tamanoMod);
+            const huntRadius = 30 + visual.movementIntensity * 25 + (agilidadMod * 15);
+            const huntSpeed = 0.0003 * agilidadMod * (1.5 / tamanoMod);
             visual.targetX = canvasWidth/2 + Math.cos(time * huntSpeed + visual.id) * huntRadius;
             visual.targetY = canvasHeight/2 + Math.sin(time * huntSpeed + visual.id) * huntRadius;
             
             // Variación en la altura basada en agilidad
-            visual.y += Math.sin(time * 0.003 * agilidadMod) * 10;
+            visual.y += Math.sin(time * 0.001 * agilidadMod) * 3;
             break;
             
           case 2: // Explorador Errático - Cambia destino frecuentemente
-            const exploreFreq = Math.max(30, 120 - (agilidadMod * 40)); // Más ágil = más frecuente
+            const exploreFreq = Math.max(100, 300 - (agilidadMod * 50)); // Más ágil = más frecuente
             if (visual.movementTimer % Math.floor(exploreFreq) === 0) {
-              const maxDistance = 80 + (agilidadMod * 50);
+              const maxDistance = 40 + (agilidadMod * 30);
               visual.targetX = Math.max(50, Math.min(canvasWidth - 50, 
                 visual.x + (Math.random() - 0.5) * maxDistance));
               visual.targetY = Math.max(50, Math.min(canvasHeight - 50, 
                 visual.y + (Math.random() - 0.5) * maxDistance));
             }
             
-            // Movimiento nervioso adicional
-            visual.x += Math.sin(time * 0.01 * agilidadMod) * 3;
-            visual.y += Math.cos(time * 0.012 * agilidadMod) * 2;
+            // Movimiento nervioso adicional más suave
+            visual.x += Math.sin(time * 0.003 * agilidadMod) * 1;
+            visual.y += Math.cos(time * 0.004 * agilidadMod) * 0.8;
             break;
             
           case 3: // Territorial - Defiende un área específica
             const territoryX = 100 + (visual.id % 6) * 120;
             const territoryY = 100 + Math.floor(visual.id / 6) * 120;
-            const territoryRadius = 40 + (defensaMod * 30);
+            const territoryRadius = 30 + (defensaMod * 20);
             
-            // Patrulla dentro de su territorio
-            const territoryAngle = time * 0.002 * (agilidadMod * 0.5);
-            const territoryPatrolRadius = territoryRadius * 0.7;
+            // Patrulla dentro de su territorio más lento
+            const territoryAngle = time * 0.0008 * (agilidadMod * 0.5);
+            const territoryPatrolRadius = territoryRadius * 0.6;
             visual.targetX = territoryX + Math.cos(territoryAngle) * territoryPatrolRadius;
             visual.targetY = territoryY + Math.sin(territoryAngle) * territoryPatrolRadius;
             
@@ -643,13 +643,13 @@ export default function CreatureCanvasAdvanced({
             break;
         }
         
-        // Smooth movement to target - velocidad basada en agilidad
-        const baseSpeed = 0.02;
-        const speedModifier = 0.8 + (agilidadMod * 0.4); // 0.8 a 1.2x velocidad
+        // Smooth movement to target - velocidad mucho más lenta
+        const baseSpeed = 0.008; // Reducido de 0.02 a 0.008
+        const speedModifier = 0.5 + (agilidadMod * 0.3); // Reducido el rango
         const actualSpeed = baseSpeed * speedModifier;
         
-        visual.vx = lerp(visual.vx, (visual.targetX - visual.x) * actualSpeed, 0.1);
-        visual.vy = lerp(visual.vy, (visual.targetY - visual.y) * actualSpeed, 0.1);
+        visual.vx = lerp(visual.vx, (visual.targetX - visual.x) * actualSpeed, 0.05); // Menos responsivo
+        visual.vy = lerp(visual.vy, (visual.targetY - visual.y) * actualSpeed, 0.05);
         visual.x += visual.vx;
         visual.y += visual.vy;
         
@@ -758,16 +758,16 @@ export default function CreatureCanvasAdvanced({
         // Actualizar energía visual basada en EP actual
         visual.energy = Math.min(1.2, currentEP / 50);
         
-        // Efectos de energía en el comportamiento
+        // Efectos de energía en el comportamiento - más moderado
         if (visual.energy > 0.8) {
-          // Criaturas con mucha energía se mueven más rápido
-          visual.vx *= 1.2;
-          visual.vy *= 1.2;
+          // Criaturas con mucha energía se mueven un poco más rápido
+          visual.vx *= 1.1; // Reducido de 1.2 a 1.1
+          visual.vy *= 1.1;
           
-          // Y cambian más frecuentemente de dirección
-          if (visual.movementTimer % 80 === 0) {
-            visual.targetX += (Math.random() - 0.5) * 60;
-            visual.targetY += (Math.random() - 0.5) * 60;
+          // Y cambian menos frecuentemente de dirección
+          if (visual.movementTimer % 200 === 0) { // Aumentado de 80 a 200
+            visual.targetX += (Math.random() - 0.5) * 30; // Reducido de 60 a 30
+            visual.targetY += (Math.random() - 0.5) * 30;
           }
         }
       });

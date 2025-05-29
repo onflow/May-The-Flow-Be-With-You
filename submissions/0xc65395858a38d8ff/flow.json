@@ -1,35 +1,28 @@
 {
 	"contracts": {
-		"ElementalStrikers": {
-			"source": "week2/ElementalStrikers/cadence/contracts/ElementalStrikers.cdc",
+		"IGeneModule": {
+			"source": "week3/cadence/contracts/core/IGeneModule.cdc",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
 				"testnet": "2444e6b4d9327f09"
 			}
 		},
-		"EvolvingCreatures": {
-			"source": "week3/cadence/contracts/EvolvingCreatures.cdc",
+		"VisualGeneModule": {
+			"source": "week3/cadence/contracts/core/modules/VisualGeneModule.cdc",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
 				"testnet": "2444e6b4d9327f09"
 			}
 		},
-		"EvolvingCreaturesV2": {
-			"source": "week3/cadence/contracts/EvolvingCreaturesV2.cdc",
+		"CombatGeneModule": {
+			"source": "week3/cadence/contracts/core/modules/CombatGeneModule.cdc",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
 				"testnet": "2444e6b4d9327f09"
 			}
 		},
-		"MyNFT": {
-			"source": "week3/cadence/contracts/MyNFT.cdc",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"testnet": "2444e6b4d9327f09"
-			}
-		},
-		"CreatureNFTV6": {
-			"source": "week3/cadence/contracts/CreatureNFTV6.cdc",
+		"CreatureNFTCore": {
+			"source": "week3/cadence/contracts/core/CreatureNFTCore.cdc",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
 				"testnet": "2444e6b4d9327f09"
@@ -232,14 +225,18 @@
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
-				"ElementalStrikers",
-				"EvolvingCreatures"
+				"IGeneModule",
+				"VisualGeneModule", 
+				"CombatGeneModule",
+				"CreatureNFTCore"
 			]
 		},
 		"testnet": {
 			"testnet-deployer": [
-				"MyNFT",
-				"CreatureNFTV6"
+				"IGeneModule",
+				"VisualGeneModule",
+				"CombatGeneModule", 
+				"CreatureNFTCore"
 			]
 		}
 	}

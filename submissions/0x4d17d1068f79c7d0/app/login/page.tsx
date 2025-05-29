@@ -1,21 +1,47 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../../shared/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { Sheet } from "@silk-hq/components";
 
 // Force dynamic rendering (no prerendering)
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
-  const { user, loading, signInWithFlow, signInWithSupabase } = useAuth();
+  const {
+    user,
+    loading,
+    signInWithFlow,
+    signInWithSupabase,
+    signInWithEmail,
+    signUpWithEmail,
+  } = useAuth();
   const router = useRouter();
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
 
   useEffect(() => {
     if (user) {
       router.push("/");
     }
   }, [user, router]);
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+
+    try {
+      if (isSignUp) {
+        await signUpWithEmail(email, password);
+      } else {
+        await signInWithEmail(email, password);
+      }
+    } catch (error: any) {
+      setAuthError(error.message || "Authentication failed");
+    }
+  };
 
   if (loading) {
     return (
@@ -70,12 +96,68 @@ export default function LoginPage() {
               Sign in with email or Google for quick access to all memory
               training features
             </p>
-            <button
-              onClick={signInWithSupabase}
-              className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium"
-            >
-              Continue with Google
-            </button>
+
+            {!showEmailForm ? (
+              <div className="space-y-3">
+                <button
+                  onClick={signInWithSupabase}
+                  className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium"
+                >
+                  Continue with Google
+                </button>
+                <button
+                  onClick={() => setShowEmailForm(true)}
+                  className="w-full py-2 text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition-all duration-200 font-medium"
+                >
+                  Use Email Instead
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleEmailAuth} className="space-y-3">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                />
+                {authError && (
+                  <p className="text-red-500 text-sm">{authError}</p>
+                )}
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium"
+                >
+                  {isSignUp ? "Sign Up" : "Sign In"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="w-full py-2 text-green-600 text-sm hover:underline"
+                >
+                  {isSignUp
+                    ? "Already have an account? Sign In"
+                    : "Need an account? Sign Up"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEmailForm(false)}
+                  className="w-full py-2 text-gray-500 text-sm hover:underline"
+                >
+                  Back to Google
+                </button>
+              </form>
+            )}
+
             <div className="text-xs text-gray-500">
               🚀 Quick setup • 💾 Cloud sync • 📊 Progress tracking
             </div>

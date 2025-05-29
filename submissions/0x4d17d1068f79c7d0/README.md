@@ -230,9 +230,9 @@ _Modern Engineering Meets Ancient Wisdom_
 - **Runtime**: React 19 (cutting-edge features)
 - **UI Components**:
   - Supabase UI Library (authentication, real-time features)
-  - Silk Components (mobile-first interactions)
   - shadcn/ui base components
   - Radix UI primitives (dialogs, dropdowns, tabs)
+  - Custom component library (memory-focused interactions)
 - **Styling**: Tailwind CSS v4 with custom memory-themed design system
 - **3D Rendering**: Three.js + React Three Fiber + Drei for immersive memory palace environments
 - **State Management**: React Server Components + Zustand for client state
@@ -247,9 +247,10 @@ _Modern Engineering Meets Ancient Wisdom_
   - NFT minting for memory achievements
   - Tournament prize pools and entry fees
 - **Authentication**: Hybrid Web2/Web3 auth system
-  - Flow wallet authentication (primary for Web3 users)
-  - Supabase fallback for traditional users
-  - Seamless switching between auth methods
+  - Email/password authentication (primary for easy onboarding)
+  - Google OAuth integration (configured, test mode)
+  - Flow wallet authentication (Web3 upgrade path)
+  - Seamless account linking and switching between auth methods
 
 ### Backend Infrastructure
 
@@ -380,10 +381,23 @@ _"Building the unshakeable base"_
 - ✅ **Core Architecture**: Next.js 15.3.2 + React 19 + Tailwind v4
 - ✅ **Flow Integration**: FCL setup, multi-network support, dev wallet integration
 - ✅ **Authentication System**: Hybrid Web2/Web3 auth with Flow + Supabase
-- ✅ **UI Foundation**: Silk components, Radix primitives, responsive design
+- ✅ **UI Foundation**: Radix primitives, responsive design, modern components
 - ✅ **3D Engine**: Three.js + React Three Fiber for memory palaces
 - ✅ **Development Environment**: Flow emulator, dev scripts, deployment configs
 - ✅ **Documentation**: Comprehensive setup guides and architecture docs
+
+### ✅ **Phase 0.5: Production Deployment (COMPLETED)**
+
+_"From localhost to the world"_
+
+- ✅ **Production Deployment**: Live on Netlify with static export optimization
+- ✅ **Dual Authentication System**: Email/password + Flow wallet integration working
+- ✅ **Flow Testnet Integration**: Real blockchain connectivity with WalletConnect
+- ✅ **Google OAuth Setup**: Configured (test mode) with Supabase integration
+- ✅ **Environment Configuration**: Production-ready environment variables
+- ✅ **Build Optimization**: TypeScript compilation, static generation, performance tuning
+- ✅ **Error Handling**: Browser extension conflicts resolved, graceful fallbacks
+- ✅ **Auth Callback System**: Seamless OAuth redirects and session management
 
 ### 🔄 **Phase 1: Chaos and Order (IN PROGRESS)**
 
@@ -438,23 +452,53 @@ _Four Phases of Cognitive Evolution_
 
 Like the legendary memory masters who spent years perfecting their craft, Memoreee unfolds through carefully orchestrated phases, each building upon the last. We're currently deep in Phase 1, with a solid foundation already established and the first games taking shape.
 
+## 🌐 Live Demo
+
+**Memoreee is now live in production!**
+
+- **Production URL**: https://memoreee.netlify.app
+- **Status**: ✅ Fully deployed and functional
+- **Authentication**: Email/password + Flow wallet integration working
+- **Blockchain**: Connected to Flow testnet for real Web3 features
+
+### Current Features Available:
+
+✅ **Dual Authentication System**
+
+- Email/password signup and login
+- Flow wallet connection for blockchain features
+- Google OAuth (test mode, ready for verification)
+
+✅ **Memory Training Interface**
+
+- Responsive design optimized for all devices
+- 3D memory palace foundations with Three.js
+- Progress tracking with Supabase integration
+
+✅ **Flow Blockchain Integration**
+
+- Real testnet connectivity
+- WalletConnect support for production wallets
+- Ready for NFT achievements and on-chain features
+
 ## 🚀 Getting Started
 
 This project is **production-ready** and **self-contained** within the hackathon submission directory.
 
-### ✅ **MVP Status: Ready for Production**
+### ✅ **MVP Status: Live in Production**
 
 - ✅ **Next.js 15.3.2** with Turbopack (latest, fastest)
 - ✅ **React 19** (cutting-edge)
 - ✅ **Tailwind CSS v4** (modern, performant)
-- ✅ **Flow Blockchain Integration** (FCL + Dev Wallet support)
-- ✅ **Supabase Authentication** (Web2 + Web3 hybrid auth)
-- ✅ **Silk UI Components** (premium user experience)
+- ✅ **Flow Blockchain Integration** (FCL + testnet connectivity)
+- ✅ **Dual Authentication System** (Email + Flow wallet)
+- ✅ **Google OAuth Ready** (configured, pending verification)
 - ✅ **Creative Memory Palace Design** (no boring rectangles!)
-- ✅ **Deployment Ready** (Vercel + Netlify configs)
+- ✅ **Live Deployment** (Netlify with static optimization)
 - ✅ **Production Optimized** (security headers, performance)
 - ✅ **Three.js** for 3D memory palaces
 - ✅ **Multi-Network Support** (Emulator, Testnet, Mainnet)
+- ✅ **WalletConnect Integration** (real wallet support)
 
 ### Prerequisites
 
@@ -636,21 +680,39 @@ supabase start
 ## Environment Variables
 
 ```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+# Supabase Configuration (Production Ready)
+NEXT_PUBLIC_SUPABASE_URL=https://todqarjzydxrfcjnwyid.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# Flow Blockchain Configuration
-NEXT_PUBLIC_FLOW_NETWORK=emulator  # or testnet/mainnet
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+# Flow Blockchain Configuration (Testnet Ready)
+NEXT_PUBLIC_FLOW_NETWORK=testnet  # emulator for local dev
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=5b064f3a595f8ccb12b5e57388c7fc7d
 
-# AI Integration
+# AI Integration (Future)
 ANTHROPIC_API_KEY=your_claude_api_key
-
-# Silk Components (for commercial use)
-SILK_LICENSE_KEY=your_silk_license_key
 ```
+
+### Authentication Status
+
+**✅ Email/Password Authentication**
+
+- Primary authentication method
+- Immediate signup and login
+- Works for all users globally
+
+**✅ Flow Wallet Integration**
+
+- Testnet connectivity established
+- WalletConnect project configured
+- Real blockchain features available
+
+**🔄 Google OAuth**
+
+- Fully configured in Google Cloud Console
+- Supabase integration complete
+- Currently in test mode (pending Google verification)
+- Test users can be added for beta testing
 
 ## Contributing
 

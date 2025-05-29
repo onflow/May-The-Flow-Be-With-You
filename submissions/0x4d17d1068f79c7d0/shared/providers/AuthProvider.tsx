@@ -21,6 +21,8 @@ interface AuthContextType {
   loading: boolean;
   signInWithFlow: () => Promise<void>;
   signInWithSupabase: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -30,6 +32,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Prevent browser extension conflicts
+  useEffect(() => {
+    // Suppress wallet extension errors that don't affect our app
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (
+        args[0]?.toString().includes("ethereum") ||
+        args[0]?.toString().includes("pageProvider")
+      ) {
+        return; // Suppress wallet extension errors
+      }
+      originalError.apply(console, args);
+    };
+
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
 
   // Only create Supabase client if environment variables are available
   const supabase =
@@ -184,6 +205,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    if (!supabase) {
+      console.error("Supabase client not available");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error("Email sign in error:", error);
+      setLoading(false);
+      throw error;
+    }
+  };
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    if (!supabase) {
+      console.error("Supabase client not available");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error("Email sign up error:", error);
+      setLoading(false);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     setLoading(true);
     try {
@@ -205,6 +267,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signInWithFlow,
     signInWithSupabase,
+    signInWithEmail,
+    signUpWithEmail,
     signOut,
     isAuthenticated: !!user,
   };

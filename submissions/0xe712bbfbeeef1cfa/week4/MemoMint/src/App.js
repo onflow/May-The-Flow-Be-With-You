@@ -12,6 +12,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { v4 as uuidv4 } from 'uuid';
 import { FaUser, FaRobot, FaMagic, FaSignOutAlt, FaSignInAlt, FaHistory } from 'react-icons/fa';
+import { InferenceClient } from "@huggingface/inference";
 import './App.css';
 
 config()
@@ -20,6 +21,8 @@ config()
   .put('discovery.wallet', 'https://fcl-discovery.onflow.org/testnet/authn')
   .put('discovery.authn.endpoint', 'https://fcl-discovery.onflow.org/testnet/authn')
   .put('discovery.authn.include', ['0x82ec283f88a62e65', '0x9d2e44203cb13051']);
+
+const client = new InferenceClient(process.env.REACT_APP_HUGGINGFACE_API_KEY);
 
 function App() {
   const [user, setUser] = useState(null);
@@ -78,14 +81,29 @@ function App() {
     setInput('');
     setIsLoading(true);
     try {
-      const res = await axios.post('/chat', {
-        messages: [...messages, userMessage],
-        sessionId
+      console.log('Sending request to DeepSeek API...');
+      const response = await client.chatCompletion({
+        provider: "hyperbolic",
+        model: "deepseek-ai/DeepSeek-R1-0528",
+        messages: [
+          {
+            role: "user",
+            content: input
+          }
+        ]
       });
-      const aiMessage = res.data.choices[0].message;
+      
+      console.log('API Response:', response);
+
+      if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
+        throw new Error('Invalid response from AI model');
+      }
+
+      const aiMessage = { role: 'assistant', content: response.choices[0].message.content.trim() };
       setMessages(prev => [...prev, aiMessage]);
     } catch (err) {
-      console.error(err);
+      console.error('Error in chat:', err);
+      alert('Error getting response: ' + err.message);
     } finally {
       setIsLoading(false);
     }
@@ -99,12 +117,32 @@ function App() {
 
     setIsLoading(true);
     try {
-      // Get summary from AI
-      const res = await axios.post('/summarize', {
-        messages,
-        sessionId
+      // Get summary using DeepSeek
+      const conversationText = messages
+        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n\n');
+      
+      const prompt = `Please provide a concise summary of the following conversation:\n\n${conversationText}\n\nSummary:`;
+      
+      console.log('Sending summarize request to DeepSeek API...');
+      const response = await client.chatCompletion({
+        provider: "hyperbolic",
+        model: "deepseek-ai/DeepSeek-R1-0528",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
       });
-      const summary = res.data.choices[0].message.content;
+
+      console.log('API Response:', response);
+
+      if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
+        throw new Error('Invalid response from AI model');
+      }
+
+      const summary = response.choices[0].message.content.trim();
       setSummary(summary);
 
       // Create memo with summary
@@ -133,7 +171,7 @@ function App() {
 
       alert('Summary saved as memo successfully!');
     } catch (err) {
-      console.error(err);
+      console.error('Error in summarize:', err);
       alert('Error saving memo: ' + err.message);
     } finally {
       setIsLoading(false);

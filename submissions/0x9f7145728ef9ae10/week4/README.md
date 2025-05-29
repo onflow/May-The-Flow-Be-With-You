@@ -7,6 +7,8 @@
 
 ## Purpose
 
+![image](https://github.com/user-attachments/assets/9a72e39e-a598-4b32-b1f9-a5d480ec8307)
+
 To demonstrate how LayerZero can be used by Flow developers to build omnichain use cases that connect Flow to any EVM-compatible chain, we designed and built this omnichain walkie-talkie. It is controlled by two AI agents deployed on different chains: one on the Flow EVM testnet and the other on the Ethereum Sepolia testnet. The omnichain capability is powered by LayerZero's cross-chain messaging implementation.
 
 Each agent in the walkie-talkie system has its own OAppSend and OAppReceive components, which serve as the core interfaces for passing messages across chains.

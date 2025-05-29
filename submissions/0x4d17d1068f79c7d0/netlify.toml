@@ -1,6 +1,6 @@
 [build]
   command = "bun run build"
-  publish = ".next"
+  publish = "out"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -40,3 +40,5 @@
 # NEXT_PUBLIC_SUPABASE_URL
 # NEXT_PUBLIC_SUPABASE_ANON_KEY
 # SUPABASE_SERVICE_ROLE_KEY
+# NEXT_PUBLIC_FLOW_NETWORK
+# NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID

@@ -1,6 +1,7 @@
 [build]
-  command = "bun run build"
-  publish = "out"
+  command = "cd submissions/0x4d17d1068f79c7d0 && bun install && bun run build"
+  publish = "submissions/0x4d17d1068f79c7d0/out"
+  base = "submissions/0x4d17d1068f79c7d0"
 
 [build.environment]
   NODE_VERSION = "20"

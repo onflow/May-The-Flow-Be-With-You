@@ -2,13 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { flowAuth } from "../config/flow";
+import { flowAuth, getWalletType } from "../config/flow";
 
 interface User {
   id: string;
   email?: string;
   flowAddress?: string;
   authMethod: "supabase" | "flow";
+  walletType?: "cadence" | "evm" | "unknown" | null;
   profile?: {
     name?: string;
     avatar?: string;
@@ -45,12 +46,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for Flow auth changes
     const unsubscribeFlow = flowAuth.onAuthChange((flowUser: any) => {
       if (flowUser.loggedIn && flowUser.addr) {
+        const walletType = getWalletType(flowUser);
+        const walletTypeLabel =
+          walletType === "evm"
+            ? "EVM"
+            : walletType === "cadence"
+            ? "Cadence"
+            : "Flow";
+
         setUser({
           id: flowUser.addr,
           flowAddress: flowUser.addr,
           authMethod: "flow",
+          walletType,
           profile: {
-            name: `Flow User ${flowUser.addr.slice(0, 8)}...`,
+            name: `${walletTypeLabel} User ${flowUser.addr.slice(0, 8)}...`,
           },
         });
       } else if (user?.authMethod === "flow") {
@@ -98,12 +108,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Check Flow auth first (preferred for Web3 users)
       const flowUser = await flowAuth.getCurrentUser();
       if (flowUser?.loggedIn && flowUser?.addr) {
+        const walletType = getWalletType(flowUser);
+        const walletTypeLabel =
+          walletType === "evm"
+            ? "EVM"
+            : walletType === "cadence"
+            ? "Cadence"
+            : "Flow";
+
         setUser({
           id: flowUser.addr,
           flowAddress: flowUser.addr,
           authMethod: "flow",
+          walletType,
           profile: {
-            name: `Flow User ${flowUser.addr.slice(0, 8)}...`,
+            name: `${walletTypeLabel} User ${flowUser.addr.slice(0, 8)}...`,
           },
         });
         setLoading(false);

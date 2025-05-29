@@ -30,7 +30,7 @@ const network = process.env.NEXT_PUBLIC_FLOW_NETWORK || 'emulator';
 fcl.config({
   'walletconnect.projectId': process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '', // your WalletConnect project ID
   'app.detail.title': 'Memoreee', // the name of your DApp
-  'app.detail.icon': 'https://memoreee.vercel.app/icon.png', // your DApps icon
+  'app.detail.icon': '/icon.png', // your DApps icon
   'app.detail.description': 'Ancient memory wisdom meets modern mastery', // a description of your DApp
   'app.detail.url': 'https://memoreee.vercel.app', // the URL of your DApp
   'flow.network': network,
@@ -41,7 +41,28 @@ fcl.config({
   'discovery.authn.include': fclConfigInfo[network as keyof typeof fclConfigInfo].discoveryAuthInclude,
   'discovery.authn.exclude': [], // excludes chosen wallets by address
   "0xProfile": network === 'testnet' ? "0xba1132bc08f82fe2" : "0xf8d6e0586b0a20c7", // Profile contract address
+  // EVM support on Flow
+  'evm.enabled': true,
+  'evm.gasLimit': 9999999,
 });
+
+// Network and wallet type detection
+export const getWalletType = (user: any) => {
+  if (!user?.addr) return null;
+
+  // EVM addresses start with 0x and are 40 characters (20 bytes)
+  if (user.addr.startsWith('0x') && user.addr.length === 42) {
+    return 'evm';
+  }
+
+  // Flow Cadence addresses are typically 16 characters (8 bytes) without 0x prefix
+  // or with 0x prefix and 18 characters total
+  if (user.addr.length === 16 || (user.addr.startsWith('0x') && user.addr.length === 18)) {
+    return 'cadence';
+  }
+
+  return 'unknown';
+};
 
 // Authentication functions
 export const flowAuth = {

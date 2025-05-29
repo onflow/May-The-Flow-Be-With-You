@@ -7,7 +7,9 @@
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "@supabase_url",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key"
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
+    "NEXT_PUBLIC_FLOW_NETWORK": "@flow_network",
+    "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID": "@walletconnect_project_id"
   },
   "build": {
     "env": {

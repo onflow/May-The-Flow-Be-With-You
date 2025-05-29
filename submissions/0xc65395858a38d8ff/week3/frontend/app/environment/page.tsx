@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import * as fcl from '@onflow/fcl';
 import Header from '@/components/Header';
 import NextLink from 'next/link';
-import CreatureCanvas, { CreatureCanvasProps } from '@/components/CreatureCanvas';
+import CreatureVisualizerHub from '@/components/CreatureVisualizerHub';
 
 const parseFloatSafe = (value: string | number | undefined | null, defaultValue: number): number => {
   if (value === undefined || value === null || typeof value === 'string' && value.trim() === '') {
@@ -792,184 +792,154 @@ export default function EnvironmentPage() {
   }, [user.addr]);
 
   return (
-    <Box bg={bgColor} minH="100vh">
+    <Box minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')} color={textColor}>
       <Header />
-      <Container maxW="container.xl" pt={24} pb={12}> 
+      
+      <Container maxW="container.xl" py={8}>
         <VStack spacing={8} align="stretch">
-          <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} justify="space-between" wrap="wrap">
-            <Heading as="h1" size="xl" mb={{ base: 4, md: 0 }} color={textColor} mr={{md: 4}}>
-              The Primordial Environment
-            </Heading>
-            <Spacer display={{base: "none", md: "block"}}/>
-            <HStack spacing={4} mt={{base: 4, md:0}}>
-                <Button 
-                  colorScheme="primary"
-                  onClick={handleMintCreature}
-                  isLoading={isLoadingMint}
-                  loadingText="Minting..."
-                >
-                  Mint New Creature (0.1 FLOW)
-                </Button>
-                <Button 
-                  colorScheme="teal" 
-                  onClick={handleProcessEvolutionAllCreatures}
-                  isLoading={isProcessingEvolution}
-                  loadingText="Evolving..."
-                  disabled={creatures.length === 0 || !user.addr || isProcessingEvolution}
-                >
-                  Evolve All Creatures
-                </Button>
-            </HStack>
-          </Flex>
-
-          {isLoadingCreatures && <Spinner size="xl" alignSelf="center" color="primary.500" thickness="4px" />}
-
-          {!isLoadingCreatures && creatures.length === 0 && user.addr && (
-            <Text fontSize="lg" textAlign="center" color={textColor}>
-              No creatures in this environment yet. Be the first to mint one!
-            </Text>
-          )}
-          {!isLoadingCreatures && !user.addr && (
-             <Text fontSize="lg" textAlign="center" color={textColor}>
-              Connect your wallet to see the environment and your creatures.
-            </Text>
-          )}
-          
-          {/* Contenedor del Canvas - Se renderiza una sola vez y recibe todas las criaturas */}
-          {!isLoadingCreatures && creatures.length > 0 && (
-            <Box ref={canvasContainerRef} w="100%" display="flex" justifyContent="center" my={{ base: 4, md: 8 }} py={4} bg={useColorModeValue("gray.100", "gray.700")} borderRadius="md">
-                 <CreatureCanvas 
-                    creatures={creatures} // Pasa todas las criaturas
-                    canvasWidth={canvasWidth} 
-                    canvasHeight={canvasHeight} 
-                  />
-            </Box>
-          )}
-
-          <Box 
-            display="grid" 
-            gridTemplateColumns={{ base: "1fr", md: "repeat(auto-fill, minmax(300px, 1fr))" }} // Adjusted minmax for cards
-            gap={6}
+          <MotionVStack
+            variants={sectionVariants}
+            custom={1}
+            spacing={4}
+            textAlign="center"
           >
-            {creatures.map((creature) => {
-              const hasEnoughEpForMinimum = parseFloatSafe(creature.puntosEvolucion, 0.0) >= MINIMUM_EP_FOR_MITOSIS;
-              const canAttemptMitosis = creature.estaViva && hasEnoughEpForMinimum;
-              
-              return (
-                <Box 
-                  key={creature.id} 
-                  p={4} // Slightly reduced padding for cards
-                  shadow="md" 
-                  borderWidth="1px" 
-                  borderRadius="lg" 
-                  bg={cardBgColor}
-                  borderColor={useColorModeValue('neutral.200', 'neutral.600')}
-                >
-                  <VStack spacing={2.5} align="stretch">
-                    <Flex align="center">
-                      <Heading size="sm" color={textColor} noOfLines={1} title={creature.name || `Creature #${creature.id}`}>{creature.name || `Creature #${creature.id}`}</Heading>
-                      <Spacer />
-                      <Tag colorScheme={creature.estaViva ? "green" : "red"} ml={2} size="sm">
-                        {creature.estaViva ? "Alive" : "Dead"}
-                      </Tag>
-                    </Flex>
-                    
-                    <Text fontSize="xs" color={useColorModeValue('neutral.600', 'neutral.300')} noOfLines={2}>{creature.description || "No description available."}</Text>
-                    
-                    <VStack spacing={0} align="stretch" fontSize="2xs">
-                      <Text><strong>ID:</strong> {creature.id}</Text>
-                      <Text><strong>Age:</strong> {parseFloat(creature.edadDiasCompletos).toFixed(2)} / {parseFloat(creature.lifespanTotalSimulatedDays).toFixed(2)} days</Text>
-                      <Text><strong>EP:</strong> {parseFloat(creature.puntosEvolucion).toFixed(2)}</Text>
-                      <Text><strong>Born:</strong> {new Date(parseFloat(creature.birthTimestamp) * 1000).toLocaleDateString()}</Text>
-                    </VStack>
+            <MotionHeading
+              as="h1"
+              fontSize={{ base: '3xl', md: '4xl', lg: '5xl' }}
+              fontWeight="extrabold"
+              color={headingColor}
+              textShadow={useColorModeValue("1px 1px 3px rgba(0,0,0,0.3)", "0px 0px 15px rgba(0, 144, 255, 0.6)")}
+            >
+              Primordia Environment
+            </MotionHeading>
+            <MotionText
+              fontSize={{ base: "lg", md: "xl" }}
+              color={loreTextColor}
+              maxW="2xl"
+            >
+              Witness your creatures evolve in their digital ecosystem
+            </MotionText>
+          </MotionVStack>
 
-                    <ButtonGroup size="xs" spacing="2" mt={2}>
-                        <Button 
-                            colorScheme="purple"
-                            onClick={() => {
-                                setMitosisTargetCreature(creature);
-                                setMitosisEpInput(MINIMUM_EP_FOR_MITOSIS.toFixed(1));
-                                onOpenMitosisModal();
-                            }}
-                            isDisabled={!canAttemptMitosis || processingMitosisForId !== null} 
-                        >
-                            Mitosis...
-                        </Button>
-                    </ButtonGroup>
-
-                  </VStack>
-                </Box>
-              );
-            })}
-          </Box>
-          
-          {/* Mitosis Modal */}
-          {mitosisTargetCreature && (
-            <Modal isOpen={isMitosisModalOpen} onClose={() => {
-                onCloseMitosisModal();
-                setProcessingMitosisForId(null);
-            }} isCentered>
-              <ModalOverlay />
-              <ModalContent bg={cardBgColor}>
-                <ModalHeader color={textColor}>Mitosis for Creature #{mitosisTargetCreature.id}</ModalHeader>
-                <ModalCloseButton />
-                <ModalBody color={textColor}>
-                  <VStack spacing={4} align="stretch">
-                    <Text>
-                      <strong>Creature:</strong> {mitosisTargetCreature.name || `ID: ${mitosisTargetCreature.id}`}<br/>
-                      <strong>Current EP:</strong> {parseFloatSafe(mitosisTargetCreature.puntosEvolucion, 0.0).toFixed(1)} EP
-                    </Text>
-                    <FormControl isRequired>
-                      <FormLabel htmlFor={`ep-cost-${mitosisTargetCreature.id}`}>EP Cost for Mitosis (Minimum: {MINIMUM_EP_FOR_MITOSIS.toFixed(1)})</FormLabel>
-                      <Input 
-                        id={`ep-cost-${mitosisTargetCreature.id}`}
-                        type="number"
-                        value={mitosisEpInput}
-                        onChange={(e) => setMitosisEpInput(e.target.value)}
-                        min={MINIMUM_EP_FOR_MITOSIS}
-                        max={parseFloatSafe(mitosisTargetCreature.puntosEvolucion, 0.0)}
-                        step="0.1"
-                      />
-                    </FormControl>
-                    {parseFloatSafe(mitosisEpInput, 0.0) < MINIMUM_EP_FOR_MITOSIS && (
-                        <Text color="red.500" fontSize="sm">EP cost must be at least {MINIMUM_EP_FOR_MITOSIS.toFixed(1)}.</Text>
-                    )}
-                    {parseFloatSafe(mitosisEpInput, 0.0) > parseFloatSafe(mitosisTargetCreature.puntosEvolucion, 0.0) && (
-                        <Text color="red.500" fontSize="sm">You do not have enough EP. Max: {parseFloatSafe(mitosisTargetCreature.puntosEvolucion, 0.0).toFixed(1)} EP.</Text>
-                    )}
-                  </VStack>
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="ghost" mr={3} onClick={() => {
-                      onCloseMitosisModal();
-                      setProcessingMitosisForId(null);
-                  }}>Cancel</Button>
-                  <Button 
-                    colorScheme="purple" 
-                    onClick={handlePerformMitosis}
-                    isLoading={processingMitosisForId === mitosisTargetCreature.id}
-                    loadingText="Confirming..."
-                    isDisabled={ 
-                        processingMitosisForId !== null && processingMitosisForId !== mitosisTargetCreature.id || 
-                        parseFloatSafe(mitosisEpInput, 0.0) < MINIMUM_EP_FOR_MITOSIS ||
-                        parseFloatSafe(mitosisEpInput, 0.0) > parseFloatSafe(mitosisTargetCreature.puntosEvolucion, 0.0)
-                    }
-                  >
-                    Confirm Mitosis ({parseFloatSafe(mitosisEpInput, MINIMUM_EP_FOR_MITOSIS).toFixed(1)} EP)
+          {/* Account Connection Status */}
+          <MotionBox variants={sectionVariants} custom={2}>
+            {!user.loggedIn ? (
+              <Flex justify="center">
+                <Button onClick={fcl.authenticate} colorScheme="blue" size="lg">
+                  Connect Wallet to View Environment
+                </Button>
+              </Flex>
+            ) : !isAccountConfigured ? (
+              <Flex justify="center">
+                <NextLink href="/" passHref>
+                  <Button as="a" colorScheme="orange" size="lg">
+                    Configure Account First
                   </Button>
-                </ModalFooter>
-              </ModalContent>
-            </Modal>
-          )}
+                </NextLink>
+              </Flex>
+            ) : (
+              <VStack spacing={6}>
+                {/* Action Buttons */}
+                <Flex justify="center" wrap="wrap" gap={4}>
+                  <Button 
+                    onClick={handleMintCreature} 
+                    colorScheme="green" 
+                    isLoading={isLoading}
+                    isDisabled={creatures.filter(c => c.estaViva).length >= 5}
+                  >
+                    Mint New Creature (0.1 FLOW)
+                  </Button>
+                  <Button 
+                    onClick={handleProcessEvolutionAllCreatures} 
+                    colorScheme="purple"
+                    isLoading={isLoading}
+                  >
+                    Process Evolution
+                  </Button>
+                  <Button 
+                    onClick={handlePerformMitosis} 
+                    colorScheme="cyan"
+                    isLoading={isLoading}
+                    isDisabled={creatures.filter(c => c.estaViva && parseFloat(c.puntosEvolucion) >= MINIMUM_EP_FOR_MITOSIS).length === 0}
+                  >
+                    Perform Mitosis
+                  </Button>
+                  <Button 
+                    onClick={fetchCreatures} 
+                    colorScheme="blue"
+                    variant="outline"
+                    isLoading={isLoading}
+                  >
+                    Refresh Data
+                  </Button>
+                </Flex>
 
-          <Box textAlign="center" mt={8}>
-            <NextLink href="/" passHref>
-              <Button colorScheme="secondary" variant="outline">
-                Back to Landing Page
-              </Button>
-            </NextLink>
-          </Box>
+                {/* Enhanced Creature Visualizer */}
+                <CreatureVisualizerHub
+                  creatures={creatures}
+                  onRefresh={fetchCreatures}
+                  isLoading={isLoading}
+                />
 
+                {/* Creature Details Modal */}
+                <Modal isOpen={isOpen} onClose={onClose} size="xl">
+                  <ModalOverlay />
+                  <ModalContent>
+                    <ModalHeader>
+                      {selectedCreature && `Creature #${selectedCreature.id} Details`}
+                    </ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody>
+                      {selectedCreature && (
+                        <VStack spacing={4} align="stretch">
+                          <HStack justify="space-between">
+                            <Text><strong>Name:</strong> {selectedCreature.name || 'Unnamed'}</Text>
+                            <Tag colorScheme={selectedCreature.estaViva ? 'green' : 'red'}>
+                              {selectedCreature.estaViva ? 'Alive' : 'Dead'}
+                            </Tag>
+                          </HStack>
+                          
+                          <Text><strong>Age:</strong> {parseFloat(selectedCreature.edadDiasCompletos).toFixed(2)} / {parseFloat(selectedCreature.lifespanTotalSimulatedDays).toFixed(2)} days</Text>
+                          <Text><strong>Evolution Points:</strong> {parseFloat(selectedCreature.puntosEvolucion).toFixed(2)}</Text>
+                          
+                          <Box>
+                            <Text fontWeight="bold" mb={2}>Visible Genes:</Text>
+                            <VStack spacing={2} align="stretch">
+                              {Object.entries(selectedCreature.genesVisibles).map(([gene, value]) => (
+                                <HStack key={gene} justify="space-between">
+                                  <Text fontSize="sm">{gene}:</Text>
+                                  <Code fontSize="sm">{parseFloat(value).toFixed(3)}</Code>
+                                </HStack>
+                              ))}
+                            </VStack>
+                          </Box>
+                          
+                          {selectedCreature.genesOcultos && Object.keys(selectedCreature.genesOcultos).length > 0 && (
+                            <Box>
+                              <Text fontWeight="bold" mb={2}>Hidden Genes:</Text>
+                              <VStack spacing={2} align="stretch">
+                                {Object.entries(selectedCreature.genesOcultos).map(([gene, value]) => (
+                                  <HStack key={gene} justify="space-between">
+                                    <Text fontSize="sm">{gene}:</Text>
+                                    <Code fontSize="sm">{parseFloat(value).toFixed(3)}</Code>
+                                  </HStack>
+                                ))}
+                              </VStack>
+                            </Box>
+                          )}
+                        </VStack>
+                      )}
+                    </ModalBody>
+                    <ModalFooter>
+                      <Button colorScheme="blue" mr={3} onClick={onClose}>
+                        Close
+                      </Button>
+                    </ModalFooter>
+                  </ModalContent>
+                </Modal>
+              </VStack>
+            )}
+          </MotionBox>
         </VStack>
       </Container>
     </Box>

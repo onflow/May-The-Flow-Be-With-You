@@ -1,9 +1,11 @@
 "use client";
 import React, { useState } from "react";
 import { Steddie } from "../../shared/components/Steddie";
-import { useSession } from "@supabase/auth-helpers-react";
+import { useAuth } from "../../shared/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { MemorySpeedChallenge } from "../../shared/components/games/MemorySpeedChallenge";
+import { CulturalSpeedChallenge } from "../../shared/components/games/speed-challenge";
+import { CulturalChaosCards } from "../../shared/components/games/chaos-cards";
+import { RandomPalaceGenerator } from "../../shared/components/games/memory-palace";
 import { UserStatsComponent } from "../../shared/components/UserStats";
 import { Leaderboard } from "../../shared/components/Leaderboard";
 import { Achievements } from "../../shared/components/Achievements";
@@ -12,39 +14,47 @@ import { Achievements } from "../../shared/components/Achievements";
 export const dynamic = "force-dynamic";
 
 export default function ActuallyFunGamesPage() {
-  const session = useSession();
+  const { user } = useAuth();
   const router = useRouter();
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!session) router.push("/login");
-  }, [session, router]);
+  // No auth gate - allow anonymous users to play
 
-  if (!session) return null;
+  const culturalCategory = "actually-fun-games";
 
   const games = [
     {
-      id: "memory-speed",
-      name: "Memory Speed Challenge",
+      id: "griot-tales",
+      name: "Griot's Tale Challenge",
       description:
-        "Fast-paced memory games with time pressure and competitive scoring",
-      icon: "⚡",
+        "Rapid storytelling and genealogy recall in the West African tradition",
+      icon: "🥁",
       status: "available",
-      component: MemorySpeedChallenge,
+      component: () => (
+        <CulturalSpeedChallenge culturalCategory={culturalCategory} />
+      ),
     },
     {
-      id: "memory-race",
-      name: "Memory Palace Races",
-      description: "Real-time multiplayer palace construction challenges",
-      icon: "🏃‍♂️",
-      status: "coming-soon",
+      id: "rhythm-cards",
+      name: "Rhythm Cards",
+      description:
+        "Memorize card sequences using traditional African patterns and drumbeat rhythms",
+      icon: "🎵",
+      status: "available",
+      component: () => (
+        <CulturalChaosCards culturalCategory={culturalCategory} />
+      ),
     },
     {
-      id: "digit-duel",
-      name: "Digit Duels",
-      description: "Head-to-head number memorization battles",
-      icon: "🔢",
-      status: "coming-soon",
+      id: "village-compound",
+      name: "Village Compound",
+      description:
+        "Navigate a traditional West African village compound, placing memories in sacred spaces",
+      icon: "🏘️",
+      status: "available",
+      component: () => (
+        <RandomPalaceGenerator culturalCategory={culturalCategory} />
+      ),
     },
   ];
 
@@ -82,13 +92,13 @@ export default function ActuallyFunGamesPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-        🏆 Actually Fun Games
+      <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+        🥁 African Oral Tradition - Griot Mastery
       </h1>
       <p className="text-gray-600 text-center mb-8 max-w-2xl">
-        Competition reveals the hero within. These engaging challenges combine
-        skill, strategy, and social interaction to make memory training
-        irresistibly fun.
+        In the tradition of West African griots, master the art of memory
+        through rhythm, storytelling, and community wisdom. These games honor
+        the oral traditions that have preserved knowledge for millennia.
       </p>
 
       <Steddie />

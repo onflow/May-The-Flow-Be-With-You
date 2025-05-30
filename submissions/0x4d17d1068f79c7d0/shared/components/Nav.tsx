@@ -5,11 +5,35 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import { Wallet, User, LogOut, ChevronDown } from "lucide-react";
 
-const weeks = [
-  { name: "Randomness Revolution", path: "/randomness-revolution" },
-  { name: "Actually Fun Games", path: "/actually-fun-games" },
-  { name: "Generative Art & Worlds", path: "/generative-art-worlds" },
-  { name: "AI & LLMs", path: "/ai-and-llms" },
+const culturalCategories = [
+  {
+    name: "Randomness Revolution",
+    path: "/randomness-revolution",
+    icon: "🏛️",
+    culture: "Greek Classical",
+    description: "Ancient wisdom meets chaos theory",
+  },
+  {
+    name: "Actually Fun Games",
+    path: "/actually-fun-games",
+    icon: "🥁",
+    culture: "West African Griot",
+    description: "Oral tradition memory mastery",
+  },
+  {
+    name: "Generative Art & Worlds",
+    path: "/generative-art-worlds",
+    icon: "🎨",
+    culture: "Indigenous/Aboriginal",
+    description: "Visual memory landscapes",
+  },
+  {
+    name: "AI & LLMs",
+    path: "/ai-and-llms",
+    icon: "🧘",
+    culture: "Eastern Sage",
+    description: "Contemplative memory practices",
+  },
 ];
 
 const WalletButton = () => {
@@ -132,22 +156,23 @@ export const Nav = () => {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Game Navigation */}
+        {/* Cultural Navigation */}
         <div className="flex gap-2">
-          {weeks.map((w, index) => (
+          {culturalCategories.map((category) => (
             <button
-              key={w.path}
-              className="px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-gray-700 font-medium transition-all duration-200 text-sm"
-              onClick={() => router.push(w.path)}
-              title={w.name}
+              key={category.path}
+              className="px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-gray-700 font-medium transition-all duration-200 text-sm group relative"
+              onClick={() => router.push(category.path)}
+              title={`${category.culture}: ${category.description}`}
             >
-              {index === 0
-                ? "🎲"
-                : index === 1
-                ? "🎮"
-                : index === 2
-                ? "🎨"
-                : "🤖"}
+              <span className="text-lg">{category.icon}</span>
+
+              {/* Tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                <div className="font-semibold">{category.culture}</div>
+                <div className="text-gray-300">{category.description}</div>
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+              </div>
             </button>
           ))}
         </div>

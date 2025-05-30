@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../../providers/AuthProvider";
-import { progressService } from "../../services/progressService";
-import { Steddie } from "../Steddie";
-import { SteddieWisdom } from "../SteddieShellPalace";
+import { useAuth } from "../../../providers/AuthProvider";
+import { progressService } from "../../../services/progressService";
+
+import { SteddieWisdom } from "../../SteddieShellPalace";
 
 // Story-based memory items that connect to classical techniques
 interface MemoryLocation {
@@ -142,7 +142,7 @@ interface GameState {
   showHint: boolean;
 }
 
-export function MethodOfLociTrainer() {
+export default function MethodOfLociTrainer() {
   const { user } = useAuth();
   const [gameState, setGameState] = useState<GameState>({
     phase: "story",
@@ -385,25 +385,22 @@ export function MethodOfLociTrainer() {
 
           {/* Historical Context */}
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-start gap-3">
-              <Steddie />
-              <div>
-                <h4 className="font-semibold text-blue-800 mb-1">
-                  Steddie's Shell Memory
-                </h4>
-                <p className="text-sm text-blue-700">
-                  {gameState.currentStory.historicalExample}
-                </p>
-                <p className="text-xs text-blue-600 mt-2 italic">
-                  "I've been carrying this memory technique on my shell for{" "}
-                  {gameState.currentStory.title.includes("Simonides")
-                    ? "2,500"
-                    : gameState.currentStory.title.includes("Cicero")
-                    ? "2,000"
-                    : "800"}{" "}
-                  years. Slow and steady builds the strongest memories."
-                </p>
-              </div>
+            <div>
+              <h4 className="font-semibold text-blue-800 mb-1">
+                Historical Context
+              </h4>
+              <p className="text-sm text-blue-700">
+                {gameState.currentStory.historicalExample}
+              </p>
+              <p className="text-xs text-blue-600 mt-2 italic">
+                "This memory technique has been used for{" "}
+                {gameState.currentStory.title.includes("Simonides")
+                  ? "2,500"
+                  : gameState.currentStory.title.includes("Cicero")
+                  ? "2,000"
+                  : "800"}{" "}
+                years. Slow and steady builds the strongest memories."
+              </p>
             </div>
           </div>
         </div>
@@ -493,29 +490,28 @@ export function MethodOfLociTrainer() {
           </div>
 
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-start gap-3">
-              <Steddie />
-              <div className="text-left">
-                <h4 className="font-semibold text-blue-800 mb-1">
-                  Steddie's Classical Wisdom
-                </h4>
-                <p className="text-sm text-blue-700">
-                  {gameState.score >= gameState.currentStory.items.length * 8
-                    ? "Magnificent! You've mastered the technique that made Simonides legendary. The ancient masters would be proud!"
-                    : gameState.score >= gameState.currentStory.items.length * 6
-                    ? "Well done! You're walking in the footsteps of Cicero and Aquinas. Keep practicing this sacred art!"
-                    : "A noble beginning! Even the greatest memory masters started with simple steps. The palace awaits your return!"}
-                </p>
-              </div>
+            <div className="text-left">
+              <h4 className="font-semibold text-blue-800 mb-1">
+                Classical Wisdom
+              </h4>
+              <p className="text-sm text-blue-700">
+                {gameState.score >= gameState.currentStory.items.length * 8
+                  ? "Magnificent! You've mastered the technique that made Simonides legendary. The ancient masters would be proud!"
+                  : gameState.score >= gameState.currentStory.items.length * 6
+                  ? "Well done! You're walking in the footsteps of Cicero and Aquinas. Keep practicing this sacred art!"
+                  : "A noble beginning! Even the greatest memory masters started with simple steps. The palace awaits your return!"}
+              </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setGameState({ ...gameState, phase: "story" })}
-            className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
-          >
-            🏛️ Try Another Classical Story
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setGameState({ ...gameState, phase: "story" })}
+              className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
+            >
+              🔄 Try Another Story
+            </button>
+          </div>
         </div>
       )}
     </div>

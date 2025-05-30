@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../../providers/AuthProvider";
-import { progressService } from "../../services/progressService";
-import { Steddie } from "../Steddie";
+import { useAuth } from "../../../providers/AuthProvider";
+import { progressService } from "../../../services/progressService";
 
 interface StoryChain {
   id: string;
@@ -93,7 +92,7 @@ const absurdityTips = [
   "Use my shell wisdom - each segment of a story should connect like the patterns on my back!",
 ];
 
-export function LinkingMethodTrainer() {
+export default function LinkingMethodTrainer() {
   const { user } = useAuth();
   const [gameState, setGameState] = useState<GameState>({
     phase: "learn",
@@ -444,20 +443,17 @@ export function LinkingMethodTrainer() {
 
           {/* Master's Example */}
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-start gap-3">
-              <Steddie />
-              <div>
-                <h4 className="font-semibold text-blue-800 mb-1">
-                  Master's Example:
-                </h4>
-                <p className="text-sm text-blue-700 italic">
-                  "{gameState.currentChain.masterStory}"
-                </p>
-                <p className="text-xs text-blue-600 mt-2">
-                  Notice how each item flows naturally into the next through
-                  impossible, memorable connections!
-                </p>
-              </div>
+            <div>
+              <h4 className="font-semibold text-blue-800 mb-1">
+                Master's Example:
+              </h4>
+              <p className="text-sm text-blue-700 italic">
+                "{gameState.currentChain.masterStory}"
+              </p>
+              <p className="text-xs text-blue-600 mt-2">
+                Notice how each item flows naturally into the next through
+                impossible, memorable connections!
+              </p>
             </div>
           </div>
 
@@ -510,16 +506,8 @@ export function LinkingMethodTrainer() {
             </div>
           </div>
 
-          {/* Your Story Reminder */}
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <h3 className="font-semibold text-purple-800 mb-2">Your Story:</h3>
-            <p className="text-sm text-purple-700 italic">
-              "{gameState.userStory}"
-            </p>
-          </div>
-
-          {/* Item Selection */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {/* Available Items */}
+          <div className="grid grid-cols-3 gap-3">
             {gameState.currentChain.items.map((item) => (
               <button
                 key={item}
@@ -561,7 +549,7 @@ export function LinkingMethodTrainer() {
       {gameState.phase === "results" && gameState.currentChain && (
         <div className="space-y-6 text-center">
           <h2 className="text-2xl font-bold text-purple-800">
-            🎭 Story Chain Complete!
+            🏆 Linking Method Complete!
           </h2>
 
           <div className="p-6 bg-purple-50 rounded-lg border border-purple-200">
@@ -575,18 +563,16 @@ export function LinkingMethodTrainer() {
             <div className="text-xl font-bold text-purple-800 mb-2">
               Final Score: {gameState.score}%
             </div>
-            <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 mt-4">
               <div>
-                <div className="font-medium text-purple-700">Story Quality</div>
-                <div className="text-lg font-bold text-purple-600">
+                <div className="text-sm text-gray-600">Story Quality</div>
+                <div className="text-lg font-bold text-green-600">
                   {Math.round(gameState.storyQuality)}%
                 </div>
               </div>
               <div>
-                <div className="font-medium text-purple-700">
-                  Absurdity Score
-                </div>
-                <div className="text-lg font-bold text-purple-600">
+                <div className="text-sm text-gray-600">Absurdity Score</div>
+                <div className="text-lg font-bold text-pink-600">
                   {Math.round(gameState.absurdityScore)}%
                 </div>
               </div>
@@ -594,29 +580,28 @@ export function LinkingMethodTrainer() {
           </div>
 
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-start gap-3">
-              <Steddie />
-              <div className="text-left">
-                <h4 className="font-semibold text-blue-800 mb-1">
-                  Steddie's Linking Wisdom
-                </h4>
-                <p className="text-sm text-blue-700">
-                  {gameState.score >= 80
-                    ? "Extraordinary! Your absurd story rivals the masters. Josh Foer would be impressed by your linking prowess!"
-                    : gameState.score >= 60
-                    ? "Well done! You're mastering the art of memorable absurdity. Keep practicing those impossible connections!"
-                    : "A solid start! Remember, the more ridiculous and impossible your story, the more unforgettable it becomes!"}
-                </p>
-              </div>
+            <div className="text-left">
+              <h4 className="font-semibold text-blue-800 mb-1">
+                Linking Wisdom
+              </h4>
+              <p className="text-sm text-blue-700">
+                {gameState.score >= 80
+                  ? "Extraordinary! Your absurd story rivals the masters. Josh Foer would be impressed by your linking prowess!"
+                  : gameState.score >= 60
+                  ? "Well done! You're mastering the art of memorable absurdity. Keep practicing those impossible connections!"
+                  : "A solid start! Remember, the more ridiculous and impossible your story, the more unforgettable it becomes!"}
+              </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setGameState({ ...gameState, phase: "learn" })}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-          >
-            🔗 Try Another Story Chain
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setGameState({ ...gameState, phase: "learn" })}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            >
+              🔄 Try Another Chain
+            </button>
+          </div>
         </div>
       )}
     </div>

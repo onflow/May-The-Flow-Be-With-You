@@ -5,6 +5,7 @@ import { Sheet } from "@silk-hq/components";
 import steddieProfile from "../steddie/steddie";
 import { useAuth } from "../providers/AuthProvider";
 import { progressService, UserStats } from "../services/progressService";
+import { SteddieChat } from "./SteddieChat";
 
 const randomTagline = () => {
   const taglines = steddieProfile.taglines;
@@ -18,6 +19,7 @@ export const Steddie = () => {
   const [contextualWisdom, setContextualWisdom] = useState<string>("");
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Set random tagline only on client side
   useEffect(() => {
@@ -127,43 +129,60 @@ export const Steddie = () => {
         </div>
       )}
 
-      {/* Silk Sheet for Wisdom */}
-      <Sheet.Root license="non-commercial">
-        <Sheet.Trigger asChild>
-          <button className="mt-4 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium">
-            💡 Get Wisdom
-          </button>
-        </Sheet.Trigger>
-        <Sheet.Portal>
-          <Sheet.View>
-            <Sheet.Backdrop themeColorDimming="auto" />
-            <Sheet.Content className="bg-white rounded-t-3xl p-6 max-w-md mx-auto">
-              <Sheet.BleedingBackground />
-              <div className="text-center">
-                <div className="text-4xl mb-4">🐢</div>
-                <h2 className="text-2xl font-bold text-green-800 mb-4">
-                  Steddie's Wisdom
-                </h2>
-                <div className="space-y-4">
-                  <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                    <p className="italic text-green-700">"{tagline}"</p>
-                  </div>
-                  <button
-                    className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                    onClick={() => setTagline(randomTagline())}
-                  >
-                    🔄 New Wisdom
-                  </button>
-                  <div className="text-sm text-gray-500 mt-4">
-                    <p>Steddie has been sharing memory wisdom for centuries.</p>
-                    <p className="mt-2">Ready to start your memory journey?</p>
+      {/* Action Buttons */}
+      <div className="mt-4 flex gap-2 flex-wrap justify-center">
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
+        >
+          💬 Chat with Steddie
+        </button>
+
+        {/* Silk Sheet for Wisdom */}
+        <Sheet.Root license="non-commercial">
+          <Sheet.Trigger asChild>
+            <button className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium">
+              💡 Get Wisdom
+            </button>
+          </Sheet.Trigger>
+          <Sheet.Portal>
+            <Sheet.View>
+              <Sheet.Backdrop themeColorDimming="auto" />
+              <Sheet.Content className="bg-white rounded-t-3xl p-6 max-w-md mx-auto">
+                <Sheet.BleedingBackground />
+                <div className="text-center">
+                  <div className="text-4xl mb-4">🐢</div>
+                  <h2 className="text-2xl font-bold text-green-800 mb-4">
+                    Steddie's Wisdom
+                  </h2>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                      <p className="italic text-green-700">"{tagline}"</p>
+                    </div>
+                    <button
+                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                      onClick={() => setTagline(randomTagline())}
+                    >
+                      🔄 New Wisdom
+                    </button>
+                    <div className="text-sm text-gray-500 mt-4">
+                      <p>
+                        Steddie has been sharing memory wisdom for centuries.
+                      </p>
+                      <p className="mt-2">
+                        Ready to start your memory journey?
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Sheet.Content>
-          </Sheet.View>
-        </Sheet.Portal>
-      </Sheet.Root>
+              </Sheet.Content>
+            </Sheet.View>
+          </Sheet.Portal>
+        </Sheet.Root>
+      </div>
+
+      {/* Chat Interface */}
+      <SteddieChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 };

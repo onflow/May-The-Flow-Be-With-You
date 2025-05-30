@@ -1,0 +1,41 @@
+{
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testing": "127.0.0.1:3569",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": {
+				"type": "file",
+				"location": "emulator-account.pkey"
+			}
+		}
+	},
+	"contracts": {
+		"MemoryVRF": {
+			"source": "cadence/contracts/MemoryVRF.cdc",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"testing": "f8d6e0586b0a20c7"
+			}
+		},
+		"MemoryAchievements": {
+			"source": "cadence/contracts/MemoryAchievements.cdc",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"testing": "f8d6e0586b0a20c7"
+			}
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": ["MemoryVRF", "MemoryAchievements"]
+		},
+		"testing": {
+			"emulator-account": ["MemoryVRF", "MemoryAchievements"]
+		}
+	}
+}

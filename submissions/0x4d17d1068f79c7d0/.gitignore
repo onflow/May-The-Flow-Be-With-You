@@ -35,10 +35,10 @@ next-env.d.ts
 # Bun
 .bun
 
-# flow
+# Flow blockchain
 emulator-account.pkey
 imports
 
-# flow
-emulator-account.pkey
-imports
+# IDE
+.vscode/
+.idea/

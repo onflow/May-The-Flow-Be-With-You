@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../../providers/AuthProvider";
-import { progressService } from "../../services/progressService";
-import { GameScoreShare } from "../SocialShare";
-import { Steddie } from "../Steddie";
-import { ChallengeFriends } from "../ChallengeFriends";
+import { useAuth } from "../../../providers/AuthProvider";
+import { progressService } from "../../../services/progressService";
+import { GameScoreShare } from "../../SocialShare";
+import { Steddie } from "../../Steddie";
+import { ChallengeFriends } from "../../ChallengeFriends";
 
 // Game state types
 interface GameItem {
@@ -171,7 +171,7 @@ function ItemDisplay({
 }
 
 // Main game component
-export function MemorySpeedChallenge() {
+export default function MemorySpeedChallenge() {
   const { user } = useAuth();
   const [gameState, setGameState] = useState<GameState>({
     phase: "setup",
@@ -501,11 +501,11 @@ export function MemorySpeedChallenge() {
                     Saving...
                   </div>
                 ) : (
-                  "🔄 New Challenge"
+                  "🔄 Play Again"
                 )}
               </button>
 
-              {gameState.score >= 30 && (
+              {gameState.score >= 50 && (
                 <GameScoreShare
                   gameType="memory_speed"
                   score={gameState.score}
@@ -515,7 +515,7 @@ export function MemorySpeedChallenge() {
                 />
               )}
 
-              {gameState.score >= 50 && (
+              {gameState.score >= 80 && (
                 <ChallengeFriends
                   gameType="memory_speed"
                   score={gameState.score}
@@ -530,125 +530,117 @@ export function MemorySpeedChallenge() {
         )}
       </div>
 
-      {/* Game Area */}
-      <div className="space-y-6">
-        {/* Study Phase */}
-        {gameState.phase === "study" && (
-          <div>
-            <h3 className="text-lg font-semibold text-center mb-4">
-              📚 Study These Items
-            </h3>
-            <div className="flex justify-center gap-3 flex-wrap">
-              {gameState.items.map((item, index) => (
-                <div key={item.id} className="relative">
-                  <ItemDisplay item={item} />
-                  <div className="absolute -top-2 -left-2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                    {index + 1}
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Items Display */}
+      {gameState.phase === "study" && (
+        <div className="mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 justify-items-center">
+            {gameState.items.map((item, index) => (
+              <div key={item.id} className="text-center">
+                <div className="text-xs text-gray-500 mb-1">{index + 1}</div>
+                <ItemDisplay item={item} />
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Recall Phase */}
-        {gameState.phase === "recall" && (
-          <div className="text-center">
-            <h3 className="text-lg font-semibold mb-4">
-              🎯 Enter Item #{gameState.currentStep + 1}
-            </h3>
-            <div className="max-w-md mx-auto">
+      {/* Recall Input */}
+      {gameState.phase === "recall" && (
+        <div className="mb-6">
+          <div className="max-w-md mx-auto">
+            <div className="mb-4 text-center">
+              <p className="text-sm text-gray-600 mb-2">
+                Item {gameState.currentStep + 1} of {gameState.items.length}
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${
+                      ((gameState.currentStep + 1) / gameState.items.length) *
+                      100
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={currentInput}
                 onChange={(e) => setCurrentInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={`Enter ${
+                placeholder={
                   gameState.gameType === "colors"
-                    ? "color code (e.g., #FF6B6B)"
-                    : gameState.gameType.slice(0, -1)
-                }`}
-                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center font-mono"
+                    ? "Enter color hex code (e.g., #FF6B6B)"
+                    : `Enter ${gameState.gameType.slice(0, -1)}`
+                }
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
               />
               <button
                 onClick={submitAnswer}
-                className="mt-3 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
                 disabled={!currentInput.trim()}
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Submit Answer
+                Submit
               </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Results Display */}
-        {gameState.phase === "results" && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-center mb-4">
-                ✅ Correct Sequence
-              </h3>
-              <div className="flex justify-center gap-2 flex-wrap">
-                {gameState.items.map((item, index) => (
-                  <div key={item.id} className="relative">
-                    <ItemDisplay item={item} showAnswer={true} />
-                    <div className="absolute -top-2 -left-2 w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                      {index + 1}
+      {/* Results Review */}
+      {gameState.phase === "results" && (
+        <div className="mb-6">
+          <h4 className="text-lg font-semibold mb-4 text-center">
+            Review Your Answers
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+            {gameState.items.map((item, index) => {
+              const userAnswer = gameState.userAnswers[index] || "";
+              const isCorrect =
+                userAnswer.toUpperCase() === item.value.toUpperCase();
+
+              return (
+                <div
+                  key={item.id}
+                  className={`p-3 rounded-lg border-2 ${
+                    isCorrect
+                      ? "border-green-300 bg-green-50"
+                      : "border-red-300 bg-red-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-gray-600">
+                        #{index + 1}
+                      </span>
+                      <ItemDisplay item={item} showAnswer />
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm">
+                        <span className="font-medium">Your answer:</span>{" "}
+                        <span
+                          className={
+                            isCorrect ? "text-green-600" : "text-red-600"
+                          }
+                        >
+                          {userAnswer || "No answer"}
+                        </span>
+                      </div>
+                      {!isCorrect && (
+                        <div className="text-xs text-gray-500">
+                          Correct: {item.value}
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold text-center mb-4">
-                🎯 Your Answers
-              </h3>
-              <div className="flex justify-center gap-2 flex-wrap">
-                {gameState.userAnswers.map((answer, index) => {
-                  const isCorrect =
-                    answer.toUpperCase() ===
-                    gameState.items[index]?.value.toUpperCase();
-                  return (
-                    <div key={`user-${index}`} className="relative">
-                      <div
-                        className={`px-4 py-3 rounded-lg border-2 shadow-sm font-mono text-lg font-bold ${
-                          isCorrect
-                            ? "bg-green-100 border-green-300 text-green-800"
-                            : "bg-red-100 border-red-300 text-red-800"
-                        }`}
-                      >
-                        {answer}
-                      </div>
-                      <div
-                        className={`absolute -top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                          isCorrect ? "bg-green-500" : "bg-red-500"
-                        }`}
-                      >
-                        {isCorrect ? "✓" : "✗"}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-      </div>
-
-      {gameState.phase === "setup" && (
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h4 className="font-semibold text-blue-800 mb-2">
-            How to Play Memory Speed Challenge:
-          </h4>
-          <ol className="text-sm text-blue-700 space-y-1">
-            <li>1. Choose your challenge type (Numbers, Words, or Colors)</li>
-            <li>2. Select difficulty level (Easy/Medium/Hard)</li>
-            <li>3. Study the sequence of items shown</li>
-            <li>4. Enter each item in the correct order</li>
-            <li>5. Score points for speed and accuracy!</li>
-          </ol>
         </div>
       )}
     </div>

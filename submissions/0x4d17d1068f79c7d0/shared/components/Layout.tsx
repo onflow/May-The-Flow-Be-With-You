@@ -1,5 +1,4 @@
 import React from "react";
-import { Steddie } from "./Steddie";
 import { Nav } from "./Nav";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => (
@@ -8,9 +7,6 @@ export const Layout = ({ children }: { children: React.ReactNode }) => (
       <Nav />
     </header>
     <main className="flex-1 flex flex-col items-center justify-center p-4 space-y-8">
-      <div className="w-full max-w-4xl">
-        <Steddie />
-      </div>
       <div className="w-full max-w-4xl">
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
           {children}

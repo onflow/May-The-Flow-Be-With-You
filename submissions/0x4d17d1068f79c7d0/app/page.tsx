@@ -89,31 +89,31 @@ export default function LandingPage() {
         <div className="flex flex-col md:flex-row items-center justify-center gap-8">
           {[
             {
-              icon: "🎲",
-              title: "Randomness Revolution",
+              icon: "🏛️",
+              title: "Grecian Roman",
               path: "/randomness-revolution",
-              desc: "Embrace chaos to find order",
+              desc: "classical wisdom",
               color: "from-yellow-400 to-orange-500",
             },
             {
-              icon: "🎮",
-              title: "Actually Fun Games",
+              icon: "🥁",
+              title: "African Tradition",
               path: "/actually-fun-games",
-              desc: "Battle for memory supremacy",
-              color: "from-green-400 to-emerald-500",
+              desc: "griot mastery",
+              color: "from-amber-400 to-orange-500",
             },
             {
               icon: "🎨",
-              title: "Generative Art & Worlds",
+              title: "Aborigine Dreams",
               path: "/generative-art-worlds",
-              desc: "Build visual memory palaces",
+              desc: "indigenous scapes",
               color: "from-pink-400 to-rose-500",
             },
             {
-              icon: "🤖",
-              title: "AI & LLMs",
+              icon: "🧘",
+              title: "Buddhist Confucian",
               path: "/ai-and-llms",
-              desc: "Train with artificial wisdom",
+              desc: "eastern practice",
               color: "from-blue-400 to-cyan-500",
             },
           ].map((path, i) => (

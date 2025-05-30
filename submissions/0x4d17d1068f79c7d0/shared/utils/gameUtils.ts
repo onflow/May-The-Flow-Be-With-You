@@ -3,7 +3,7 @@ import { DifficultyLevel, DifficultyConfig, RandomSeed, GameType } from "../type
 // Seeded random number generator for consistent randomness
 export function createSeededRandom(seed: number): RandomSeed {
   let value = seed;
-  
+
   const next = () => {
     value = (value * 9301 + 49297) % 233280;
     return value / 233280;
@@ -16,12 +16,12 @@ export function createSeededRandom(seed: number): RandomSeed {
 export function shuffleArray<T>(array: T[], seed: number): T[] {
   const random = createSeededRandom(seed);
   const shuffled = [...array];
-  
+
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(random.next() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  
+
   return shuffled;
 }
 
@@ -55,7 +55,7 @@ export function calculateAccuracy(correct: number, total: number): number {
 }
 
 // Difficulty configurations for different games
-export const GAME_CONFIGS: Record<GameType, Record<DifficultyLevel, DifficultyConfig>> = {
+export const GAME_DIFFICULTY_CONFIGS: Record<GameType, Record<DifficultyLevel, DifficultyConfig>> = {
   chaos_cards: {
     easy: { itemCount: 6, studyTime: 20, chaosTime: 3, multiplier: 1 },
     medium: { itemCount: 8, studyTime: 15, chaosTime: 2, multiplier: 1.5 },
@@ -84,8 +84,8 @@ export const GAME_CONFIGS: Record<GameType, Record<DifficultyLevel, DifficultyCo
 };
 
 // Get difficulty config for a game
-export function getDifficultyConfig(gameType: GameType, difficulty: DifficultyLevel): DifficultyConfig {
-  return GAME_CONFIGS[gameType][difficulty];
+export function getGameDifficultyConfig(gameType: GameType, difficulty: DifficultyLevel): DifficultyConfig {
+  return GAME_DIFFICULTY_CONFIGS[gameType][difficulty];
 }
 
 // Format time display

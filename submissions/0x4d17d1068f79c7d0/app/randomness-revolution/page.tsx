@@ -2,13 +2,15 @@
 import React, { useState } from "react";
 import { Steddie } from "../../shared/components/Steddie";
 import { useAuth } from "../../shared/providers/AuthProvider";
+import { GameProvider } from "../../shared/providers/GameProvider";
 import { useRouter } from "next/navigation";
-import { GameManager, GameSelector } from "../../shared/components/GameManager";
+import { CulturalSpeedChallenge } from "../../shared/components/games/speed-challenge";
+import { CulturalChaosCards } from "../../shared/components/games/chaos-cards";
+import { RandomPalaceGenerator } from "../../shared/components/games/memory-palace";
 import { UserStatsComponent } from "../../shared/components/UserStats";
 import { Leaderboard } from "../../shared/components/Leaderboard";
-import { getGamesByCategory } from "../../shared/config/games";
-import { GameType } from "../../shared/types/game";
-import { SteddieStoryteller } from "../../shared/components/SteddieStoryteller";
+import { Achievements } from "../../shared/components/Achievements";
+import { AnonymousUserBanner } from "../../shared/components/ProgressiveEnhancement";
 
 // Force dynamic rendering (no prerendering)
 export const dynamic = "force-dynamic";
@@ -16,77 +18,144 @@ export const dynamic = "force-dynamic";
 export default function RandomnessRevolutionPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [selectedGame, setSelectedGame] = useState<GameType | null>(null);
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!user) router.push("/login");
-  }, [user, router]);
+  // No auth gate - allow anonymous users to play
 
-  if (!user) return null;
+  const culturalCategory = "randomness-revolution";
 
-  // Get games for this category
-  const randomnessGames = getGamesByCategory("randomness");
+  const games = [
+    {
+      id: "rhetorical-challenge",
+      name: "Rhetorical Challenge",
+      description:
+        "Channel the orator's skill in rapidly accessing vast stores of memorized information",
+      icon: "🏛️",
+      status: "available",
+      component: () => (
+        <CulturalSpeedChallenge culturalCategory={culturalCategory} />
+      ),
+    },
+    {
+      id: "chaos-cards",
+      name: "Chaos Cards",
+      description:
+        "Master randomized sequences through the discipline of classical order",
+      icon: "🎲",
+      status: "available",
+      component: () => (
+        <CulturalChaosCards culturalCategory={culturalCategory} />
+      ),
+    },
+    {
+      id: "classical-palace",
+      name: "Classical Palace",
+      description:
+        "Walk through a magnificent Greco-Roman palace, placing memories in architectural splendor",
+      icon: "🏺",
+      status: "available",
+      component: () => (
+        <RandomPalaceGenerator culturalCategory={culturalCategory} />
+      ),
+    },
+  ];
 
-  // If a game is selected, show the game manager
+  // If a game is selected, show the game component
   if (selectedGame) {
-    return (
-      <div className="w-full space-y-6">
-        <GameManager
-          gameType={selectedGame}
-          onBack={() => setSelectedGame(null)}
-          onGameComplete={(result) => {
-            console.log("Game completed:", result);
-            // Could show achievement notifications here
-          }}
-        />
+    const game = games.find((g) => g.id === selectedGame);
+    if (game && game.component) {
+      const GameComponent = game.component;
+      return (
+        <div className="w-full space-y-6">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold">{game.name}</h1>
+            <button
+              onClick={() => setSelectedGame(null)}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              ← Back to Games
+            </button>
+          </div>
 
-        {/* Stats and Leaderboard */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <UserStatsComponent gameType={selectedGame} showLeaderboard={false} />
-          <Leaderboard gameType={selectedGame} />
+          {/* Game Component */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <GameComponent />
+          </div>
+
+          {/* Stats, Achievements, and Leaderboard */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <UserStatsComponent gameType={game.id} showLeaderboard={false} />
+            <Achievements gameType={game.id} />
+            <Leaderboard gameType={game.id} />
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-        🎲 Randomness Revolution
-      </h1>
-      <p className="text-gray-600 text-center mb-4 max-w-2xl">
-        Master the ancient memory techniques that transformed ordinary minds
-        into legendary ones. Learn the classical methods perfected over
-        millennia.
-      </p>
+    <GameProvider defaultMode="offchain">
+      <AnonymousUserBanner />
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+          🏛️ Grecian Roman - Classical Wisdom
+        </h1>
+        <p className="text-gray-600 text-center mb-4 max-w-2xl">
+          Master the ancient Greek and Roman memory techniques that transformed
+          ordinary minds into legendary ones. Learn the classical methods
+          perfected by Simonides, Cicero, and the great orators of antiquity.
+        </p>
 
-      {/* Featured Classical Techniques Banner */}
-      <div className="mb-6 p-4 bg-gradient-to-r from-amber-100 to-orange-100 rounded-lg border border-amber-300 max-w-3xl">
-        <div className="text-center">
-          <h2 className="text-lg font-bold text-amber-800 mb-2">
-            🏛️ Classical Memory Techniques
-          </h2>
-          <p className="text-sm text-amber-700">
-            Learn the actual techniques used by Simonides, Cicero, and memory
-            champions throughout history. These aren't just games—they're
-            training in the lost arts of superhuman memory.
-          </p>
+        {/* Featured Classical Techniques Banner */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-amber-100 to-orange-100 rounded-lg border border-amber-300 max-w-3xl">
+          <div className="text-center">
+            <h2 className="text-lg font-bold text-amber-800 mb-2">
+              🏛️ Classical Memory Techniques
+            </h2>
+            <p className="text-sm text-amber-700">
+              Learn the actual techniques used by Simonides, Cicero, and memory
+              champions throughout history. These aren't just games—they're
+              training in the lost arts of superhuman memory.
+            </p>
+          </div>
+        </div>
+
+        <Steddie />
+
+        {/* Cultural Games Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 w-full max-w-4xl">
+          {games.map((game) => (
+            <div
+              key={game.id}
+              className={`p-6 bg-white rounded-xl shadow-lg border-2 transition-all duration-300 ${
+                game.status === "available"
+                  ? "border-yellow-200 hover:border-yellow-400 hover:shadow-xl cursor-pointer"
+                  : "border-gray-200 opacity-60"
+              }`}
+              onClick={() =>
+                game.status === "available" && setSelectedGame(game.id)
+              }
+            >
+              <div className="text-4xl mb-4 text-center">{game.icon}</div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                {game.name}
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">{game.description}</p>
+              <div className="flex justify-center">
+                {game.status === "available" ? (
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                    ✅ Available
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                    🚧 Coming Soon
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-
-      <div className="mb-8">
-        <Steddie />
-      </div>
-
-      {/* Use the new GameSelector component */}
-      <div className="w-full max-w-4xl">
-        <GameSelector
-          games={randomnessGames.map((g) => g.type)}
-          onSelectGame={setSelectedGame}
-          title="Choose Your Memory Challenge"
-          description="Embrace chaos to find the order within"
-        />
-      </div>
-    </div>
+    </GameProvider>
   );
 }

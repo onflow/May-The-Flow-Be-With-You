@@ -1,16 +1,19 @@
-// get_registered_modules.cdc
-// Script to check registered modules in the system
+// Get Registered Modules Script
+import "EvolvingCreatureNFT"
 
-import "EvolvingNFT"
-
-access(all) fun main(): [String] {
-    // Get all registered modules
-    let registeredModules = EvolvingNFT.getRegisteredModules()
+access(all) fun main(contractAddress: Address): {String: AnyStruct} {
+    // Get contract account
+    let account = getAccount(contractAddress)
+    let minterCap = account.capabilities.get<&EvolvingCreatureNFT.NFTMinter>(EvolvingCreatureNFT.MinterPublicPath)
     
-    log("Registered modules:")
-    for moduleType in registeredModules {
-        log("- ".concat(moduleType))
+    if !minterCap.check() {
+        return {"error": "Minter capability not found"}
     }
     
-    return registeredModules
+    let minter = minterCap.borrow()!
+    
+    return {
+        "registeredModules": minter.getRegisteredModuleTypes(),
+        "totalSupply": EvolvingCreatureNFT.totalSupply
+    }
 } 

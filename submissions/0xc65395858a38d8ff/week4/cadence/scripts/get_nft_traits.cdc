@@ -1,41 +1,36 @@
-// get_nft_traits.cdc
-// Script to read NFT traits with LAZY INITIALIZATION 🚀
+// Get NFT Traits Script
+import "EvolvingCreatureNFT"
 
-import "EvolvingNFT"
-import "NonFungibleToken"
-
-access(all) fun main(ownerAddress: Address, nftID: UInt64): {String: String} {
-    // Get the owner's collection reference
-    let collectionRef = getAccount(ownerAddress)
-        .capabilities.borrow<&{NonFungibleToken.Collection}>(EvolvingNFT.CollectionPublicPath)
-        ?? panic("Could not borrow collection reference")
+access(all) fun main(owner: Address, nftID: UInt64): {String: AnyStruct} {
+    // Get account and collection
+    let account = getAccount(owner)
+    let collectionCap = account.capabilities.get<&EvolvingCreatureNFT.Collection>(EvolvingCreatureNFT.CollectionPublicPath)
     
-    // Borrow the specific NFT
-    let nftRef = collectionRef.borrowNFT(nftID)
-        ?? panic("Could not borrow NFT reference")
-    
-    let evolvingNFTRef = nftRef as! &EvolvingNFT.NFT
-    
-    // Get all trait displays
-    var traitDisplays: {String: String} = {}
-    
-    // 🚀 DYNAMIC: Get ALL registered modules (not just hardcoded ones)
-    let registeredModules = EvolvingNFT.getRegisteredModules()
-    
-    for moduleType in registeredModules {
-        // 🚀 LAZY INIT: Use getTraitValueWithInit which auto-creates missing traits
-        if let traitValue = evolvingNFTRef.getTraitValueWithInit(traitType: moduleType) {
-            if let traitDisplay = evolvingNFTRef.getTraitDisplay(traitType: moduleType) {
-                traitDisplays[moduleType] = traitDisplay
-            }
-        }
+    if !collectionCap.check() {
+        return {"error": "Collection not found"}
     }
     
-    // Add basic NFT info
-    traitDisplays["id"] = nftID.toString()
-    traitDisplays["name"] = evolvingNFTRef.name
-    traitDisplays["description"] = evolvingNFTRef.description
-    traitDisplays["birthBlock"] = evolvingNFTRef.birthBlock.toString()
+    let collection = collectionCap.borrow()!
+    let nft = collection.borrowEvolvingCreatureNFT(id: nftID)
     
-    return traitDisplays
+    if nft == nil {
+        return {"error": "NFT not found"}
+    }
+    
+    let nftRef = nft!
+    
+    // Get basic NFT info
+    let result: {String: AnyStruct} = {
+        "id": nftRef.id,
+        "name": nftRef.name,
+        "description": nftRef.description,
+        "thumbnail": nftRef.thumbnail,
+        "isAlive": nftRef.isAlive,
+        "age": nftRef.age,
+        "evolutionPoints": nftRef.evolutionPoints,
+        "traits": nftRef.getTraitsDisplay(),
+        "registeredModules": nftRef.getRegisteredModuleTypes()
+    }
+    
+    return result
 } 

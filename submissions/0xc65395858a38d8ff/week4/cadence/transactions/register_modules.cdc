@@ -1,48 +1,37 @@
-// register_modules.cdc
-// Transaction to register trait modules with the core contract
+// Register Trait Modules Transaction
+import "EvolvingCreatureNFT"
+import "VisualTraitsModule"
+import "CombatStatsModule"
+import "EvolutionPotentialModule"
+import "MetabolismModule"
 
-import "EvolvingNFT"
-
-transaction(deployerAddress: Address) {
-    
-    prepare(signer: &Account) {
-        // Register the ColorModule
-        EvolvingNFT.registerModule(
-            moduleType: "color",
-            contractAddress: deployerAddress,
-            contractName: "ColorModule"
-        )
+transaction() {
+    prepare(acct: auth(Storage, Capabilities) &Account) {
+        // Get minter capability
+        let minterCap = acct.capabilities.get<&EvolvingCreatureNFT.NFTMinter>(EvolvingCreatureNFT.MinterPublicPath)
         
-        // Register the SizeModule
-        EvolvingNFT.registerModule(
-            moduleType: "size", 
-            contractAddress: deployerAddress,
-            contractName: "SizeModule"
-        )
-        
-        // Register the PersonalityModule
-        EvolvingNFT.registerModule(
-            moduleType: "personality",
-            contractAddress: deployerAddress,
-            contractName: "PersonalityModule"
-        )
-        
-        // Register the NEW COMPLEX StatsModule 🧠💪⚡❤️
-        EvolvingNFT.registerModule(
-            moduleType: "stats",
-            contractAddress: deployerAddress,
-            contractName: "StatsModule"
-        )
-        
-        log("All modules registered successfully!")
-    }
-    
-    execute {
-        // Verify modules were registered
-        let registeredModules = EvolvingNFT.getRegisteredModules()
-        log("Registered modules count: ".concat(registeredModules.length.toString()))
-        for moduleType in registeredModules {
-            log("- ".concat(moduleType))
+        if minterCap.check() {
+            let minter = minterCap.borrow()!
+            
+            // Register Visual Traits Module
+            minter.registerModule("visual", VisualTraitsModule.createDefaultTrait)
+            log("Visual traits module registered")
+            
+            // Register Combat Stats Module  
+            minter.registerModule("combat", CombatStatsModule.createDefaultTrait)
+            log("Combat stats module registered")
+            
+            // Register Evolution Potential Module
+            minter.registerModule("evolution", EvolutionPotentialModule.createDefaultTrait)
+            log("Evolution potential module registered")
+            
+            // Register Metabolism Module
+            minter.registerModule("metabolism", MetabolismModule.createDefaultTrait)
+            log("Metabolism module registered")
+            
+            log("All modules registered successfully!")
+        } else {
+            panic("No minter capability found")
         }
     }
 } 

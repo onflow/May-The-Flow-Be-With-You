@@ -1,44 +1,36 @@
-// evolve_nft.cdc
-// Transaction to evolve an NFT's traits
+// Evolve NFT Transaction
+import "EvolvingCreatureNFT"
 
-import "EvolvingNFT"
-import "NonFungibleToken"
-
-transaction(nftID: UInt64, evolutionSeed: UInt64) {
-    
-    let collectionRef: auth(NonFungibleToken.Update) &EvolvingNFT.Collection
-    
-    prepare(signer: &Account) {
-        // Get the signer's collection reference with update permissions
-        self.collectionRef = signer.storage.borrow<auth(NonFungibleToken.Update) &EvolvingNFT.Collection>(from: EvolvingNFT.CollectionStoragePath)
-            ?? panic("Could not borrow collection reference")
-    }
-    
-    execute {
-        // Get current traits before evolution
-        if let nftRef = self.collectionRef.borrowEvolvingNFT(id: nftID) {
-            log("=== BEFORE EVOLUTION ===")
-            if let colorDisplay = nftRef.getTraitDisplay(traitType: "color") {
-                log("Color: ".concat(colorDisplay))
-            }
-            if let sizeDisplay = nftRef.getTraitDisplay(traitType: "size") {
-                log("Size: ".concat(sizeDisplay))
-            }
-            
-            // Trigger evolution
-            self.collectionRef.evolveNFT(id: nftID, seed: evolutionSeed)
-            
-            log("=== AFTER EVOLUTION ===")
-            if let colorDisplay = nftRef.getTraitDisplay(traitType: "color") {
-                log("Color: ".concat(colorDisplay))
-            }
-            if let sizeDisplay = nftRef.getTraitDisplay(traitType: "size") {
-                log("Size: ".concat(sizeDisplay))
-            }
-            
-            log("Evolution completed!")
-        } else {
-            panic("NFT not found!")
-        }
+transaction(nftID: UInt64) {
+    prepare(acct: auth(Storage, Capabilities) &Account) {
+        // Get collection reference
+        let collection = acct.storage.borrow<auth(NonFungibleToken.Withdraw, NonFungibleToken.Update) &EvolvingCreatureNFT.Collection>(
+            from: EvolvingCreatureNFT.CollectionStoragePath
+        ) ?? panic("Collection not found")
+        
+        // Get NFT reference
+        let nftRef = collection.borrowEvolvingCreatureNFT(id: nftID) 
+            ?? panic("NFT not found")
+        
+        // Generate random seeds for evolution (using block data)
+        let currentBlock = getCurrentBlock()
+        let baseSeeds: [UInt64] = [
+            currentBlock.height,
+            UInt64(currentBlock.timestamp),
+            currentBlock.height ^ UInt64(currentBlock.timestamp),
+            (currentBlock.height * 123) % 9999,
+            (UInt64(currentBlock.timestamp) * 456) % 9999,
+            (currentBlock.height + UInt64(currentBlock.timestamp)) % 9999,
+            (currentBlock.height * 789) % 9999,
+            (UInt64(currentBlock.timestamp) * 321) % 9999,
+            (currentBlock.height ^ 654) % 9999,
+            (UInt64(currentBlock.timestamp) ^ 987) % 9999
+        ]
+        
+        // Evolve the NFT
+        nftRef.evolve(seeds: baseSeeds)
+        
+        log("NFT evolved successfully!")
+        log("New traits: ".concat(nftRef.getTraitsDisplay()))
     }
 } 

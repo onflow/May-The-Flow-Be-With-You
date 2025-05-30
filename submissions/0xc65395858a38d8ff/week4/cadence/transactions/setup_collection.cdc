@@ -1,41 +1,24 @@
-// setup_collection.cdc
-// Transaction to set up an NFT collection for a user
-
-import "EvolvingNFT"
+// Setup Collection Transaction for EvolvingCreatureNFT
+import "EvolvingCreatureNFT"
 import "NonFungibleToken"
 
 transaction() {
-    
-    let signerAddress: Address
-    
-    prepare(signer: auth(Storage, Capabilities) &Account) {
-        // Store signer address for use in execute
-        self.signerAddress = signer.address
-        
-        // Check if collection already exists
-        if signer.storage.borrow<&EvolvingNFT.Collection>(from: EvolvingNFT.CollectionStoragePath) == nil {
-            // Create a new collection
-            let collection <- EvolvingNFT.createEmptyCollection(nftType: Type<@EvolvingNFT.NFT>())
+    prepare(acct: auth(Storage, Capabilities) &Account) {
+        // Check if collection exists
+        if acct.storage.borrow<&EvolvingCreatureNFT.Collection>(from: EvolvingCreatureNFT.CollectionStoragePath) == nil {
+            // Create new empty collection
+            let collection <- EvolvingCreatureNFT.createEmptyCollection(nftType: Type<@EvolvingCreatureNFT.NFT>())
             
-            // Save it to storage
-            signer.storage.save(<-collection, to: EvolvingNFT.CollectionStoragePath)
+            // Save collection to storage
+            acct.storage.save(<-collection, to: EvolvingCreatureNFT.CollectionStoragePath)
             
-            // Create a public capability for the collection
-            let collectionCapability = signer.capabilities.storage.issue<&{NonFungibleToken.Collection}>(EvolvingNFT.CollectionStoragePath)
-            signer.capabilities.publish(collectionCapability, at: EvolvingNFT.CollectionPublicPath)
+            // Create public capability
+            let cap = acct.capabilities.storage.issue<&EvolvingCreatureNFT.Collection>(EvolvingCreatureNFT.CollectionStoragePath)
+            acct.capabilities.publish(cap, at: EvolvingCreatureNFT.CollectionPublicPath)
             
-            log("Collection set up successfully!")
+            log("EvolvingCreatureNFT Collection setup complete")
         } else {
-            log("Collection already exists!")
+            log("Collection already exists")
         }
-    }
-    
-    execute {
-        // Verify collection is accessible
-        let collectionRef = getAccount(self.signerAddress)
-            .capabilities.borrow<&{NonFungibleToken.Collection}>(EvolvingNFT.CollectionPublicPath)
-            ?? panic("Could not borrow collection reference")
-        
-        log("Collection verified! Current NFT count: ".concat(collectionRef.getIDs().length.toString()))
     }
 } 

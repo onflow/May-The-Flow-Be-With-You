@@ -86,10 +86,8 @@ function App() {
         provider: "hyperbolic",
         model: "deepseek-ai/DeepSeek-R1-0528",
         messages: [
-          {
-            role: "user",
-            content: input
-          }
+          ...messages,
+          userMessage
         ]
       });
       
@@ -103,7 +101,7 @@ function App() {
       setMessages(prev => [...prev, aiMessage]);
     } catch (err) {
       console.error('Error in chat:', err);
-      alert('Error getting response: ' + err.message);
+      alert('Error getting response: ' + (err && err.message ? err.message : JSON.stringify(err)));
     } finally {
       setIsLoading(false);
     }
@@ -172,7 +170,7 @@ function App() {
       alert('Summary saved as memo successfully!');
     } catch (err) {
       console.error('Error in summarize:', err);
-      alert('Error saving memo: ' + err.message);
+      alert('Error saving memo: ' + (err && err.message ? err.message : JSON.stringify(err)));
     } finally {
       setIsLoading(false);
     }

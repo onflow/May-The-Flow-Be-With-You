@@ -18,7 +18,7 @@ export function ChaosCardsSetup({
   difficulty,
   onDifficultyChange,
   onStartGame,
-  isLoading
+  isLoading,
 }: ChaosCardsSetupProps) {
   return (
     <>
@@ -37,7 +37,7 @@ export function ChaosCardsSetup({
             <option value={6}>6 (Expert)</option>
           </select>
         </div>
-        
+
         <button
           onClick={onStartGame}
           disabled={isLoading}
@@ -69,10 +69,7 @@ export function ChaosCardsSetup({
           borderColor: theme.colors.primary + "40",
         }}
       >
-        <h4
-          className="font-semibold mb-2"
-          style={{ color: theme.colors.text }}
-        >
+        <h4 className="font-semibold mb-2" style={{ color: theme.colors.text }}>
           {gameInfo.description}
         </h4>
         <ol

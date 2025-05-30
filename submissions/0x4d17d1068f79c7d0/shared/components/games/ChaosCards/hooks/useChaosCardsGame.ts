@@ -1,10 +1,10 @@
 // Custom hook for Chaos Cards game logic
 // Encapsulates all game state and business logic
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../../../../providers/AuthProvider";
 import { useGame } from "../../../../providers/GameProvider";
-import { useGameState, useGameTimer } from "../../../../hooks/useGameState";
+import { useGameState } from "../../../../hooks/useGameState";
 import { getCulturalEmoji, getCulturalContext } from "../../../../utils/culturalMapping";
 import { getThemeItems } from "../../../../config/culturalThemes";
 import { createGameError } from "../../../../utils/errorHandling";
@@ -60,17 +60,40 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     }
   });
 
-  // Timer for memorization phase
-  const timer = useGameTimer(
-    15,
-    () => {
-      // Time up - move to recall phase
-      gameActions.setPhase("recall");
-    },
-    (timeLeft) => {
-      gameActions.setTimeLeft(timeLeft);
+  // Simple timer that works with hot reload
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimer = useCallback(() => {
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
-  );
+
+    let currentTime = 15;
+    gameActions.setTimeLeft(currentTime);
+
+    timerRef.current = setInterval(() => {
+      currentTime -= 1;
+      gameActions.setTimeLeft(currentTime);
+
+      if (currentTime <= 0) {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        gameActions.setPhase("recall");
+      }
+    }, 1000);
+  }, [gameActions]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
 
   // Generate culturally appropriate cards
   const generateCards = useCallback((count: number): Card[] => {
@@ -91,46 +114,12 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
 
   // Start new game
   const startGame = useCallback(async () => {
-    if (!user?.id) return;
-
     try {
       gameActions.setLoading(true);
       gameActions.setError(null);
 
-      // Create game configuration
-      const gameConfig = {
-        gameType: "chaos_cards" as const,
-        difficulty:
-          gameState.gameData.difficulty <= 3
-            ? ("easy" as const)
-            : gameState.gameData.difficulty <= 4
-            ? ("medium" as const)
-            : ("hard" as const),
-        culture: culturalCategory,
-        itemCount: gameState.gameData.difficulty,
-        studyTime: 15,
-        chaosTime: 2,
-      };
-
-      // Start game session using the game service
-      await startGameSession(gameConfig);
-
-      // Generate cards using the game sequence if available
-      let cards: Card[];
-      if (currentGame?.sequence) {
-        // Use the sequence from the game service (includes VRF randomness)
-        cards = currentGame.sequence.items.map((item: any, index: number) => ({
-          id: `card-${index}`,
-          symbol: getCulturalEmoji(item.name),
-          name: item.name,
-          color:
-            index % 2 === 0 ? theme.colors.primary : theme.colors.secondary,
-          culturalContext: item.culturalContext,
-        }));
-      } else {
-        // Fallback to local generation
-        cards = generateCards(gameState.gameData.difficulty);
-      }
+      // Generate cards immediately for anonymous users
+      const cards = generateCards(gameState.gameData.difficulty);
 
       // Update game state
       gameActions.setGameData({
@@ -142,24 +131,51 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
 
       gameActions.setPhase("memorize");
       gameActions.setScore(0);
-      timer.reset(15);
-      timer.start();
+      startTimer();
+
+      // Only try game service if user is authenticated
+      if (user?.id) {
+        // Create game configuration
+        const gameConfig = {
+          gameType: "chaos_cards" as const,
+          difficulty:
+            gameState.gameData.difficulty <= 3
+              ? ("easy" as const)
+              : gameState.gameData.difficulty <= 4
+              ? ("medium" as const)
+              : ("hard" as const),
+          culture: culturalCategory,
+          itemCount: gameState.gameData.difficulty,
+          studyTime: 15,
+          chaosTime: 2,
+        };
+
+        // Start game session using the game service
+        await startGameSession(gameConfig);
+      }
+
+      // Update cards if we got a sequence from the game service
+      if (currentGame?.sequence) {
+        const vrfCards = currentGame.sequence.items.map((item: any, index: number) => ({
+          id: `card-${index}`,
+          symbol: getCulturalEmoji(item.name),
+          name: item.name,
+          color:
+            index % 2 === 0 ? theme.colors.primary : theme.colors.secondary,
+          culturalContext: item.culturalContext,
+        }));
+
+        gameActions.setGameData({
+          cards: vrfCards,
+          userSequence: [],
+          currentGuess: 0,
+          difficulty: gameState.gameData.difficulty,
+        });
+      }
 
     } catch (error) {
       console.error("Failed to start game:", error);
       gameActions.setError("Failed to start game. Please try again.");
-      
-      // Fallback to local mode
-      const cards = generateCards(gameState.gameData.difficulty);
-      gameActions.setGameData({
-        cards,
-        userSequence: [],
-        currentGuess: 0,
-        difficulty: gameState.gameData.difficulty,
-      });
-      gameActions.setPhase("memorize");
-      timer.reset(15);
-      timer.start();
     } finally {
       gameActions.setLoading(false);
     }
@@ -172,7 +188,7 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     currentGame,
     generateCards,
     gameActions,
-    timer
+    startTimer
   ]);
 
   // Handle card selection during recall
@@ -244,17 +260,13 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
 
   // Reset game
   const handleReset = useCallback(() => {
-    timer.stop();
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     gameActions.resetGame();
     resetGame();
-  }, [timer, gameActions, resetGame]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      timer.cleanup();
-    };
-  }, [timer]);
+  }, [gameActions, resetGame]);
 
   return {
     // Game state

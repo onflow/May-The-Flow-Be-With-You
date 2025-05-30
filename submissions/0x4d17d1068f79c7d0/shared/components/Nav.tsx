@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import { Wallet, User, LogOut, ChevronDown } from "lucide-react";
+import { NavigationButton } from "./NavigationLoader";
 
 const culturalCategories = [
   {
@@ -159,11 +160,10 @@ export const Nav = () => {
         {/* Cultural Navigation */}
         <div className="flex gap-2">
           {culturalCategories.map((category) => (
-            <button
+            <NavigationButton
               key={category.path}
+              href={category.path}
               className="px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-gray-700 font-medium transition-all duration-200 text-sm group relative"
-              onClick={() => router.push(category.path)}
-              title={`${category.culture}: ${category.description}`}
             >
               <span className="text-lg">{category.icon}</span>
 
@@ -173,7 +173,7 @@ export const Nav = () => {
                 <div className="text-gray-300">{category.description}</div>
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
               </div>
-            </button>
+            </NavigationButton>
           ))}
         </div>
 

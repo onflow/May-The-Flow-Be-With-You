@@ -8,25 +8,27 @@ interface LoadingSpinnerProps {
   className?: string;
 }
 
-export function LoadingSpinner({ 
-  size = "md", 
-  message = "Loading...", 
-  className = "" 
+export function LoadingSpinner({
+  size = "md",
+  message = "Loading...",
+  className = "",
 }: LoadingSpinnerProps) {
   const sizeClasses = {
     sm: "w-4 h-4",
-    md: "w-8 h-8", 
-    lg: "w-12 h-12"
+    md: "w-8 h-8",
+    lg: "w-12 h-12",
   };
 
   const textSizeClasses = {
     sm: "text-sm",
     md: "text-base",
-    lg: "text-lg"
+    lg: "text-lg",
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center p-6 ${className}`}>
+    <div
+      className={`flex flex-col items-center justify-center p-6 ${className}`}
+    >
       <div className={`${sizeClasses[size]} animate-spin`}>
         <svg
           className="w-full h-full text-blue-600"
@@ -50,7 +52,9 @@ export function LoadingSpinner({
         </svg>
       </div>
       {message && (
-        <p className={`mt-3 text-gray-600 ${textSizeClasses[size]} text-center`}>
+        <p
+          className={`mt-3 text-gray-600 ${textSizeClasses[size]} text-center`}
+        >
           {message}
         </p>
       )}
@@ -64,13 +68,15 @@ interface LoadingCardProps {
   className?: string;
 }
 
-export function LoadingCard({ 
-  title = "Loading", 
+export function LoadingCard({
+  title = "Loading",
   description = "Please wait while we prepare your content...",
-  className = ""
+  className = "",
 }: LoadingCardProps) {
   return (
-    <div className={`bg-white rounded-xl shadow-lg border border-gray-200 p-6 ${className}`}>
+    <div
+      className={`bg-white rounded-xl shadow-lg border border-gray-200 p-6 ${className}`}
+    >
       <div className="animate-pulse">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-6 h-6 bg-gray-200 rounded"></div>
@@ -99,15 +105,17 @@ interface LoadingOverlayProps {
   className?: string;
 }
 
-export function LoadingOverlay({ 
-  isVisible, 
-  message = "Loading...", 
-  className = "" 
+export function LoadingOverlay({
+  isVisible,
+  message = "Loading...",
+  className = "",
 }: LoadingOverlayProps) {
   if (!isVisible) return null;
 
   return (
-    <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${className}`}>
+    <div
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${className}`}
+    >
       <div className="bg-white rounded-xl p-8 shadow-2xl max-w-sm mx-4">
         <LoadingSpinner size="lg" message={message} />
       </div>
@@ -126,11 +134,17 @@ export const memoryLoadingMessages = [
   "Calibrating your mental gymnasium...",
   "Loading the halls of remembrance...",
   "Preparing your journey through time...",
-  "Awakening dormant neural pathways..."
+  "Awakening dormant neural pathways...",
 ];
 
 export function getRandomMemoryMessage(): string {
-  return memoryLoadingMessages[Math.floor(Math.random() * memoryLoadingMessages.length)];
+  // Use stable message for SSR, random for client
+  if (typeof window === "undefined") {
+    return memoryLoadingMessages[0]; // Always return first message on server
+  }
+  return memoryLoadingMessages[
+    Math.floor(Math.random() * memoryLoadingMessages.length)
+  ];
 }
 
 interface MemoryLoadingSpinnerProps {
@@ -138,9 +152,9 @@ interface MemoryLoadingSpinnerProps {
   className?: string;
 }
 
-export function MemoryLoadingSpinner({ 
-  size = "md", 
-  className = "" 
+export function MemoryLoadingSpinner({
+  size = "md",
+  className = "",
 }: MemoryLoadingSpinnerProps) {
   const [message, setMessage] = React.useState(getRandomMemoryMessage());
 
@@ -152,11 +166,5 @@ export function MemoryLoadingSpinner({
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <LoadingSpinner 
-      size={size} 
-      message={message} 
-      className={className}
-    />
-  );
+  return <LoadingSpinner size={size} message={message} className={className} />;
 }

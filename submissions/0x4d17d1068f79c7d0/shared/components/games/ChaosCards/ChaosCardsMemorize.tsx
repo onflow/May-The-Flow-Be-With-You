@@ -10,7 +10,7 @@ interface ChaosCardsMemorizeProps {
 
 export function ChaosCardsMemorize({
   theme,
-  timeLeft
+  timeLeft,
 }: ChaosCardsMemorizeProps) {
   return (
     <div className="text-center">
@@ -20,7 +20,7 @@ export function ChaosCardsMemorize({
       >
         Memorize the sequence of {theme.culture} symbols!
       </p>
-      
+
       {/* Progress Bar */}
       <div
         className="w-full rounded-full h-2 mt-2"
@@ -34,11 +34,9 @@ export function ChaosCardsMemorize({
           }}
         />
       </div>
-      
+
       {/* Time Display */}
-      <div className="mt-2 text-sm font-mono">
-        {timeLeft}s remaining
-      </div>
+      <div className="mt-2 text-sm font-mono">{timeLeft}s remaining</div>
     </div>
   );
 }

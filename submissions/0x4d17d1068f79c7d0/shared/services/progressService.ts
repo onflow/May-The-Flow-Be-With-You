@@ -179,6 +179,7 @@ class ProgressService {
   // Get leaderboard for a specific game type
   async getLeaderboard(gameType: string, period: 'daily' | 'weekly' | 'monthly' | 'all_time' = 'all_time', limit: number = 10): Promise<LeaderboardEntry[]> {
     try {
+      // Simplified query without user_profiles join for now
       const { data, error } = await this.supabase
         .from('leaderboards')
         .select(`
@@ -186,8 +187,7 @@ class ProgressService {
           score,
           rank,
           total_sessions,
-          average_accuracy,
-          user_profiles!inner(username, display_name, avatar_url)
+          average_accuracy
         `)
         .eq('game_type', gameType)
         .eq('period', period)
@@ -198,9 +198,9 @@ class ProgressService {
 
       return data?.map((entry: any) => ({
         user_id: entry.user_id,
-        username: entry.user_profiles?.username,
-        display_name: entry.user_profiles?.display_name,
-        avatar_url: entry.user_profiles?.avatar_url,
+        username: entry.user_id.substring(0, 8) + '...', // Fallback username
+        display_name: `Player ${entry.rank}`, // Fallback display name
+        avatar_url: undefined,
         score: entry.score,
         rank: entry.rank,
         total_sessions: entry.total_sessions,

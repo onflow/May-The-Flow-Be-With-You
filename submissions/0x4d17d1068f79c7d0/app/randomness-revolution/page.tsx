@@ -4,12 +4,7 @@ import { Steddie } from "../../shared/components/Steddie";
 import { useAuth } from "../../shared/providers/AuthProvider";
 import { GameProvider } from "../../shared/providers/GameProvider";
 import { useRouter } from "next/navigation";
-import { CulturalSpeedChallenge } from "../../shared/components/games/speed-challenge";
-import { CulturalChaosCards } from "../../shared/components/games/chaos-cards";
-import { RandomPalaceGenerator } from "../../shared/components/games/memory-palace";
-import { UserStatsComponent } from "../../shared/components/UserStats";
-import { Leaderboard } from "../../shared/components/Leaderboard";
-import { Achievements } from "../../shared/components/Achievements";
+import { DynamicGameLoader } from "../../shared/components/DynamicGameLoader";
 import { AnonymousUserBanner } from "../../shared/components/ProgressiveEnhancement";
 
 // Force dynamic rendering (no prerendering)
@@ -33,7 +28,10 @@ export default function RandomnessRevolutionPage() {
       icon: "🏛️",
       status: "available",
       component: () => (
-        <CulturalSpeedChallenge culturalCategory={culturalCategory} />
+        <DynamicGameLoader
+          gameType="speed-challenge"
+          culturalCategory={culturalCategory}
+        />
       ),
     },
     {
@@ -44,7 +42,10 @@ export default function RandomnessRevolutionPage() {
       icon: "🎲",
       status: "available",
       component: () => (
-        <CulturalChaosCards culturalCategory={culturalCategory} />
+        <DynamicGameLoader
+          gameType="chaos-cards"
+          culturalCategory={culturalCategory}
+        />
       ),
     },
     {
@@ -55,7 +56,10 @@ export default function RandomnessRevolutionPage() {
       icon: "🏺",
       status: "available",
       component: () => (
-        <RandomPalaceGenerator culturalCategory={culturalCategory} />
+        <DynamicGameLoader
+          gameType="memory-palace"
+          culturalCategory={culturalCategory}
+        />
       ),
     },
   ];
@@ -84,9 +88,13 @@ export default function RandomnessRevolutionPage() {
 
           {/* Stats, Achievements, and Leaderboard */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <UserStatsComponent gameType={game.id} showLeaderboard={false} />
-            <Achievements gameType={game.id} />
-            <Leaderboard gameType={game.id} />
+            <DynamicGameLoader
+              gameType="stats"
+              gameId={game.id}
+              showLeaderboard={false}
+            />
+            <DynamicGameLoader gameType="achievements" gameId={game.id} />
+            <DynamicGameLoader gameType="leaderboard" gameId={game.id} />
           </div>
         </div>
       );

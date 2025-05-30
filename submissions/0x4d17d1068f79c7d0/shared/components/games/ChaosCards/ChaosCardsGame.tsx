@@ -50,12 +50,7 @@ export function ChaosCardsGame({
         );
 
       case "memorize":
-        return (
-          <ChaosCardsMemorize
-            theme={theme}
-            timeLeft={timeLeft}
-          />
-        );
+        return <ChaosCardsMemorize theme={theme} timeLeft={timeLeft} />;
 
       case "recall":
         return (
@@ -147,7 +142,7 @@ export function ChaosCardsGame({
               onClick={() => setShowModeSelector(!showModeSelector)}
               className="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              {gameMode === 'onchain' ? '🏆 Competitive' : '🎮 Practice'} Mode
+              {gameMode === "onchain" ? "🏆 Competitive" : "🎮 Practice"} Mode
             </button>
           </div>
         </div>

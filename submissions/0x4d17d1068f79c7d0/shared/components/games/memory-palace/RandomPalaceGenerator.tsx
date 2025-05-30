@@ -347,13 +347,21 @@ export default function RandomPalaceGenerator({
     userGuesses: [],
     currentGuess: 0,
   });
-  const [seed, setSeed] = useState(Math.floor(Math.random() * 10000));
+  const [seed, setSeed] = useState(() => {
+    // Use stable seed for SSR, random for client
+    return typeof window !== "undefined"
+      ? Math.floor(Math.random() * 10000)
+      : 12345;
+  });
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Start new game
   const startGame = () => {
-    const newSeed = Math.floor(Math.random() * 10000);
+    const newSeed =
+      typeof window !== "undefined"
+        ? Math.floor(Math.random() * 10000)
+        : Date.now() % 10000;
     setSeed(newSeed);
     const newRooms = generatePalaceLayout(newSeed, culturalCategory);
     const items = generateItems(newSeed, newRooms, culturalCategory);

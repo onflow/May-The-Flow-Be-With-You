@@ -48,14 +48,14 @@ export class OnChainAdapter extends BaseGameAdapter {
           .from('user_progress')
           .upsert({
             user_id: userId,
+            game_type: 'general', // Default game type for overall progress
             level: progress.level,
-            total_score: progress.totalScore,
-            games_played: progress.gamesPlayed,
-            best_streak: progress.bestStreak,
-            cultural_mastery: progress.culturalMastery,
-            last_played: new Date(progress.lastPlayed).toISOString(),
+            experience_points: progress.totalScore || 0,
+            total_sessions: progress.gamesPlayed,
+            streak_best: progress.bestStreak,
+            streak_current: progress.bestStreak, // Assuming current streak matches best for now
+            last_played_at: new Date(progress.lastPlayed).toISOString(),
             statistics: progress.statistics,
-            is_onchain: true,
             updated_at: new Date().toISOString()
           });
 
@@ -189,11 +189,15 @@ export class OnChainAdapter extends BaseGameAdapter {
 
       // Save to Supabase with verification data
       if (this.supabase) {
+        // Generate a unique session ID
+        const sessionId = `onchain_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
         const { error } = await this.supabase
           .from('game_sessions')
           .insert({
             user_id: userId,
             game_type: gameType,
+            session_id: sessionId,
             score: score,
             max_possible_score: metadata?.maxPossibleScore || 1000,
             accuracy: metadata?.accuracy || 0,
@@ -201,8 +205,8 @@ export class OnChainAdapter extends BaseGameAdapter {
             duration_seconds: metadata?.duration || 0,
             difficulty_level: metadata?.difficultyLevel || 2,
             session_data: metadata || {},
-            transaction_id: txId,
-            is_verified: true,
+            flow_transaction_id: txId,
+            verification_status: 'verified',
             created_at: new Date().toISOString()
           });
 

@@ -62,9 +62,20 @@ export interface CommitRevealPair {
 
 // Off-Chain Randomness Provider (Fast, Local)
 export class OffChainRandomnessProvider implements RandomnessProvider {
-  private lastSeed: number = Date.now();
+  private lastSeed: number;
+
+  constructor() {
+    // Initialize with a stable seed for SSR, will be updated on client
+    this.lastSeed = 12345;
+  }
 
   async generateSeed(): Promise<number> {
+    // Use stable randomness for SSR compatibility
+    if (typeof window === 'undefined') {
+      this.lastSeed = this.lastSeed * 1103515245 + 12345;
+      return Math.abs(this.lastSeed) % 1000000;
+    }
+
     this.lastSeed = Math.floor(Math.random() * 1000000) + Date.now();
     return this.lastSeed;
   }
@@ -77,7 +88,7 @@ export class OffChainRandomnessProvider implements RandomnessProvider {
       const randomValue = array[0] / (0xffffffff + 1);
       return Math.floor(randomValue * (max - min)) + min;
     }
-    
+
     return Math.floor(Math.random() * (max - min)) + min;
   }
 
@@ -119,12 +130,12 @@ export class FlowVRFRandomnessProvider implements RandomnessProvider {
     try {
       // Request randomness from Flow VRF
       const result = await this.flowService.requestRandomness();
-      
+
       this.lastVerification = {
         transactionId: result.transactionId,
         blockHeight: result.blockHeight,
         seed: result.seed,
-        timestamp: Date.now(),
+        timestamp: typeof window !== 'undefined' ? Date.now() : 0,
         verificationUrl: `https://testnet.flowscan.org/transaction/${result.transactionId}`,
         isVerified: true,
       };
@@ -134,10 +145,10 @@ export class FlowVRFRandomnessProvider implements RandomnessProvider {
       console.error('Flow VRF generation failed, falling back to secure random:', error);
       // Fallback to secure random if Flow VRF fails
       const fallbackSeed = Math.floor(Math.random() * 1000000) + Date.now();
-      
+
       this.lastVerification = {
         seed: fallbackSeed,
-        timestamp: Date.now(),
+        timestamp: typeof window !== 'undefined' ? Date.now() : 0,
         isVerified: false,
       };
 
@@ -155,14 +166,14 @@ export class FlowVRFRandomnessProvider implements RandomnessProvider {
   async generateMultipleRandom(count: number, min: number, max: number): Promise<number[]> {
     const baseSeed = await this.generateSeed();
     const results: number[] = [];
-    
+
     // Generate multiple deterministic randoms from single VRF seed
     for (let i = 0; i < count; i++) {
       const derivedSeed = (baseSeed + i * 1337) % 1000000;
       const normalized = derivedSeed / 1000000;
       results.push(Math.floor(normalized * (max - min)) + min);
     }
-    
+
     return results;
   }
 
@@ -198,7 +209,7 @@ export function createSeededRandomFromProvider(
   return {
     provider,
     seed: seed || Date.now(),
-    
+
     async next(): Promise<number> {
       if (seed) {
         // Use deterministic generation if seed provided

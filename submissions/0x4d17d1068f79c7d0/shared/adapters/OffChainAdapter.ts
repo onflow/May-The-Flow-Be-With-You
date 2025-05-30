@@ -57,12 +57,13 @@ export class OffChainAdapter extends BaseGameAdapter {
           .from('user_progress')
           .upsert({
             user_id: userId,
+            game_type: 'general', // Default game type for overall progress
             level: progress.level,
-            total_score: progress.totalScore,
-            games_played: progress.gamesPlayed,
-            best_streak: progress.bestStreak,
-            cultural_mastery: progress.culturalMastery,
-            last_played: new Date(progress.lastPlayed).toISOString(),
+            experience_points: progress.totalScore || 0,
+            total_sessions: progress.gamesPlayed,
+            streak_best: progress.bestStreak,
+            streak_current: progress.bestStreak, // Assuming current streak matches best for now
+            last_played_at: new Date(progress.lastPlayed).toISOString(),
             statistics: progress.statistics,
             updated_at: new Date().toISOString()
           });
@@ -112,11 +113,11 @@ export class OffChainAdapter extends BaseGameAdapter {
           return {
             userId: data.user_id,
             level: data.level,
-            totalScore: data.total_score,
-            gamesPlayed: data.games_played,
-            bestStreak: data.best_streak,
+            totalScore: data.experience_points || 0,
+            gamesPlayed: data.total_sessions,
+            bestStreak: data.streak_best,
             culturalMastery: data.cultural_mastery || {},
-            lastPlayed: new Date(data.last_played).getTime(),
+            lastPlayed: new Date(data.last_played_at).getTime(),
             achievements: await this.getAchievements(userId),
             statistics: data.statistics || this.createDefaultStatistics()
           };
@@ -162,12 +163,16 @@ export class OffChainAdapter extends BaseGameAdapter {
           .from('achievements')
           .insert({
             user_id: userId,
-            achievement_id: achievement.id,
-            name: achievement.name,
+            achievement_type: achievement.category || 'general',
+            achievement_name: achievement.name,
             description: achievement.description,
             icon: achievement.icon,
-            category: achievement.category,
-            culture: achievement.culture,
+            points: 10, // Default points value since Achievement interface doesn't have points
+            metadata: {
+              category: achievement.category,
+              culture: achievement.culture,
+              originalId: achievement.id
+            },
             unlocked_at: new Date(achievement.unlockedAt).toISOString()
           });
 
@@ -234,12 +239,16 @@ export class OffChainAdapter extends BaseGameAdapter {
       const isAnonymous = userId.startsWith('anonymous_');
 
       if (!isAnonymous && this.supabase) {
+        // Generate a unique session ID
+        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
         // For authenticated users, save to Supabase
         const { error } = await this.supabase
           .from('game_sessions')
           .insert({
             user_id: userId,
             game_type: gameType,
+            session_id: sessionId,
             score: score,
             max_possible_score: metadata?.maxPossibleScore || 1000,
             accuracy: metadata?.accuracy || 0,

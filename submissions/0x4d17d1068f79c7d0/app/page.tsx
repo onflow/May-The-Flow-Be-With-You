@@ -1,5 +1,5 @@
 import React from "react";
-import Link from "next/link";
+import { NavigationButton } from "../shared/components/NavigationLoader";
 
 export default function LandingPage() {
   return (
@@ -117,23 +117,21 @@ export default function LandingPage() {
               color: "from-blue-400 to-cyan-500",
             },
           ].map((path, i) => (
-            <Link key={i} href={path.path}>
-              <div className="group cursor-pointer">
-                <div
-                  className={`w-24 h-24 bg-gradient-to-br ${path.color} rounded-full shadow-xl flex items-center justify-center text-3xl transform group-hover:scale-110 transition-all duration-300 mb-4 mx-auto`}
-                >
-                  {path.icon}
+            <NavigationButton key={i} href={path.path} className="group">
+              <div
+                className={`w-24 h-24 bg-gradient-to-br ${path.color} rounded-full shadow-xl flex items-center justify-center text-3xl transform group-hover:scale-110 transition-all duration-300 mb-4 mx-auto`}
+              >
+                {path.icon}
+              </div>
+              <div className="text-center">
+                <div className="font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">
+                  {path.title}
                 </div>
-                <div className="text-center">
-                  <div className="font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">
-                    {path.title}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1 max-w-32">
-                    {path.desc}
-                  </div>
+                <div className="text-sm text-gray-600 mt-1 max-w-32">
+                  {path.desc}
                 </div>
               </div>
-            </Link>
+            </NavigationButton>
           ))}
         </div>
       </div>

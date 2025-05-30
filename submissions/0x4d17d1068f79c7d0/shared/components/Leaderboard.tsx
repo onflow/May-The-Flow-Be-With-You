@@ -7,16 +7,16 @@ import { Trophy, Medal, Award, Crown } from "lucide-react";
 
 interface LeaderboardProps {
   gameType: string;
-  period?: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  period?: "daily" | "weekly" | "monthly" | "all_time";
   limit?: number;
   showUserRank?: boolean;
 }
 
-export function Leaderboard({ 
-  gameType, 
-  period = 'all_time', 
-  limit = 10, 
-  showUserRank = true 
+export function Leaderboard({
+  gameType,
+  period = "all_time",
+  limit = 10,
+  showUserRank = true,
 }: LeaderboardProps) {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -31,12 +31,16 @@ export function Leaderboard({
   const loadLeaderboard = async () => {
     setLoading(true);
     try {
-      const data = await progressService.getLeaderboard(gameType, selectedPeriod, limit);
+      const data = await progressService.getLeaderboard(
+        gameType,
+        selectedPeriod,
+        limit
+      );
       setLeaderboard(data);
-      
+
       // Find user's rank if they're not in top results
       if (showUserRank && user) {
-        const userEntry = data.find(entry => entry.user_id === user.id);
+        const userEntry = data.find((entry) => entry.user_id === user.id);
         if (!userEntry) {
           // User is not in top results, fetch their rank separately
           // For now, we'll just show they're not ranked
@@ -46,7 +50,7 @@ export function Leaderboard({
         }
       }
     } catch (error) {
-      console.error('Error loading leaderboard:', error);
+      console.error("Error loading leaderboard:", error);
     } finally {
       setLoading(false);
     }
@@ -68,34 +72,34 @@ export function Leaderboard({
   const getRankBadgeColor = (rank: number) => {
     switch (rank) {
       case 1:
-        return 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900';
+        return "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900";
       case 2:
-        return 'bg-gradient-to-r from-gray-300 to-gray-500 text-gray-800';
+        return "bg-gradient-to-r from-gray-300 to-gray-500 text-gray-800";
       case 3:
-        return 'bg-gradient-to-r from-orange-400 to-orange-600 text-orange-900';
+        return "bg-gradient-to-r from-orange-400 to-orange-600 text-orange-900";
       default:
-        return 'bg-gray-200 text-gray-700';
+        return "bg-gray-200 text-gray-700";
     }
   };
 
   const getGameTypeDisplay = (type: string): string => {
     const gameNames: Record<string, string> = {
-      'random_palace': 'Random Palace',
-      'chaos_cards': 'Chaos Cards',
-      'entropy_storytelling': 'Entropy Stories',
-      'memory_race': 'Memory Race',
-      'digit_duel': 'Digit Duel',
-      'story_chain': 'Story Chain'
+      random_palace: "Random Palace",
+      chaos_cards: "Chaos Cards",
+      entropy_storytelling: "Entropy Stories",
+      memory_race: "Memory Race",
+      digit_duel: "Digit Duel",
+      story_chain: "Story Chain",
     };
     return gameNames[type] || type;
   };
 
   const getPeriodDisplay = (period: string): string => {
     const periodNames: Record<string, string> = {
-      'daily': 'Today',
-      'weekly': 'This Week',
-      'monthly': 'This Month',
-      'all_time': 'All Time'
+      daily: "Today",
+      weekly: "This Week",
+      monthly: "This Month",
+      all_time: "All Time",
     };
     return periodNames[period] || period;
   };
@@ -125,80 +129,83 @@ export function Leaderboard({
   return (
     <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-purple-600" />
-            {getGameTypeDisplay(gameType)} Leaderboard
+      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            🏅 Rankings
           </h3>
         </div>
-        
+
         {/* Period Selector */}
-        <div className="flex gap-2">
-          {['daily', 'weekly', 'monthly', 'all_time'].map((p) => (
+        <div className="flex gap-1">
+          {["daily", "weekly", "monthly", "all_time"].map((p) => (
             <button
               key={p}
               onClick={() => setSelectedPeriod(p as any)}
-              className={`px-3 py-1 text-sm rounded-full transition-colors ${
+              className={`px-2 py-1 text-xs rounded transition-colors ${
                 selectedPeriod === p
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100'
+                  ? "bg-purple-600 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
               }`}
             >
-              {getPeriodDisplay(p)}
+              {getPeriodDisplay(p)
+                .replace("All Time", "All")
+                .replace("This ", "")}
             </button>
           ))}
         </div>
       </div>
 
       {/* Leaderboard Content */}
-      <div className="p-6">
+      <div className="p-4">
         {leaderboard.length === 0 ? (
-          <div className="text-center py-8">
-            <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-600">No rankings available yet.</p>
-            <p className="text-sm text-gray-500 mt-1">Be the first to set a score!</p>
+          <div className="text-center py-6">
+            <div className="text-4xl mb-2">🏆</div>
+            <p className="text-gray-600 text-sm">No rankings yet.</p>
+            <p className="text-xs text-gray-500 mt-1">Be the first!</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {leaderboard.map((entry, index) => (
+          <div className="space-y-2">
+            {leaderboard.slice(0, 5).map((entry, index) => (
               <div
                 key={entry.user_id}
-                className={`flex items-center justify-between p-4 rounded-lg transition-all ${
+                className={`flex items-center justify-between p-3 rounded-lg transition-all ${
                   entry.user_id === user?.id
-                    ? 'bg-blue-50 border-2 border-blue-200 shadow-md'
-                    : 'bg-gray-50 hover:bg-gray-100'
-                } ${index < 3 ? 'ring-2 ring-opacity-20 ' + (
-                  index === 0 ? 'ring-yellow-400' :
-                  index === 1 ? 'ring-gray-400' :
-                  'ring-orange-400'
-                ) : ''}`}
+                    ? "bg-blue-50 border border-blue-200"
+                    : "bg-gray-50"
+                }`}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   {/* Rank Badge */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${getRankBadgeColor(entry.rank)}`}>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${getRankBadgeColor(
+                      entry.rank
+                    )}`}
+                  >
                     {entry.rank <= 3 ? getRankIcon(entry.rank) : entry.rank}
                   </div>
-                  
+
                   {/* User Info */}
                   <div>
-                    <div className="font-semibold text-gray-800 flex items-center gap-2">
-                      {entry.display_name || entry.username}
+                    <div className="font-medium text-sm text-gray-800 flex items-center gap-1">
+                      {(entry.display_name || entry.username).slice(0, 12)}
                       {entry.user_id === user?.id && (
-                        <span className="text-blue-600 text-sm font-medium">(You)</span>
+                        <span className="text-blue-600 text-xs">(You)</span>
                       )}
-                      {entry.rank === 1 && <Crown className="w-4 h-4 text-yellow-500" />}
                     </div>
-                    <div className="text-sm text-gray-600">
-                      {entry.total_sessions} games • {entry.average_accuracy.toFixed(1)}% avg accuracy
+                    <div className="text-xs text-gray-600">
+                      {entry.total_sessions} games •{" "}
+                      {entry.average_accuracy.toFixed(0)}%
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Score */}
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-800">{entry.score}</div>
-                  <div className="text-xs text-gray-500">best score</div>
+                  <div className="text-lg font-bold text-gray-800">
+                    {entry.score}
+                  </div>
+                  <div className="text-xs text-gray-500">pts</div>
                 </div>
               </div>
             ))}
@@ -206,21 +213,21 @@ export function Leaderboard({
         )}
 
         {/* User's Rank (if not in top results) */}
-        {showUserRank && user && !leaderboard.find(e => e.user_id === user.id) && (
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="text-center text-gray-600">
-              <p className="text-sm">You're not ranked yet in {getPeriodDisplay(selectedPeriod).toLowerCase()}.</p>
-              <p className="text-xs text-gray-500 mt-1">Play more games to climb the leaderboard!</p>
+        {showUserRank &&
+          user &&
+          !leaderboard.find((e) => e.user_id === user.id) && (
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <div className="text-center text-gray-600">
+                <p className="text-xs">Not ranked yet. Play more to climb!</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
-        <div className="flex justify-between items-center text-xs text-gray-500">
-          <span>Updated in real-time</span>
-          <span>{getPeriodDisplay(selectedPeriod)} rankings</span>
+      <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
+        <div className="text-center text-xs text-gray-500">
+          Updated in real-time
         </div>
       </div>
     </div>

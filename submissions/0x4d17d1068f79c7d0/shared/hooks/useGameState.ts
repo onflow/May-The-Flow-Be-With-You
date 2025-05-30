@@ -1,7 +1,7 @@
 // Reusable Game State Management Hook
 // Provides consistent game state patterns across different game types
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 export type GamePhase = 'setup' | 'memorize' | 'recall' | 'results' | 'loading' | 'error';
 
@@ -68,7 +68,7 @@ export function useGameState<T = any>(
     setState(prev => {
       if (prev.phase !== phase) {
         callbacksRef.current.onPhaseChange?.(phase, prev.phase);
-        
+
         // Auto-trigger onGameEnd when phase changes to results
         if (phase === 'results') {
           const finalState = { ...prev, phase };
@@ -101,10 +101,10 @@ export function useGameState<T = any>(
   }, []);
 
   const setError = useCallback((error: string | null) => {
-    setState(prev => ({ 
-      ...prev, 
+    setState(prev => ({
+      ...prev,
       error,
-      phase: error ? 'error' : prev.phase 
+      phase: error ? 'error' : prev.phase
     }));
   }, []);
 
@@ -159,14 +159,16 @@ export function useGameTimer(
   callbacksRef.current = { onTimeUp, onTick };
 
   const start = useCallback(() => {
-    if (intervalRef.current) return; // Already running
+    if (intervalRef.current) {
+      return; // Already running
+    }
 
     setIsRunning(true);
     intervalRef.current = setInterval(() => {
       setTimeLeft(prev => {
         const newTime = prev - 1;
         callbacksRef.current.onTick?.(newTime);
-        
+
         if (newTime <= 0) {
           setIsRunning(false);
           if (intervalRef.current) {
@@ -176,7 +178,7 @@ export function useGameTimer(
           callbacksRef.current.onTimeUp?.();
           return 0;
         }
-        
+
         return newTime;
       });
     }, 1000);
@@ -203,7 +205,23 @@ export function useGameTimer(
     setIsRunning(false);
   }, []);
 
-  // Cleanup on unmount
+  // Cleanup on unmount and hot reload
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []);
+
+  // Auto-restart timer if it was running but interval got cleared (hot reload)
+  useEffect(() => {
+    if (isRunning && !intervalRef.current && timeLeft > 0) {
+      start();
+    }
+  }, [isRunning, timeLeft, start]);
+
   const cleanup = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);

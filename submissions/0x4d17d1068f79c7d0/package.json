@@ -24,6 +24,8 @@
     "flow:deploy": "flow project deploy --network emulator",
     "db:migrate": "supabase db push",
     "db:reset": "supabase db reset",
+    "db:setup": "node scripts/setup-database.js",
+    "db:verify": "node scripts/setup-database.js --direct",
     "deploy:vercel": "vercel --prod",
     "deploy:netlify": "netlify deploy --prod"
   },
@@ -46,6 +48,7 @@
     "@supabase/ui": "^0.36.5",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "dotenv": "^16.5.0",
     "framer-motion": "^12.10.5",
     "lucide-react": "^0.263.1",
     "next": "15.3.2",

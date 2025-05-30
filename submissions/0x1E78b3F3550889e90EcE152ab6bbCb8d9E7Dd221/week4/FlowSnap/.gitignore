@@ -1,0 +1,23 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables
+.env
+.env.*
+
+# Flow private keys
+*.pkey
+
+# OS generated files
+.DS_Store
+
+# Log files
+*.log
+
+# IDE files
+.vscode/
+.idea/

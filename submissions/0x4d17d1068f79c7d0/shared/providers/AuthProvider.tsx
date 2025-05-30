@@ -38,9 +38,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Suppress wallet extension errors that don't affect our app
     const originalError = console.error;
     console.error = (...args) => {
+      const errorMessage = args[0]?.toString() || "";
       if (
-        args[0]?.toString().includes("ethereum") ||
-        args[0]?.toString().includes("pageProvider")
+        errorMessage.includes("ethereum") ||
+        errorMessage.includes("pageProvider") ||
+        errorMessage.includes("KeyRing is locked") ||
+        errorMessage.includes("Cannot set property ethereum") ||
+        errorMessage.includes("injectedScript") ||
+        errorMessage.includes("chrome-extension")
       ) {
         return; // Suppress wallet extension errors
       }

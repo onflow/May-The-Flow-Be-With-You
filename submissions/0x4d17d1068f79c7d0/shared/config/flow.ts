@@ -1,11 +1,17 @@
 import * as fcl from "@onflow/fcl";
 
 // Flow network configuration
-const fclConfigInfo = {
+interface NetworkConfig {
+  accessNode: string;
+  discoveryWallet: string;
+  discoveryAuthnEndpoint?: string;
+  discoveryAuthInclude: string[];
+}
+
+const fclConfigInfo: Record<string, NetworkConfig> = {
   emulator: {
     accessNode: 'http://127.0.0.1:8888',
     discoveryWallet: 'http://localhost:8701/fcl/authn',
-    discoveryAuthnEndpoint: undefined, // Not needed for emulator
     discoveryAuthInclude: [],
   },
   testnet: {

@@ -1,6 +1,7 @@
 import "../shared/styles/globals.css";
 import { Layout } from "../shared/components/Layout";
 import { AuthProvider } from "../shared/providers/AuthProvider";
+import { AchievementManager } from "../shared/components/AchievementNotification";
 
 export const metadata = {
   title: "Memoreee - Memory Training Platform",
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <Layout>{children}</Layout>
+          <AchievementManager>
+            <Layout>{children}</Layout>
+          </AchievementManager>
         </AuthProvider>
       </body>
     </html>

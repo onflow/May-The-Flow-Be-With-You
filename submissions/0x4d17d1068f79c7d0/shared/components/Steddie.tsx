@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Sheet } from "@silk-hq/components";
 import steddieProfile from "../steddie/steddie";
+import { useAuth } from "../providers/AuthProvider";
+import { progressService, UserStats } from "../services/progressService";
 
 const randomTagline = () => {
   const taglines = steddieProfile.taglines;
@@ -10,8 +12,11 @@ const randomTagline = () => {
 };
 
 export const Steddie = () => {
+  const { user } = useAuth();
   // Start with first tagline to avoid hydration mismatch
   const [tagline, setTagline] = useState(steddieProfile.taglines[0]);
+  const [contextualWisdom, setContextualWisdom] = useState<string>("");
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   // Set random tagline only on client side
@@ -19,6 +24,78 @@ export const Steddie = () => {
     setIsClient(true);
     setTagline(randomTagline());
   }, []);
+
+  // Load user stats for contextual wisdom
+  useEffect(() => {
+    if (user) {
+      loadUserStats();
+    }
+  }, [user]);
+
+  const loadUserStats = async () => {
+    if (!user) return;
+    try {
+      const stats = await progressService.getUserStats(user.id);
+      setUserStats(stats);
+      if (stats) {
+        setContextualWisdom(generateContextualWisdom(stats));
+      }
+    } catch (error) {
+      // Silently handle stats loading errors - Steddie will still work with default wisdom
+      console.warn("Could not load user stats for Steddie:", error);
+      setUserStats(null);
+    }
+  };
+
+  const generateContextualWisdom = (stats: UserStats): string => {
+    // Generate wisdom based on user's performance and progress
+    if (stats.total_sessions === 0) {
+      return "Welcome, young mind! Every master was once a beginner. Your first step into the memory palace awaits.";
+    }
+
+    if (stats.total_sessions === 1) {
+      return "Excellent! You've taken your first step. Like a tortoise, we build strength through steady practice.";
+    }
+
+    if (stats.current_streak >= 7) {
+      return `Remarkable! ${stats.current_streak} days of practice. Consistency is the tortoise's greatest strength.`;
+    }
+
+    if (stats.average_accuracy >= 90) {
+      return "Your precision is impressive! Remember, accuracy and speed both matter, but accuracy comes first.";
+    }
+
+    if (stats.average_accuracy < 60) {
+      return "Patience, young one. Even the wisest tortoise stumbles. Focus on understanding, not just speed.";
+    }
+
+    if (stats.best_score >= 50) {
+      return "Your memory palace grows strong! High scores show your techniques are taking root.";
+    }
+
+    if (stats.total_sessions >= 10) {
+      return "Ten sessions completed! You're building the habits that separate masters from beginners.";
+    }
+
+    if (stats.achievements_count >= 5) {
+      return "Your collection of achievements grows! Each one represents a milestone on your memory journey.";
+    }
+
+    // Default contextual wisdom based on favorite game
+    const gameWisdom: Record<string, string> = {
+      random_palace:
+        "The palace method serves you well. Each room you master strengthens your spatial memory.",
+      chaos_cards:
+        "Chaos teaches order. Your card memory skills will serve you in many areas of life.",
+      entropy_storytelling:
+        "Stories are the threads that weave memories together. Your narrative skills grow stronger.",
+    };
+
+    return (
+      gameWisdom[stats.favorite_game] ||
+      "Every practice session adds another stone to your memory palace. Keep building!"
+    );
+  };
 
   return (
     <div className="flex flex-col items-center p-4">
@@ -28,8 +105,27 @@ export const Steddie = () => {
       </div>
       <div className="mt-3 text-xl font-bold text-green-800">Steddie</div>
       <div className="italic text-gray-600 text-center max-w-xs mt-2 text-sm leading-relaxed">
-        “{tagline}”
+        “{contextualWisdom || tagline}”
       </div>
+
+      {/* User Progress Indicator */}
+      {userStats && (
+        <div className="mt-3 flex gap-2 text-xs flex-wrap justify-center">
+          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+            {userStats.total_sessions} games
+          </span>
+          {userStats.current_streak > 0 && (
+            <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+              🔥 {userStats.current_streak} day streak
+            </span>
+          )}
+          {userStats.achievements_count > 0 && (
+            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+              🏆 {userStats.achievements_count} achievements
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Silk Sheet for Wisdom */}
       <Sheet.Root license="non-commercial">

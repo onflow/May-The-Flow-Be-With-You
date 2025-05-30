@@ -1,0 +1,41 @@
+{
+	"emulators": {
+		"default": {
+			"port": 3569,
+			"serviceAccount": "emulator-account"
+		}
+	},
+	"contracts": {
+		"ContractDocs": "./cadence/contracts/ContractDocs.cdc"
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": "5112883de06b9576af62b9aafa7ead685fb7fb46c495039b1a83649d61bff97c"
+		},
+		"pandit": {
+			"address": "bbee5b2eceb8b337",
+			"key": {
+				"type": "file",
+				"location": "pandit.pkey"
+			}
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"ContractDocs"
+			]
+		},
+		"testnet": {
+			"pandit": [
+				"ContractDocs"
+			]
+		}
+	}
+}

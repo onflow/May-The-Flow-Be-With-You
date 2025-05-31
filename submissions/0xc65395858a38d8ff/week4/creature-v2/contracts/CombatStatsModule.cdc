@@ -73,8 +73,8 @@ access(all) contract CombatStatsModule: TraitModule {
             // Base evolution factor
             let factorEvolucionInfluenciaBase = 0.0001 * potencialEvolutivo * dailyVolatilityFactor // FACTOR_INFLUENCIA_VISUAL_SOBRE_COMBATE
             
-            // Get visual influences (these would come from another module in practice)
-            let visualInfluences = self.getVisualInfluences()
+            // Get visual influences from seeds if available, otherwise fallback to defaults
+            let visualInfluences = self.getVisualInfluencesFromSeeds(seeds)
             
             // Evolve each combat gene with passive + visual influences
             self.evolveCombatGene("puntosSaludMax", seeds[1], potencialEvolutivo, dailyVolatilityFactor, factorEvolucionInfluenciaBase, visualInfluences)
@@ -302,6 +302,26 @@ access(all) contract CombatStatsModule: TraitModule {
             }
         }
         
+        // NEW: Get visual influences from actual evolution seeds that contain visual data
+        access(self) fun getVisualInfluencesFromSeeds(_ seeds: [UInt64]): {String: UFix64} {
+            // If we have at least 5 seeds, the last 3 contain visual data
+            // seeds[2] = tamanoBase * 1000, seeds[3] = formaPrincipal * 1000, seeds[4] = numApendices * 1000
+            if seeds.length >= 5 {
+                let tamanoBase = UFix64(seeds[2]) / 1000.0
+                let formaPrincipal = UFix64(seeds[3]) / 1000.0
+                let numApendices = UFix64(seeds[4]) / 1000.0
+                
+                return {
+                    "tamanoBase": tamanoBase,
+                    "formaPrincipal": formaPrincipal,
+                    "numApendices": numApendices
+                }
+            }
+            
+            // Fallback to defaults if not enough seeds
+            return self.getVisualInfluences()
+        }
+        
         access(self) fun clampValue(_ value: UFix64, _ geneName: String): UFix64 {
             let ranges = CombatStatsModule.GENE_RANGES[geneName]!
             let minVal = ranges["min"]!
@@ -407,6 +427,14 @@ access(all) contract CombatStatsModule: TraitModule {
     
     access(all) view fun getVersion(): String {
         return "1.0.0"
+    }
+    
+    access(all) view fun getModuleName(): String {
+        return "Combat Stats Module"
+    }
+    
+    access(all) view fun getModuleDescription(): String {
+        return "Manages combat statistics including health points, attack, defense, and agility"
     }
     
     init() {

@@ -253,6 +253,14 @@ access(all) contract MetabolismModule: TraitModule {
         return "1.0.0"
     }
     
+    access(all) view fun getModuleName(): String {
+        return "Metabolism Module"  
+    }
+    
+    access(all) view fun getModuleDescription(): String {
+        return "Manages metabolic rate and fertility characteristics"
+    }
+    
     init() {
         // Initialize gene ranges (from CreatureNFTV6)
         let ranges: {String: {String: UFix64}} = {}

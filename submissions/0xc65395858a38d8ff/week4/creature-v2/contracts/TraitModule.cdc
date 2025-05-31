@@ -31,6 +31,9 @@ access(all) contract interface TraitModule {
     // Create a child trait from two parents (for reproduction)
     access(all) fun createChildTrait(parent1: &{Trait}, parent2: &{Trait}, seed: UInt64): @{Trait}
     
+    // NEW: Factory function for seed-based trait creation
+    access(all) fun createTraitWithSeed(seed: UInt64): @{Trait}
+    
     // === MODULE IDENTITY ===
     // Module identification functions
     
@@ -39,4 +42,8 @@ access(all) contract interface TraitModule {
     
     // Get the version of this module
     access(all) view fun getVersion(): String
+    
+    // Metadata
+    access(all) view fun getModuleName(): String
+    access(all) view fun getModuleDescription(): String
 } 

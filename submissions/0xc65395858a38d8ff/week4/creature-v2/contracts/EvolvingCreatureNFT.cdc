@@ -234,28 +234,12 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                     let seedIndex = i % birthSeeds.length
                     let moduleSeed = birthSeeds[seedIndex]
                     
-                    // Try to create with seed if available, otherwise default
-                    var newTrait: @{TraitModule.Trait}? <- nil
+                    // Use factory to create trait with seed
+                    let newTrait <- factory.createTraitWithSeed(seed: moduleSeed)
+                    self.addTrait(traitType: moduleType, trait: <- newTrait)
                     
-                    // Check if factory has createTraitWithSeed method
-                    switch moduleType {
-                        case "visual":
-                            newTrait <-! VisualTraitsModule.createTraitWithSeed(seed: moduleSeed)
-                        case "combat":
-                            newTrait <-! CombatStatsModule.createTraitWithSeed(seed: moduleSeed)
-                        case "evolution":
-                            newTrait <-! EvolutionPotentialModule.createTraitWithSeed(seed: moduleSeed)
-                        case "metabolism":
-                            newTrait <-! MetabolismModule.createTraitWithSeed(seed: moduleSeed)
-                        default:
-                            newTrait <-! factory.createDefaultTrait()
-                    }
-                    
-                    if newTrait != nil {
-                        self.addTrait(traitType: moduleType, trait: <-newTrait!)
-                    } else {
-                        destroy newTrait
-                    }
+                    // Log the seed used for this module
+                    log("Module ".concat(moduleType).concat(" initialized with seed: ").concat(moduleSeed.toString()))
                 }
             }
         }
@@ -346,13 +330,36 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
         
         // Parse visual trait data for cross-module communication
         access(self) fun parseVisualTraits(_ value: String): {String: UFix64} {
-            // TODO: Parse actual visual trait string format
-            // For now, return defaults (would need proper string parsing)
-            return {
-                "tamanoBase": 1.5,
-                "formaPrincipal": 2.0,
-                "numApendices": 4.0
+            // Parse actual visual trait string format: "R:0.72|G:0.86|B:0.20|Size:0.50|Form:1.08|Apps:5.39|Mov:2.32"
+            var result: {String: UFix64} = {
+                "tamanoBase": 1.5,        // Default fallback
+                "formaPrincipal": 2.0,    // Default fallback  
+                "numApendices": 4.0       // Default fallback
             }
+            
+            // Split by | to get individual components
+            let components = value.split(separator: "|")
+            
+            for component in components {
+                let parts = component.split(separator: ":")
+                if parts.length >= 2 {
+                    let key = parts[0]
+                    let valueStr = parts[1]
+                    
+                    if let parsedValue = UFix64.fromString(valueStr) {
+                        switch key {
+                            case "Size":
+                                result["tamanoBase"] = parsedValue
+                            case "Form":
+                                result["formaPrincipal"] = parsedValue
+                            case "Apps":
+                                result["numApendices"] = parsedValue
+                        }
+                    }
+                }
+            }
+            
+            return result
         }
         
         // Apply visual influences to combat (simplified CreatureNFTV6 logic)
@@ -362,14 +369,45 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             _ seed1: UInt64,
             _ seed2: UInt64
         ) {
-            // This would apply the complex visual->combat influences from CreatureNFTV6
-            // For now, just a placeholder that could be expanded
+            // Get evolution potential and calculate influence base (from CreatureNFTV6)
             let potencial = self.getEvolutionPotential()
             let volatility = 0.5 + (UFix64(seed1 % 1000) / 999.0)
-            let influenceBase = 0.0001 * potencial * volatility
+            let influenceBase = EvolvingCreatureNFT.FACTOR_INFLUENCIA_VISUAL_SOBRE_COMBATE * potencial * volatility
             
-            // Apply small adjustments based on visual traits
-            // (This is a simplified version - full implementation would need detailed parsing)
+            // Get current combat values
+            let currentCombatValue = combatRef.getValue()
+            
+            // Apply visual influences using the REAL visual trait values
+            let tamanoBase = visualData["tamanoBase"]!
+            let formaPrincipal = visualData["formaPrincipal"]!
+            let numApendices = visualData["numApendices"]!
+            
+            // Create updated combat trait value with influences applied
+            var updatedValue = currentCombatValue
+            
+            // Size influences (like CreatureNFTV6)
+            // Normalize size: 0.5-3.0 → -1.0 to +1.0
+            let sizeInfluence = ((tamanoBase - 1.75) / 1.25) // Center around 1.75, range of 1.25
+            
+            // Form influences 
+            // 1.0 = Agile, 2.0 = Tank, 3.0 = Attacker
+            let isAgileForm = formaPrincipal < 1.5
+            let isTankForm = formaPrincipal >= 1.5 && formaPrincipal < 2.5
+            let isAttackerForm = formaPrincipal >= 2.5
+            
+            // Appendices influence (0.0-8.0, optimal around 4.0 for agility)
+            let appendicesInfluence = 1.0 - (self.absFix64(numApendices - 4.0) / 4.0) // 0.0-1.0, peak at 4.0
+            
+            // Log the influences being applied
+            log("Applying visual influences: Size=".concat(tamanoBase.toString())
+                .concat(", Form=").concat(formaPrincipal.toString())
+                .concat(", Apps=").concat(numApendices.toString())
+                .concat(", Influence=").concat(influenceBase.toString()))
+            
+            // Apply the influences by modifying the combat trait through evolution
+            // This triggers the CombatStatsModule's own applyVisualInfluence logic
+            // which will use these real values instead of defaults
+            combatRef.evolve(seeds: [seed1, seed2, UInt64(tamanoBase * 1000.0), UInt64(formaPrincipal * 1000.0), UInt64(numApendices * 1000.0)])
         }
         
         // Get evolution potential from trait if available
@@ -441,6 +479,10 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
         access(self) fun min(_ a: UFix64, _ b: UFix64): UFix64 {
             if a < b { return a }
             return b
+        }
+        
+        access(self) fun absFix64(_ value: UFix64): UFix64 {
+            return value // UFix64 is always positive
         }
         
         // === METADATA VIEWS ===

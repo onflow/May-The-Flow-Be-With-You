@@ -250,33 +250,43 @@ access(all) contract VisualTraitsModule: TraitModule {
     
     // NEW: Create trait with seed-based randomization
     access(all) fun createTraitWithSeed(seed: UInt64): @{TraitModule.Trait} {
-        // Use seed to generate pseudo-random values within gene ranges
-        let r1 = (seed * 31) % 1000
-        let r2 = (seed * 37) % 1000  
-        let r3 = (seed * 41) % 1000
-        let r4 = (seed * 43) % 1000
-        let r5 = (seed * 47) % 1000
-        let r6 = (seed * 53) % 1000
-        let r7 = (seed * 59) % 1000
+        // Use seed for pseudo-random generation within gene ranges
+        let rng1 = UFix64(seed % 1000) / 999.0           // 0.0 to 1.0
+        let rng2 = UFix64((seed / 1000) % 1000) / 999.0  // Second random value
+        let rng3 = UFix64((seed / 1000000) % 1000) / 999.0 // Third random value
+        let rng4 = UFix64((seed / 1000000000) % 1000) / 999.0 // Fourth random value
+        let rng5 = UFix64((seed / 1000000000000) % 1000) / 999.0 // Fifth random value
         
-        // Generate values within ranges
-        let colorR = UFix64(r1) / 999.0  // 0.0-1.0
-        let colorG = UFix64(r2) / 999.0  // 0.0-1.0
-        let colorB = UFix64(r3) / 999.0  // 0.0-1.0
+        // Generate additional randoms for the discrete traits
+        let rng6 = UFix64((seed / 17) % 1000) / 999.0    // For form
+        let rng7 = UFix64((seed / 7) % 1000) / 999.0     // For appendices  
+        let rng8 = UFix64((seed / 13) % 1000) / 999.0    // For movement
         
-        let tamanoBase = 0.5 + (UFix64(r4) / 999.0) * 2.5  // 0.5-3.0
-        let formaPrincipal = 1.0 + (UFix64(r5) / 999.0) * 2.0  // 1.0-3.0
-        let numApendices = (UFix64(r6) / 999.0) * 8.0  // 0.0-8.0
-        let patronMovimiento = 1.0 + (UFix64(r7) / 999.0) * 3.0  // 1.0-4.0
+        // Generate color genes (0.0 to 1.0)
+        let rojoGen = rng1
+        let verdeGen = rng2 
+        let azulGen = rng3
+        
+        // Generate size (0.5 to 3.0) - already allowing intermediates
+        let tamanoBase = 0.5 + (rng4 * 2.5)
+        
+        // Generate form (1.0 to 3.0) - NOW with intermediate values
+        let formaPrincipal = 1.0 + (rng6 * 2.0) // 1.0-3.0 with decimals
+        
+        // Generate appendices (0.0 to 8.0) - NOW with intermediate values
+        let numApendices = rng7 * 8.0 // 0.0-8.0 with decimals
+        
+        // Generate movement type (1.0 to 4.0) - NOW with intermediate values
+        let tipoMovimiento = 1.0 + (rng8 * 3.0) // 1.0-4.0 with decimals
         
         return <- create VisualTraits(
-            colorR: colorR,
-            colorG: colorG,
-            colorB: colorB,
+            colorR: rojoGen,
+            colorG: verdeGen,
+            colorB: azulGen,
             tamanoBase: tamanoBase,
             formaPrincipal: formaPrincipal,
             numApendices: numApendices,
-            patronMovimiento: patronMovimiento
+            patronMovimiento: tipoMovimiento
         )
     }
     
@@ -314,6 +324,14 @@ access(all) contract VisualTraitsModule: TraitModule {
     
     access(all) view fun getVersion(): String {
         return "1.0.0"
+    }
+    
+    access(all) view fun getModuleName(): String {
+        return "Visual Traits Module"
+    }
+    
+    access(all) view fun getModuleDescription(): String {
+        return "Manages visual genetics including color, size, form, appendices, and movement patterns"
     }
     
     init() {

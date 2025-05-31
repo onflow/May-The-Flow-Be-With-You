@@ -241,6 +241,14 @@ access(all) contract EvolutionPotentialModule: TraitModule {
         return "1.0.0"
     }
     
+    access(all) view fun getModuleName(): String {
+        return "Evolution Potential Module"
+    }
+    
+    access(all) view fun getModuleDescription(): String {
+        return "Manages evolution potential and lifespan characteristics"
+    }
+    
     init() {
         // Initialize gene ranges (from CreatureNFTV6)
         let ranges: {String: {String: UFix64}} = {}

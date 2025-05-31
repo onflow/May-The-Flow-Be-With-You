@@ -46,19 +46,42 @@ CREATE TABLE IF NOT EXISTS achievements (
     unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. Leaderboards table
-CREATE TABLE IF NOT EXISTS leaderboards (
+-- 4. Unified Leaderboard Entries table
+-- Supports both tier-based and period-based leaderboards with cultural contexts
+CREATE TABLE IF NOT EXISTS leaderboard_entries (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+
+    -- User Information
+    user_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    user_tier TEXT NOT NULL CHECK (user_tier IN ('supabase', 'flow')),
+
+    -- Game Context
     game_type TEXT NOT NULL,
+    culture TEXT NOT NULL,
+
+    -- Scoring
+    raw_score INTEGER NOT NULL,
+    adjusted_score INTEGER NOT NULL, -- Calculated based on tier (80% supabase, 100% flow)
+
+    -- Time Periods (auto-managed)
     period TEXT NOT NULL CHECK (period IN ('daily', 'weekly', 'monthly', 'all_time')),
-    score INTEGER NOT NULL DEFAULT 0,
-    rank INTEGER,
-    total_sessions INTEGER DEFAULT 0,
-    average_accuracy DECIMAL(5,2) DEFAULT 0.0,
     period_start DATE NOT NULL,
     period_end DATE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+
+    -- Blockchain Integration
+    verified BOOLEAN DEFAULT FALSE,
+    transaction_id TEXT,
+    block_height BIGINT,
+    vrf_seed BIGINT,
+
+    -- Metadata
+    session_data JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+    -- Constraints: One entry per user per game/culture/period combination
+    UNIQUE(user_id, game_type, culture, period, period_start)
 );
 
 -- 5. Memory palaces table (optional for now)
@@ -123,7 +146,19 @@ CREATE INDEX IF NOT EXISTS idx_practice_sessions_user_id ON practice_sessions(us
 CREATE INDEX IF NOT EXISTS idx_practice_sessions_game_type ON practice_sessions(game_type);
 CREATE INDEX IF NOT EXISTS idx_practice_sessions_created_at ON practice_sessions(created_at);
 CREATE INDEX IF NOT EXISTS idx_achievements_user_id ON achievements(user_id);
-CREATE INDEX IF NOT EXISTS idx_leaderboards_game_type_period ON leaderboards(game_type, period);
+-- Unified leaderboard indexes for performance
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_adjusted_score ON leaderboard_entries(adjusted_score DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_game_type ON leaderboard_entries(game_type);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_culture ON leaderboard_entries(culture);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_user_tier ON leaderboard_entries(user_tier);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_period ON leaderboard_entries(period);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_verified ON leaderboard_entries(verified);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_created_at ON leaderboard_entries(created_at DESC);
+
+-- Composite indexes for common leaderboard queries
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_game_culture_period_score ON leaderboard_entries(game_type, culture, period, adjusted_score DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_tier_period_score ON leaderboard_entries(user_tier, period, adjusted_score DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_period_dates ON leaderboard_entries(period, period_start, period_end);
 CREATE INDEX IF NOT EXISTS idx_memory_palaces_user_id ON memory_palaces(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_progress_user_id ON user_progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_progress_game_type ON user_progress(game_type);
@@ -136,14 +171,29 @@ CREATE INDEX IF NOT EXISTS idx_game_sessions_created_at ON game_sessions(created
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE leaderboards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leaderboard_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE memory_palaces ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE game_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for public read access (for leaderboards)
-CREATE POLICY "Public leaderboards are viewable by everyone" ON leaderboards
+CREATE POLICY "Public leaderboard entries are viewable by everyone" ON leaderboard_entries
     FOR SELECT USING (true);
+
+-- Policy: Users can insert their own scores
+CREATE POLICY "Users can insert own leaderboard entries" ON leaderboard_entries
+    FOR INSERT WITH CHECK (
+        user_id = auth.uid()::text OR
+        auth.uid() IS NULL OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
+
+-- Policy: Users can update their own entries (for adding transaction details)
+CREATE POLICY "Users can update own leaderboard entries" ON leaderboard_entries
+    FOR UPDATE USING (
+        user_id = auth.uid()::text OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
 
 -- Create RLS policies for user data access
 CREATE POLICY "Users can view own profile" ON user_profiles
@@ -254,6 +304,172 @@ CREATE TRIGGER on_auth_user_created
 -- ('test-user-1', 'first_game', 'Memory Apprentice', 'Completed your first memory challenge', '🎓', 10),
 -- ('test-user-1', 'high_score', 'Memory Master', 'Scored 50+ points in a single game', '🏆', 20);
 
+-- =====================================================
+-- LEADERBOARD VIEWS AND FUNCTIONS
+-- =====================================================
+
+-- View: Top scores across all tiers and periods
+CREATE OR REPLACE VIEW leaderboard_top_scores AS
+SELECT
+  id,
+  user_id,
+  username,
+  raw_score,
+  adjusted_score,
+  game_type,
+  culture,
+  user_tier,
+  period,
+  verified,
+  transaction_id,
+  vrf_seed,
+  created_at,
+  ROW_NUMBER() OVER (PARTITION BY game_type, culture, period ORDER BY adjusted_score DESC) as rank
+FROM leaderboard_entries
+ORDER BY adjusted_score DESC;
+
+-- View: Flow-verified scores only
+CREATE OR REPLACE VIEW leaderboard_flow_verified AS
+SELECT
+  id,
+  user_id,
+  username,
+  raw_score,
+  adjusted_score,
+  game_type,
+  culture,
+  user_tier,
+  period,
+  verified,
+  transaction_id,
+  vrf_seed,
+  created_at,
+  ROW_NUMBER() OVER (PARTITION BY game_type, culture, period ORDER BY adjusted_score DESC) as rank
+FROM leaderboard_entries
+WHERE user_tier = 'flow' AND verified = true
+ORDER BY adjusted_score DESC;
+
+-- View: Supabase users only
+CREATE OR REPLACE VIEW leaderboard_supabase_only AS
+SELECT
+  id,
+  user_id,
+  username,
+  raw_score,
+  adjusted_score,
+  game_type,
+  culture,
+  user_tier,
+  period,
+  created_at,
+  ROW_NUMBER() OVER (PARTITION BY game_type, culture, period ORDER BY adjusted_score DESC) as rank
+FROM leaderboard_entries
+WHERE user_tier = 'supabase'
+ORDER BY adjusted_score DESC;
+
+-- View: Grand Master leaderboard (all cultures combined)
+CREATE OR REPLACE VIEW leaderboard_grand_master AS
+SELECT
+  user_id,
+  username,
+  user_tier,
+  game_type,
+  period,
+  SUM(adjusted_score) as total_score,
+  COUNT(*) as cultures_mastered,
+  AVG(adjusted_score) as average_score,
+  MAX(adjusted_score) as best_score,
+  MAX(created_at) as last_played,
+  ROW_NUMBER() OVER (PARTITION BY game_type, period ORDER BY SUM(adjusted_score) DESC) as rank
+FROM leaderboard_entries
+GROUP BY user_id, username, user_tier, game_type, period
+ORDER BY total_score DESC;
+
+-- Function: Get current period dates
+CREATE OR REPLACE FUNCTION get_current_periods()
+RETURNS TABLE (
+  period_type TEXT,
+  period_start DATE,
+  period_end DATE
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    'daily'::TEXT,
+    CURRENT_DATE,
+    CURRENT_DATE
+  UNION ALL
+  SELECT
+    'weekly'::TEXT,
+    DATE_TRUNC('week', CURRENT_DATE)::DATE,
+    (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '6 days')::DATE
+  UNION ALL
+  SELECT
+    'monthly'::TEXT,
+    DATE_TRUNC('month', CURRENT_DATE)::DATE,
+    (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+  UNION ALL
+  SELECT
+    'all_time'::TEXT,
+    '2024-01-01'::DATE,
+    '2099-12-31'::DATE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function: Get user's ranking in specific leaderboard
+CREATE OR REPLACE FUNCTION get_user_ranking(
+  p_user_id TEXT,
+  p_game_type TEXT,
+  p_culture TEXT DEFAULT NULL,
+  p_period TEXT DEFAULT 'all_time'
+)
+RETURNS TABLE (
+  rank BIGINT,
+  total_players BIGINT,
+  user_score INTEGER,
+  score_to_next INTEGER
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH user_entry AS (
+    SELECT adjusted_score
+    FROM leaderboard_entries
+    WHERE user_id = p_user_id
+      AND game_type = p_game_type
+      AND (p_culture IS NULL OR culture = p_culture)
+      AND period = p_period
+    ORDER BY adjusted_score DESC
+    LIMIT 1
+  ),
+  rankings AS (
+    SELECT
+      adjusted_score,
+      ROW_NUMBER() OVER (ORDER BY adjusted_score DESC) as position,
+      COUNT(*) OVER () as total
+    FROM leaderboard_entries
+    WHERE game_type = p_game_type
+      AND (p_culture IS NULL OR culture = p_culture)
+      AND period = p_period
+  ),
+  next_score AS (
+    SELECT adjusted_score as next_score
+    FROM rankings r, user_entry u
+    WHERE r.adjusted_score > u.adjusted_score
+    ORDER BY r.adjusted_score ASC
+    LIMIT 1
+  )
+  SELECT
+    r.position,
+    r.total,
+    u.adjusted_score,
+    COALESCE(n.next_score - u.adjusted_score, 0)
+  FROM user_entry u
+  CROSS JOIN rankings r
+  LEFT JOIN next_score n ON true
+  WHERE r.adjusted_score = u.adjusted_score;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Verify tables were created
 SELECT
     schemaname,
@@ -261,5 +477,5 @@ SELECT
     tableowner
 FROM pg_tables
 WHERE schemaname = 'public'
-    AND tablename IN ('user_profiles', 'practice_sessions', 'achievements', 'leaderboards', 'memory_palaces', 'user_progress', 'game_sessions')
+    AND tablename IN ('user_profiles', 'practice_sessions', 'achievements', 'leaderboard_entries', 'memory_palaces', 'user_progress', 'game_sessions')
 ORDER BY tablename;

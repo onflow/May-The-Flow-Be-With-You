@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../providers/AuthProvider";
+import { UserTierStatus } from "./UserTierStatus";
 import { progressService, LeaderboardEntry } from "../services/progressService";
 import { Trophy, Medal, Award, Crown } from "lucide-react";
 
@@ -18,19 +19,19 @@ export function Leaderboard({
   limit = 10,
   showUserRank = true,
 }: LeaderboardProps) {
-  const { user } = useAuth();
+  const { user, userTier, canAccessFeature } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState(period);
 
   useEffect(() => {
-    if (user) {
+    if (canAccessFeature("canJoinLeaderboard")) {
       loadLeaderboard();
     } else {
       setLoading(false);
     }
-  }, [gameType, selectedPeriod, user]);
+  }, [gameType, selectedPeriod, user, canAccessFeature]);
 
   const loadLeaderboard = async () => {
     setLoading(true);
@@ -108,8 +109,8 @@ export function Leaderboard({
     return periodNames[period] || period;
   };
 
-  // Anonymous user placeholder
-  if (!user) {
+  // Enhanced user experience based on tier
+  if (!canAccessFeature("canJoinLeaderboard")) {
     return (
       <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         {/* Header */}
@@ -119,21 +120,59 @@ export function Leaderboard({
           </h3>
         </div>
 
-        {/* Anonymous Content */}
-        <div className="p-6 text-center">
-          <div className="text-4xl mb-4">🏆</div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">
-            Join the competition
-          </h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Sign in to see your ranking and compete with other memory athletes.
-          </p>
-          <div className="space-y-2 text-xs text-gray-500">
-            <div>🥇 Compete for top rankings</div>
-            <div>📊 Track your progress over time</div>
-            <div>🎯 Challenge other players</div>
-            <div>🏆 Earn recognition for your skills</div>
+        {/* Content based on user tier */}
+        <div className="p-4">
+          {/* Show sample leaderboard data for preview */}
+          <div className="mb-4">
+            <div className="text-center mb-3">
+              <div className="text-sm text-gray-600 mb-2">
+                Preview Leaderboard
+              </div>
+            </div>
+
+            {/* Sample entries */}
+            <div className="space-y-2 opacity-60">
+              {[
+                { rank: 1, name: "MemoryMaster", score: 1250, games: 45 },
+                { rank: 2, name: "FlowChampion", score: 1180, games: 38 },
+                { rank: 3, name: "ChaosCardPro", score: 1050, games: 42 },
+                { rank: 4, name: "PalaceBuilder", score: 980, games: 35 },
+                { rank: 5, name: "StoryWeaver", score: 920, games: 29 },
+              ].map((entry) => (
+                <div
+                  key={entry.rank}
+                  className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${getRankBadgeColor(
+                        entry.rank
+                      )}`}
+                    >
+                      {entry.rank <= 3 ? getRankIcon(entry.rank) : entry.rank}
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm text-gray-800">
+                        {entry.name}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        {entry.games} games
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-gray-800">
+                      {entry.score}
+                    </div>
+                    <div className="text-xs text-gray-500">pts</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* User tier status with upgrade prompt */}
+          <UserTierStatus showUpgradePrompt={true} />
         </div>
       </div>
     );

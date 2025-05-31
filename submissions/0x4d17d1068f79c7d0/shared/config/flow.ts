@@ -30,8 +30,15 @@ const fclConfigInfo: Record<string, NetworkConfig> = {
   },
 };
 
-// Get network from environment or default to emulator for development
-const network = process.env.NEXT_PUBLIC_FLOW_NETWORK || 'emulator';
+// Get network from environment or default to testnet for production
+const network = process.env.NEXT_PUBLIC_FLOW_NETWORK || 'testnet';
+
+// Debug logging to verify network configuration
+console.log('🌐 Flow Network Configuration:', {
+  envVar: process.env.NEXT_PUBLIC_FLOW_NETWORK,
+  resolvedNetwork: network,
+  isTestnet: network === 'testnet'
+});
 
 // Get network configuration
 const networkConfig = fclConfigInfo[network as keyof typeof fclConfigInfo];
@@ -49,7 +56,7 @@ const fclConfig: Record<string, any> = {
   // adds in opt-in wallets like Dapper and Ledger
   'discovery.authn.include': networkConfig.discoveryAuthInclude,
   'discovery.authn.exclude': [], // excludes chosen wallets by address
-  "0xProfile": network === 'testnet' ? "0xba1132bc08f82fe2" : "0xf8d6e0586b0a20c7", // Profile contract address
+  "0xProfile": network === 'testnet' ? "0xba1132bc08f82fe2" : "0xba1132bc08f82fe2", // Profile contract address
   // EVM support on Flow
   'evm.enabled': true,
   'evm.gasLimit': 9999999,
@@ -80,13 +87,117 @@ export const getWalletType = (user: any) => {
   return 'unknown';
 };
 
+// Enhanced network detection for Flow addresses
+export const getFlowNetworkFromAddress = (address: string): 'emulator' | 'testnet' | 'mainnet' | 'unknown' => {
+  if (!address) return 'unknown';
+
+  // Emulator has a specific known address
+  if (address === '0xf8d6e0586b0a20c7') return 'emulator';
+
+  // For Flow addresses, we need to check the actual network they're on
+  // This is a simplified approach - in production, you'd query the network
+  if (address.startsWith('0x') && address.length === 18) {
+    // Known testnet service accounts (these are examples)
+    const knownTestnetAddresses = [
+      '0xb8404e09b36b6623', // Your testnet contract address
+      '0x82ec283f88a62e65', // Dapper testnet
+      '0x9d2e44203cb13051', // Ledger testnet
+    ];
+
+    // Known mainnet service accounts (these are examples)
+    const knownMainnetAddresses = [
+      '0xead892083b3e2c6c', // Dapper mainnet
+      '0xe5cd26afebe62781', // Ledger mainnet
+    ];
+
+    if (knownTestnetAddresses.includes(address)) return 'testnet';
+    if (knownMainnetAddresses.includes(address)) return 'mainnet';
+
+    // For unknown addresses, we'll need to make an API call to determine the network
+    // For now, we'll assume testnet for development purposes
+    return 'testnet';
+  }
+
+  return 'unknown';
+};
+
+// Async network detection that queries Flow APIs
+export const detectFlowNetworkFromAddress = async (address: string): Promise<'emulator' | 'testnet' | 'mainnet' | 'unknown'> => {
+  if (!address) return 'unknown';
+
+  // Emulator has a specific known address
+  if (address === '0xf8d6e0586b0a20c7') return 'emulator';
+
+  if (!address.startsWith('0x') || address.length !== 18) return 'unknown';
+
+  try {
+    // Try testnet first
+    const testnetResponse = await fetch(`https://rest-testnet.onflow.org/v1/accounts/${address}`);
+    if (testnetResponse.ok) {
+      return 'testnet';
+    }
+
+    // Try mainnet
+    const mainnetResponse = await fetch(`https://rest-mainnet.onflow.org/v1/accounts/${address}`);
+    if (mainnetResponse.ok) {
+      return 'mainnet';
+    }
+
+    return 'unknown';
+  } catch (error) {
+    console.warn('Failed to detect Flow network for address:', address, error);
+    // Fallback to the synchronous method
+    return getFlowNetworkFromAddress(address);
+  }
+};
+
+// Network mismatch detection
+export const detectNetworkMismatch = (expectedNetwork: string, userAddress: string): {
+  hasMismatch: boolean;
+  userNetwork: string;
+  expectedNetwork: string;
+  message?: string;
+} => {
+  if (!userAddress) {
+    return { hasMismatch: false, userNetwork: 'none', expectedNetwork };
+  }
+
+  const userNetwork = getFlowNetworkFromAddress(userAddress);
+  const hasMismatch = expectedNetwork !== userNetwork && userNetwork !== 'unknown';
+
+  let message = '';
+  if (hasMismatch) {
+    if (expectedNetwork === 'testnet' && userNetwork === 'mainnet') {
+      message = 'Please switch your Flow wallet from Mainnet to Testnet to use this app.';
+    } else if (expectedNetwork === 'testnet' && userNetwork === 'emulator') {
+      message = 'Please switch your Flow wallet from Emulator to Testnet to use this app.';
+    } else if (expectedNetwork === 'emulator' && userNetwork === 'testnet') {
+      message = 'Please switch your Flow wallet from Testnet to Emulator for development.';
+    } else {
+      message = `Please switch your Flow wallet to ${expectedNetwork} network.`;
+    }
+  }
+
+  return {
+    hasMismatch,
+    userNetwork,
+    expectedNetwork,
+    message
+  };
+};
+
 // Authentication functions
 export const flowAuth = {
   // Sign in with Flow wallet
   signIn: () => fcl.authenticate(),
 
-  // Sign out
-  signOut: () => fcl.unauthenticate(),
+  // Sign out and clear all cached data
+  signOut: async () => {
+    await fcl.unauthenticate();
+    // Clear any cached user data
+    localStorage.removeItem('fcl:current_user');
+    console.log('🚪 Flow authentication cleared');
+  },
 
   // Get current user (returns Promise in newer FCL versions)
   getCurrentUser: async () => {

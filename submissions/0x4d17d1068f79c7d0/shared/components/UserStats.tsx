@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../providers/AuthProvider";
+import { UserTierStatus } from "./UserTierStatus";
 import {
   progressService,
   UserStats,
@@ -19,7 +20,7 @@ export function UserStatsComponent({
   gameType = "random_palace",
   showLeaderboard = true,
 }: UserStatsProps) {
-  const { user } = useAuth();
+  const { user, userTier, canAccessFeature } = useAuth();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -29,12 +30,12 @@ export function UserStatsComponent({
   >("stats");
 
   useEffect(() => {
-    if (user) {
+    if (canAccessFeature("canEarnPoints")) {
       loadUserData();
     } else {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, gameType, canAccessFeature]);
 
   const loadUserData = async () => {
     if (!user) return;
@@ -95,8 +96,8 @@ export function UserStatsComponent({
     );
   }
 
-  // Anonymous user placeholder
-  if (!user) {
+  // Enhanced user experience based on tier
+  if (!canAccessFeature("canEarnPoints")) {
     return (
       <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         {/* Tab Navigation */}
@@ -123,22 +124,82 @@ export function UserStatsComponent({
           ))}
         </div>
 
-        {/* Anonymous Content */}
-        <div className="p-6 text-center">
-          <div className="text-4xl mb-4">🎮</div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">
-            Sign in to track your progress
-          </h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Create an account to save your stats, earn achievements, and compete
-            on leaderboards.
-          </p>
-          <div className="space-y-2 text-xs text-gray-500">
-            <div>✅ Track your memory training progress</div>
-            <div>✅ Earn cultural achievement badges</div>
-            <div>✅ Compete with other memory athletes</div>
-            <div>✅ Access advanced memory techniques</div>
-          </div>
+        {/* Content based on selected tab */}
+        <div className="p-4">
+          {activeTab === "stats" && (
+            <div className="space-y-4">
+              {/* Sample stats preview */}
+              <div className="grid grid-cols-2 gap-3 opacity-60">
+                <div className="bg-blue-50 p-3 rounded-lg text-center">
+                  <div className="text-xl font-bold text-blue-600">--</div>
+                  <div className="text-xs text-blue-800">Games</div>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg text-center">
+                  <div className="text-xl font-bold text-green-600">--%</div>
+                  <div className="text-xs text-green-800">Accuracy</div>
+                </div>
+                <div className="bg-purple-50 p-3 rounded-lg text-center">
+                  <div className="text-xl font-bold text-purple-600">--</div>
+                  <div className="text-xs text-purple-800">Best</div>
+                </div>
+                <div className="bg-orange-50 p-3 rounded-lg text-center">
+                  <div className="text-xl font-bold text-orange-600">--</div>
+                  <div className="text-xs text-orange-800">Streak</div>
+                </div>
+              </div>
+
+              <UserTierStatus showUpgradePrompt={true} />
+            </div>
+          )}
+
+          {activeTab === "achievements" && (
+            <div className="space-y-4">
+              {/* Sample achievements preview */}
+              <div className="grid grid-cols-3 gap-2 opacity-60">
+                {["🧠", "📈", "🔗", "🚀", "⚡", "🌟"].map((emoji, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col items-center p-2 rounded-lg bg-gray-50 border border-gray-200"
+                  >
+                    <div className="text-lg mb-1">{emoji}</div>
+                    <div className="text-xs text-gray-600 text-center">
+                      Locked
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <UserTierStatus showUpgradePrompt={true} />
+            </div>
+          )}
+
+          {activeTab === "leaderboard" && showLeaderboard && (
+            <div className="space-y-4">
+              {/* Sample leaderboard preview */}
+              <div className="space-y-2 opacity-60">
+                {[
+                  { rank: 1, name: "MemoryMaster", score: 1250 },
+                  { rank: 2, name: "FlowChampion", score: 1180 },
+                  { rank: 3, name: "ChaosCardPro", score: 1050 },
+                ].map((entry) => (
+                  <div
+                    key={entry.rank}
+                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold bg-gray-200 text-gray-600">
+                        {entry.rank}
+                      </div>
+                      <div className="font-medium text-sm">{entry.name}</div>
+                    </div>
+                    <div className="font-bold text-lg">{entry.score}</div>
+                  </div>
+                ))}
+              </div>
+
+              <UserTierStatus showUpgradePrompt={true} />
+            </div>
+          )}
         </div>
       </div>
     );

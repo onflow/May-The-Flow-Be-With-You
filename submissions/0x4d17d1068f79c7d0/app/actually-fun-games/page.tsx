@@ -9,6 +9,7 @@ import { RandomPalaceGenerator } from "../../shared/components/games/memory-pala
 import { UserStatsComponent } from "../../shared/components/UserStats";
 import { Leaderboard } from "../../shared/components/Leaderboard";
 import { Achievements } from "../../shared/components/Achievements";
+import { UserTierBadge } from "../../shared/components/UserTierStatus";
 
 // Force dynamic rendering (no prerendering)
 export const dynamic = "force-dynamic";
@@ -65,7 +66,10 @@ export default function ActuallyFunGamesPage() {
       return (
         <div className="w-full space-y-6">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold">{game.name}</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold">{game.name}</h1>
+              <UserTierBadge />
+            </div>
             <button
               onClick={() => setSelectedGame(null)}
               className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"

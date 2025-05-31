@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { CulturalTheme } from "../../../config/culturalThemes";
 import { GameScoreShare } from "../../SocialShare";
 import { VRFVerification } from "../../VRFVerification";
@@ -51,8 +51,27 @@ export function ChaosCardsResults({
   userSequence = [],
   scoreBreakdown = [],
 }: ChaosCardsResultsProps) {
-  const accuracy = Math.round((score / (cards.length * 10)) * 100);
-  const maxScore = cards.length * 10;
+  // Local state to override loading when save completes
+  const [localLoading, setLocalLoading] = useState(isLoading);
+
+  // Reset local loading state after a delay to ensure save completes
+  useEffect(() => {
+    if (isLoading) {
+      setLocalLoading(true);
+      // Set a timeout to reset loading state
+      const timeout = setTimeout(() => {
+        setLocalLoading(false);
+      }, 3000); // 3 second timeout
+      return () => clearTimeout(timeout);
+    } else {
+      setLocalLoading(false);
+    }
+  }, [isLoading]);
+
+  // Calculate max score using the actual scoring system
+  const basePointsPerCard = 5 + Math.max(0, (difficulty - 5) * 2); // Same as in gameRules.ts
+  const maxScore = cards.length * basePointsPerCard;
+  const accuracy = Math.round((score / maxScore) * 100);
   const isPerfect = score === maxScore;
 
   // Memory science insights
@@ -102,7 +121,7 @@ export function ChaosCardsResults({
 
       <div className="space-y-2">
         <p className="text-lg font-bold">Final Score: {score} points</p>
-        <p className="text-sm" style={{ color: theme.colors.text + "80" }}>
+        <p className="text-sm" style={{ color: theme.colors.text }}>
           Accuracy: {accuracy}% • Level {cards.length} • {memoryTechnique}{" "}
           technique
         </p>
@@ -127,7 +146,7 @@ export function ChaosCardsResults({
                 <div
                   key={`breakdown-${index}`}
                   className="text-xs"
-                  style={{ color: theme.colors.text + "90" }}
+                  style={{ color: theme.colors.text }}
                 >
                   {item}
                 </div>
@@ -231,7 +250,7 @@ export function ChaosCardsResults({
         }}
       >
         <div className="text-sm space-y-1">
-          <div style={{ color: theme.colors.text + "80" }}>
+          <div style={{ color: theme.colors.text }}>
             Perfect Rounds: {isPerfect ? perfectRounds + 1 : perfectRounds} •
             Total Games: {totalRounds}
           </div>
@@ -268,7 +287,7 @@ export function ChaosCardsResults({
                 : colors.warning + "40",
             }}
           >
-            <div style={{ color: theme.colors.text + "60" }}>
+            <div style={{ color: theme.colors.text }}>
               Journey to Mastery: {difficulty} cards
               {difficulty < nextMilestone &&
                 ` → Next milestone: ${nextMilestone} cards`}
@@ -289,7 +308,7 @@ export function ChaosCardsResults({
       <div className="flex gap-3 justify-center mb-4">
         <button
           onClick={onPlayAgain}
-          disabled={isLoading}
+          disabled={localLoading}
           className="px-6 py-2 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 hover:scale-105 shadow-lg"
           style={{
             backgroundColor: isPerfect ? colors.success : colors.info,
@@ -298,7 +317,7 @@ export function ChaosCardsResults({
             }30`,
           }}
         >
-          {isLoading
+          {localLoading
             ? "Saving..."
             : isPerfect
             ? "🚀 Continue Journey"

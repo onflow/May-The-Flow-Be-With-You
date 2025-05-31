@@ -188,19 +188,20 @@ class ProgressService {
   // Get leaderboard for a specific game type
   async getLeaderboard(gameType: string, period: 'daily' | 'weekly' | 'monthly' | 'all_time' = 'all_time', limit: number = 10): Promise<LeaderboardEntry[]> {
     try {
-      // Simplified query without user_profiles join for now
+      // Query the unified leaderboard entries table
       const { data, error } = await this.supabase
-        .from('leaderboards')
+        .from('leaderboard_entries')
         .select(`
           user_id,
-          score,
-          rank,
-          total_sessions,
-          average_accuracy
+          username,
+          raw_score,
+          adjusted_score,
+          user_tier,
+          verified
         `)
         .eq('game_type', gameType)
         .eq('period', period)
-        .order('rank', { ascending: true })
+        .order('adjusted_score', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
@@ -428,7 +429,7 @@ class ProgressService {
         // Upsert leaderboard entries
         if (leaderboardEntries.length > 0) {
           const { error: upsertError } = await this.supabase
-            .from('leaderboards')
+            .from('leaderboard_entries')
             .upsert(leaderboardEntries, {
               onConflict: 'user_id,game_type,period,period_start',
             });

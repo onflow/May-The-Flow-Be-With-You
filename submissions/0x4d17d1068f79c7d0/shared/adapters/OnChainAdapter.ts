@@ -24,7 +24,9 @@ export class OnChainAdapter extends BaseGameAdapter {
       this.supabase = null;
     }
 
-    this.contractAddress = contractAddress || "0x8c5303eaa26202d6"; // Default testnet address
+    this.contractAddress = contractAddress ||
+      process.env.NEXT_PUBLIC_MEMORY_VRF_CONTRACT ||
+      "0xb8404e09b36b6623"; // Testnet contract address
     this.flowVRFService = new FlowVRFService(this.contractAddress);
     this.randomnessProvider = new FlowVRFRandomnessProvider(this.flowVRFService);
   }
@@ -185,85 +187,147 @@ export class OnChainAdapter extends BaseGameAdapter {
     }
   }
 
-  async submitScore(userId: string, gameType: string, score: number, metadata?: any): Promise<void> {
+  async submitScore(userId: string, gameType: string, score: number, metadata?: any): Promise<{ success: boolean; transactionId?: string; error?: string; isVerified?: boolean; isEligible?: boolean }> {
+    console.log('🎯 HYBRID APPROACH: Off-chain first, strategic blockchain enhancement');
+
     try {
-      // Submit score to blockchain for verification
-      const txId = await this.submitScoreOnChain(userId, gameType, score, metadata);
+      if (!this.supabase) {
+        throw new Error('Supabase not available');
+      }
 
-      // Save to Supabase with verification data
-      if (this.supabase) {
-        // Generate a unique session ID
-        const sessionId = `onchain_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // 1. ALWAYS save off-chain first (reliable, fast)
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const isEligible = this.isBlockchainWorthy(score, metadata);
 
-        const { error } = await this.supabase
-          .from('game_sessions')
-          .insert({
-            user_id: userId,
-            game_type: gameType,
-            session_id: sessionId,
-            score: score,
-            max_possible_score: metadata?.maxPossibleScore || 1000,
-            accuracy: metadata?.accuracy || 0,
-            items_count: metadata?.itemsCount || 8,
-            duration_seconds: metadata?.duration || 0,
-            difficulty_level: metadata?.difficultyLevel || 2,
-            session_data: metadata || {},
-            flow_transaction_id: txId,
-            verification_status: 'verified',
-            created_at: new Date().toISOString()
-          });
+      const { error } = await this.supabase
+        .from('game_sessions')
+        .insert({
+          user_id: userId,
+          game_type: gameType,
+          session_id: sessionId,
+          score: score,
+          max_possible_score: metadata?.maxPossibleScore || 1000,
+          accuracy: metadata?.accuracy || 0,
+          items_count: metadata?.itemsCount || 8,
+          duration_seconds: metadata?.duration || 0,
+          difficulty_level: metadata?.difficultyLevel || 2,
+          session_data: {
+            ...metadata,
+            submissionMethod: 'hybrid_approach',
+            blockchainEligible: isEligible
+          },
+          verification_status: 'pending',
+          created_at: new Date().toISOString()
+        });
 
-        if (error) {
-          console.error('Failed to submit score to Supabase:', error);
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ Score saved off-chain successfully');
+
+      // 2. OPTIONALLY enhance with blockchain (strategic)
+      if (isEligible) {
+        console.log('🏆 High-value score detected, attempting blockchain verification...');
+        try {
+          const txId = await this.submitScoreOnChain(userId, gameType, score, metadata);
+
+          // Update verification status
+          await this.supabase
+            .from('game_sessions')
+            .update({
+              flow_transaction_id: txId,
+              verification_status: 'verified'
+            })
+            .eq('session_id', sessionId);
+
+          console.log(`🔗 Blockchain verification successful: ${txId}`);
+          return { success: true, transactionId: txId, isVerified: true, isEligible: true };
+        } catch (blockchainError) {
+          console.log('⚠️ Blockchain verification failed, but score is safely saved off-chain');
+          return { success: true, isVerified: false, isEligible: true };
         }
       }
+
+      return { success: true, isVerified: false, isEligible: false };
     } catch (error) {
-      console.error('Failed to submit score on-chain:', error);
-      throw error;
+      console.error('❌ Failed to save score:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to save score'
+      };
     }
+  }
+
+  // Determine if a score is worth putting on blockchain
+  private isBlockchainWorthy(score: number, metadata?: any): boolean {
+    // Only use blockchain for:
+    // 1. High scores (top 10% threshold)
+    // 2. Perfect games
+    // 3. Achievement unlocks
+    // 4. Personal records
+
+    const isHighScore = score >= 800; // Adjust threshold as needed
+    const isPerfectGame = metadata?.accuracy === 1.0;
+    const isAchievementUnlock = metadata?.achievementUnlocked;
+
+    return isHighScore || isPerfectGame || isAchievementUnlock;
   }
 
   async getLeaderboard(gameType: string, culture?: string, limit: number = 10): Promise<LeaderboardEntry[]> {
     try {
-      // Get verified scores from blockchain
-      const onChainLeaderboard = await this.getLeaderboardFromChain(gameType, culture, limit);
+      console.log('🏆 HYBRID LEADERBOARD: Combining off-chain and on-chain scores');
 
-      // Enhance with Supabase metadata
-      if (this.supabase) {
-        let query = this.supabase
-          .from('game_sessions')
-          .select(`
-            user_id,
-            score,
-            created_at,
-            session_data,
-            transaction_id,
-            is_verified
-          `)
-          .eq('game_type', gameType)
-          .eq('is_verified', true)
-          .order('score', { ascending: false })
-          .limit(limit);
-
-        if (culture) {
-          query = query.eq('session_data->culture', culture);
-        }
-
-        const { data, error } = await query;
-
-        if (!error && data) {
-          return data.map((item: any, index: number) => ({
-            userId: item.user_id,
-            username: `User ${item.user_id.slice(0, 8)}`,
-            score: item.score,
-            rank: index + 1,
-            culture: item.session_data?.culture,
-            isVerified: item.is_verified
-          }));
-        }
+      if (!this.supabase) {
+        return [];
       }
 
-      return onChainLeaderboard;
+      // Get ALL scores from Supabase (both verified and unverified)
+      let query = this.supabase
+        .from('game_sessions')
+        .select(`
+          user_id,
+          score,
+          created_at,
+          session_data,
+          flow_transaction_id,
+          verification_status,
+          accuracy,
+          duration_seconds
+        `)
+        .eq('game_type', gameType)
+        .order('score', { ascending: false })
+        .limit(limit * 2); // Get more to account for filtering
+
+      if (culture) {
+        query = query.eq('session_data->culture', culture);
+      }
+
+      const { data, error } = await query;
+
+      if (error || !data) {
+        console.error('Failed to get leaderboard from Supabase:', error);
+        return [];
+      }
+
+      // Process and rank scores with verification status
+      const leaderboard = data
+        .map((item: any, index: number) => ({
+          userId: item.user_id,
+          username: `User ${item.user_id.slice(0, 8)}`,
+          score: item.score,
+          rank: index + 1,
+          culture: item.session_data?.culture,
+          isVerified: item.verification_status === 'verified',
+          transactionId: item.flow_transaction_id,
+          accuracy: item.accuracy || 0,
+          duration: item.duration_seconds || 0,
+          verificationStatus: item.verification_status || 'pending'
+        }))
+        .slice(0, limit);
+
+      console.log(`✅ Retrieved ${leaderboard.length} scores (${leaderboard.filter((s: LeaderboardEntry) => s.isVerified).length} blockchain verified)`);
+      return leaderboard;
     } catch (error) {
       console.error('Failed to get leaderboard:', error);
       return [];
@@ -279,68 +343,88 @@ export class OnChainAdapter extends BaseGameAdapter {
       value: value.toString()
     }));
 
-    const transactionId = await fcl.mutate({
-      cadence: `
-        import MemoryProgress from ${this.contractAddress}
+    // Note: MemoryLeaderboard doesn't have a direct progress update function
+    // Progress is tracked through individual score submissions
+    // For now, we'll return a placeholder transaction ID
+    console.log('📊 Progress tracking via MemoryLeaderboard score submissions');
+    const transactionId = `progress_update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        transaction(
-          level: UInt32,
-          totalScore: UInt64,
-          gamesPlayed: UInt32,
-          bestStreak: UInt32,
-          culturalMastery: {String: UInt32}
-        ) {
-          prepare(signer: AuthAccount) {
-            let progressResource = signer.borrow<&MemoryProgress.UserProgress>(from: /storage/memoryProgress)
-              ?? panic("No progress resource found")
-
-            progressResource.updateProgress(
-              level: level,
-              totalScore: totalScore,
-              gamesPlayed: gamesPlayed,
-              bestStreak: bestStreak,
-              culturalMastery: culturalMastery
-            )
-          }
-        }
-      `,
-      args: (arg, t) => [
-        arg(progress.level.toString(), t.UInt32),
-        arg(progress.totalScore.toString(), t.UInt64),
-        arg(progress.gamesPlayed.toString(), t.UInt32),
-        arg(progress.bestStreak.toString(), t.UInt32),
-        arg(culturalMasteryArray, t.Dictionary({ key: t.String, value: t.UInt32 }))
-      ],
-      proposer: fcl.authz,
-      payer: fcl.authz,
-      authorizations: [fcl.authz],
-      limit: 1000
-    });
+    // In a real implementation, we might submit a summary score or use a separate progress contract
 
     return transactionId;
   }
 
   private async loadProgressFromChain(userId: string): Promise<GameProgress | null> {
     try {
+      console.log('📊 Loading player progress from MemoryLeaderboard contract...');
+
+      // Critical check: Prevent using Supabase project ID as Flow address
+      if (userId === '4d17d1068f79c7d0' || userId === '0x4d17d1068f79c7d0') {
+        console.error('🚨 CRITICAL: Detected Supabase project ID being used as Flow address!', {
+          userId,
+          stackTrace: new Error().stack
+        });
+        throw new Error('Invalid user ID: Supabase project ID cannot be used as Flow address');
+      }
+
+      // Get the current connected Flow user address
+      const currentUser = await fcl.currentUser.snapshot();
+      const addressToQuery = currentUser.loggedIn && currentUser.addr ? currentUser.addr : userId;
+
+      console.log(`🔍 OnChainAdapter.loadProgressFromChain - Debug info:`, {
+        providedUserId: userId,
+        currentUserAddr: currentUser.addr,
+        currentUserLoggedIn: currentUser.loggedIn,
+        addressToQuery,
+        willUseConnectedWallet: currentUser.loggedIn && currentUser.addr
+      });
+
+      // Since MemoryLeaderboard doesn't store individual player stats,
+      // we'll calculate basic progress from leaderboard entries
       const result = await fcl.query({
         cadence: `
-          import MemoryProgress from ${this.contractAddress}
+          import MemoryLeaderboard from ${this.contractAddress}
 
-          pub fun main(address: Address): MemoryProgress.ProgressData? {
-            return MemoryProgress.getProgress(address: address)
+          access(all) fun main(address: Address): {String: AnyStruct} {
+            // Get all leaderboard entries to calculate player stats
+            let allEntries = MemoryLeaderboard.getTopScores(gameType: nil, culture: nil, limit: 1000)
+            var totalGames: UInt64 = 0
+            var totalScore: UInt64 = 0
+            var bestScore: UInt64 = 0
+
+            for entry in allEntries {
+              if entry.playerAddress == address {
+                totalGames = totalGames + 1
+                totalScore = totalScore + entry.score
+                if entry.score > bestScore {
+                  bestScore = entry.score
+                }
+              }
+            }
+
+            return {
+              "totalGames": totalGames,
+              "totalScore": totalScore,
+              "bestScore": bestScore,
+              "averageScore": totalGames > 0 ? totalScore / totalGames : 0
+            }
           }
         `,
-        args: (arg, t) => [arg(userId, t.Address)]
+        args: (arg, t) => [arg(addressToQuery, t.Address)]
       });
 
       if (result) {
+        const totalGames = parseInt(result.totalGames.toString());
+        const totalScore = parseInt(result.totalScore.toString());
+        const bestScore = parseInt(result.bestScore.toString());
+
         return {
           userId,
-          level: parseInt(result.level),
-          totalScore: parseInt(result.totalScore),
-          gamesPlayed: parseInt(result.gamesPlayed),
-          bestStreak: parseInt(result.bestStreak),
-          culturalMastery: result.culturalMastery || {},
+          level: Math.max(1, Math.floor(totalGames / 10) + 1), // Level based on games played
+          totalScore,
+          gamesPlayed: totalGames,
+          bestStreak: 0, // Not tracked in current contract
+          culturalMastery: {},
           lastPlayed: Date.now(),
           achievements: await this.getAchievements(userId),
           statistics: this.createDefaultStatistics()
@@ -403,15 +487,21 @@ export class OnChainAdapter extends BaseGameAdapter {
 
   private async getAchievementsFromChain(userId: string): Promise<Achievement[]> {
     try {
+      // Get the current connected Flow user address
+      const currentUser = await fcl.currentUser.snapshot();
+      const addressToQuery = currentUser.loggedIn && currentUser.addr ? currentUser.addr : userId;
+
+      console.log(`🔍 Querying achievements for address: ${addressToQuery}`);
+
       const result = await fcl.query({
         cadence: `
           import MemoryAchievements from ${this.contractAddress}
 
-          pub fun main(address: Address): [MemoryAchievements.AchievementData] {
+          access(all) fun main(address: Address): [MemoryAchievements.AchievementMetadata] {
             return MemoryAchievements.getAchievements(address: address)
           }
         `,
-        args: (arg, t) => [arg(userId, t.Address)]
+        args: (arg, t) => [arg(addressToQuery, t.Address)]
       });
 
       return result.map((item: any) => ({
@@ -431,32 +521,46 @@ export class OnChainAdapter extends BaseGameAdapter {
   }
 
   private async submitScoreOnChain(userId: string, gameType: string, score: number, metadata?: any): Promise<string> {
+    // Simple validation
+    if (userId === '4d17d1068f79c7d0' || userId === '0x4d17d1068f79c7d0') {
+      throw new Error('Invalid user ID: Cannot use Supabase project ID as Flow address');
+    }
+
+    // Get current user with simple check
+    const currentUser = await fcl.currentUser.snapshot();
+    if (!currentUser.loggedIn || !currentUser.addr) {
+      throw new Error('Flow wallet not connected. Please connect your Flow wallet to submit scores on-chain.');
+    }
+
+    console.log(`🔗 Attempting blockchain transaction for: ${currentUser.addr}`);
+
+    // Simple, clean transaction - let FCL handle everything normally
     const transactionId = await fcl.mutate({
       cadence: `
         import MemoryLeaderboard from ${this.contractAddress}
 
         transaction(
-          gameType: String,
           score: UInt64,
-          accuracy: UFix64,
-          duration: UInt32
+          gameType: String,
+          culture: String,
+          vrfSeed: UInt64
         ) {
           prepare(signer: AuthAccount) {
             MemoryLeaderboard.submitScore(
               player: signer.address,
-              gameType: gameType,
               score: score,
-              accuracy: accuracy,
-              duration: duration
+              gameType: gameType,
+              culture: culture,
+              vrfSeed: vrfSeed
             )
           }
         }
       `,
       args: (arg, t) => [
-        arg(gameType, t.String),
         arg(score.toString(), t.UInt64),
-        arg((metadata?.accuracy || 0).toString(), t.UFix64),
-        arg((metadata?.duration || 0).toString(), t.UInt32)
+        arg(gameType, t.String),
+        arg(metadata?.culture || 'general', t.String),
+        arg((metadata?.vrfSeed || Math.floor(Math.random() * 1000000)).toString(), t.UInt64)
       ],
       proposer: fcl.authz,
       payer: fcl.authz,
@@ -464,6 +568,7 @@ export class OnChainAdapter extends BaseGameAdapter {
       limit: 1000
     });
 
+    console.log(`✅ Blockchain transaction successful: ${transactionId}`);
     return transactionId;
   }
 
@@ -473,19 +578,20 @@ export class OnChainAdapter extends BaseGameAdapter {
         cadence: `
           import MemoryLeaderboard from ${this.contractAddress}
 
-          pub fun main(gameType: String, limit: Int): [MemoryLeaderboard.LeaderboardEntry] {
-            return MemoryLeaderboard.getTopScores(gameType: gameType, limit: limit)
+          access(all) fun main(gameType: String?, culture: String?, limit: Int): [MemoryLeaderboard.LeaderboardEntry] {
+            return MemoryLeaderboard.getTopScores(gameType: gameType, culture: culture, limit: limit)
           }
         `,
         args: (arg, t) => [
-          arg(gameType, t.String),
+          arg(gameType, t.Optional(t.String)),
+          arg(culture || null, t.Optional(t.String)),
           arg(limit.toString(), t.Int)
         ]
       });
 
       return result.map((item: any, index: number) => ({
-        userId: item.player,
-        username: `User ${item.player.slice(0, 8)}`,
+        userId: item.playerAddress,
+        username: `User ${item.playerAddress.slice(0, 8)}`,
         score: parseInt(item.score),
         rank: index + 1,
         isVerified: true

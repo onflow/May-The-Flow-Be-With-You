@@ -36,7 +36,7 @@ interface GameContextType {
   setError: (error: string | null) => void;
 
   // Game Actions
-  startGame: (config: any) => Promise<void>;
+  startGame: (config: any) => Promise<any>;
   endGame: (result: any) => Promise<any>;
   resetGame: () => void;
 
@@ -58,12 +58,12 @@ export function GameProvider({
 }: GameProviderProps) {
   const { user } = useAuth();
 
-  // Core State
+  // Core State - Always start with offchain to avoid immediate VRF triggering
   const [gameMode, setGameModeState] = useState<"offchain" | "onchain">(
-    defaultMode
+    "offchain"
   );
   const [gameService, setGameService] = useState(() =>
-    createGameService(defaultMode)
+    createGameService("offchain")
   );
   const [currentGame, setCurrentGame] = useState<any | null>(null);
   const [lastVerification, setLastVerification] =
@@ -204,27 +204,42 @@ export function GameProvider({
       // Generate user ID for anonymous users or use authenticated user ID
       const userId = user?.id || generateAnonymousUserId();
 
+      console.log("🎮 GameProvider: Starting game session", { userId, config });
+
       // Start game session
       const session = await gameService.startGameSession(userId, config);
+      console.log("✅ GameProvider: Game session created", session);
 
       // Generate game sequence
       const sequence = await gameService.generateGameSequence(config);
+      console.log("✅ GameProvider: Game sequence generated", {
+        itemCount: sequence.items.length,
+        seed: sequence.seed,
+      });
 
       // Store verification data
       if (sequence.verificationData) {
         setLastVerification(sequence.verificationData);
+        console.log("✅ GameProvider: Verification data stored");
       }
 
       // Set current game state
-      setCurrentGame({
+      const gameState = {
         session,
         sequence,
         config,
         startTime: Date.now(),
-      });
+      };
+
+      setCurrentGame(gameState);
+      console.log("✅ GameProvider: Current game state set", gameState);
+
+      return gameState; // Return the game state for immediate use
     } catch (error: any) {
-      console.error("Failed to start game:", error);
+      console.error("❌ GameProvider: Failed to start game:", error);
       setError(error.message || "Failed to start game");
+      setCurrentGame(null); // Ensure clean state on error
+      throw error; // Re-throw so calling code can handle it
     } finally {
       setIsLoading(false);
     }

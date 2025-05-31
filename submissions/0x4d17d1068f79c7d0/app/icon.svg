@@ -1,0 +1,37 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Brain emoji-style icon -->
+  <defs>
+    <style>
+      .brain-main { fill: #ff9999; }
+      .brain-shadow { fill: #ff7777; }
+      .brain-highlight { fill: #ffbbbb; }
+      .brain-detail { fill: #ff6666; stroke: #ff4444; stroke-width: 0.5; }
+    </style>
+  </defs>
+  
+  <!-- Main brain shape -->
+  <path class="brain-main" d="M8 12c0-4 3-7 7-7s7 3 7 7c1-1 3-1 4 1s0 4-1 5c1 2 1 4-1 6s-4 2-6 1c-1 1-3 2-5 2s-4-1-5-2c-2 1-4 1-6-1s-2-4-1-6c-1-1-1-3 1-5s3-2 4-1z"/>
+  
+  <!-- Brain hemisphere division -->
+  <path class="brain-shadow" d="M16 5c-4 0-7 3-7 7 0 1 0 2 1 3v8c1 1 3 2 5 2s4-1 5-2V15c1-1 1-2 1-3 0-4-3-7-5-7z"/>
+  
+  <!-- Left hemisphere details -->
+  <ellipse class="brain-detail" cx="12" cy="10" rx="2" ry="1.5"/>
+  <ellipse class="brain-detail" cx="10" cy="14" rx="1.5" ry="1"/>
+  <ellipse class="brain-detail" cx="13" cy="17" rx="1.5" ry="1"/>
+  <ellipse class="brain-detail" cx="11" cy="20" rx="1" ry="0.8"/>
+  
+  <!-- Right hemisphere details -->
+  <ellipse class="brain-detail" cx="20" cy="10" rx="2" ry="1.5"/>
+  <ellipse class="brain-detail" cx="22" cy="14" rx="1.5" ry="1"/>
+  <ellipse class="brain-detail" cx="19" cy="17" rx="1.5" ry="1"/>
+  <ellipse class="brain-detail" cx="21" cy="20" rx="1" ry="0.8"/>
+  
+  <!-- Central fissure -->
+  <path class="brain-shadow" d="M16 8c0 2-0.5 4-0.5 6s0.5 4 0.5 6" stroke="#ff5555" stroke-width="1" fill="none"/>
+  
+  <!-- Highlights for 3D effect -->
+  <ellipse class="brain-highlight" cx="13" cy="9" rx="1" ry="0.5" opacity="0.6"/>
+  <ellipse class="brain-highlight" cx="19" cy="9" rx="1" ry="0.5" opacity="0.6"/>
+  <ellipse class="brain-highlight" cx="16" cy="12" rx="0.5" ry="0.3" opacity="0.4"/>
+</svg>

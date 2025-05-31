@@ -30,15 +30,51 @@ export class FlowVRFService {
     // Use environment variable for contract address, with fallbacks
     this.contractAddress = contractAddress ||
       process.env.NEXT_PUBLIC_MEMORY_VRF_CONTRACT ||
-      "0xf8d6e0586b0a20c7"; // Emulator fallback
+      "0xb8404e09b36b6623"; // Testnet fallback
+
+    // Debug logging to verify contract address
+    console.log('🔗 FlowVRFService Contract Address:', {
+      provided: contractAddress,
+      envVar: process.env.NEXT_PUBLIC_MEMORY_VRF_CONTRACT,
+      resolved: this.contractAddress,
+      isTestnet: this.contractAddress === "0xb8404e09b36b6623"
+    });
   }
 
   /**
-   * Request randomness from Flow VRF
+   * Get instant randomness from pre-generated VRF pool
+   * This provides immediate randomness without user transactions
+   */
+  async getInstantRandomness(): Promise<VRFResult> {
+    try {
+      console.log('🎲 Getting instant VRF from pool...');
+
+      // Try to get from pool first
+      const poolResult = await this.getFromVRFPool();
+      if (poolResult) {
+        console.log('✅ Got VRF from pool:', poolResult.seed);
+        return poolResult;
+      }
+
+      // Fallback to secure random with warning
+      console.warn('⚠️ VRF pool empty, using secure fallback');
+      return this.generateSecureFallback();
+    } catch (error) {
+      console.warn('⚠️ VRF pool failed, using secure fallback');
+      return this.generateSecureFallback();
+    }
+  }
+
+  /**
+   * Request randomness from Flow VRF (for admin/background use)
    * Uses Flow's commit-reveal pattern for secure randomness
    */
   async requestRandomness(): Promise<VRFResult> {
     try {
+      // Validate user authentication first
+      const userAddress = await this.getCurrentUserAddress();
+      console.log('🎲 Starting VRF request for user:', userAddress);
+
       const requestId = this.generateRequestId();
 
       // Step 1: Submit commit transaction
@@ -240,7 +276,45 @@ export class FlowVRFService {
    */
   private async getCurrentUserAddress(): Promise<string> {
     const user = await fcl.currentUser.snapshot();
-    return user.addr || '';
+    const address = user.addr || '';
+
+    // Debug logging to track address resolution
+    console.log('🔍 FlowVRFService getCurrentUserAddress:', {
+      userLoggedIn: user.loggedIn,
+      userAddress: address,
+      isEmulatorAddress: address === '0xf8d6e0586b0a20c7',
+      isTestnetAddress: address.startsWith('0x') && address.length === 18 && address !== '0xf8d6e0586b0a20c7'
+    });
+
+    // Validate address for current network
+    if (!address) {
+      throw new Error('No Flow wallet connected. Please connect a Flow wallet to use VRF.');
+    }
+
+    // Network mismatch detection
+    const expectedNetwork = process.env.NEXT_PUBLIC_FLOW_NETWORK || 'testnet';
+
+    const getWalletNetwork = (addr: string) => {
+      if (addr === '0xf8d6e0586b0a20c7') return 'emulator';
+      if (addr.length === 18 && addr.startsWith('0x')) return 'testnet';
+      return 'unknown';
+    };
+
+    const walletNetwork = getWalletNetwork(address);
+
+    if (expectedNetwork === 'testnet' && walletNetwork === 'emulator') {
+      throw new Error('❌ Network Mismatch: App is configured for testnet, but your wallet is connected to emulator. Please switch to testnet.');
+    }
+
+    if (expectedNetwork === 'emulator' && walletNetwork === 'testnet') {
+      throw new Error('❌ Network Mismatch: App is configured for emulator, but your wallet is connected to testnet. Please switch to emulator.');
+    }
+
+    if (walletNetwork === 'unknown') {
+      throw new Error('❌ Unknown wallet network. Please ensure you are connected to the correct Flow network.');
+    }
+
+    return address;
   }
 
   /**
@@ -312,6 +386,79 @@ export class FlowVRFService {
   static randomInRange(seed: number, min: number, max: number): number {
     const range = max - min;
     return min + (seed % range);
+  }
+
+  /**
+   * Get VRF from pre-generated pool (instant, no user transaction)
+   */
+  private async getFromVRFPool(): Promise<VRFResult | null> {
+    try {
+      // Query a public VRF pool or service
+      // This could be your own service or a public one like Randoms.WTF
+      const response = await fetch('/api/vrf-pool/', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        // Add timeout to prevent hanging
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!response.ok) {
+        console.warn(`VRF pool API returned ${response.status}: ${response.statusText}`);
+        return null;
+      }
+
+      const data = await response.json();
+
+      // Handle both success and fallback responses
+      if (data.success === false && data.fallback) {
+        console.warn('VRF pool returned fallback data');
+        return {
+          seed: data.fallback.seed,
+          transactionId: data.fallback.transactionId,
+          blockHeight: data.fallback.blockHeight || 0,
+          timestamp: data.fallback.timestamp,
+          isVerified: false // Mark fallback as unverified
+        };
+      }
+
+      // Handle successful response
+      if (data.seed) {
+        return {
+          seed: data.seed,
+          transactionId: data.transactionId,
+          blockHeight: data.blockHeight,
+          timestamp: data.timestamp,
+          isVerified: data.success !== false
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('VRF pool fetch failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate secure fallback when VRF is unavailable
+   */
+  private generateSecureFallback(): VRFResult {
+    // Use crypto.getRandomValues for secure randomness
+    const array = new Uint32Array(1);
+    if (typeof window !== 'undefined' && window.crypto) {
+      window.crypto.getRandomValues(array);
+    } else {
+      // Node.js fallback
+      array[0] = Math.floor(Math.random() * 0xffffffff);
+    }
+
+    return {
+      seed: array[0],
+      transactionId: `fallback_${Date.now()}`,
+      blockHeight: 0,
+      timestamp: Date.now(),
+      isVerified: false // Mark as unverified since it's not from VRF
+    };
   }
 
   /**

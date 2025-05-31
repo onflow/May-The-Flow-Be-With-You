@@ -18,9 +18,9 @@ export const CONTRACT_ADDRESSES = {
     Counter: '0xf8d6e0586b0a20c7'
   },
   testnet: {
-    MemoryAchievements: '',
-    MemoryVRF: '',
-    Counter: ''
+    MemoryAchievements: '0xb8404e09b36b6623',
+    MemoryVRF: '0xb8404e09b36b6623',
+    Counter: '0xb8404e09b36b6623'
   },
   mainnet: {
     MemoryAchievements: '',

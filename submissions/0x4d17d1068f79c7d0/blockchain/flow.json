@@ -14,10 +14,10 @@
       }
     },
     "testnet-account": {
-      "address": "$FLOW_TESTNET_ADDRESS",
+      "address": "0xb8404e09b36b6623",
       "key": {
         "type": "hex",
-        "privateKey": "$FLOW_TESTNET_PRIVATE_KEY",
+        "privateKey": "7dc2e9c5d76accb24613cafd2af148cbf78f1483bbbb8e8cbc0993167d5155cc",
         "signatureAlgorithm": "ECDSA_secp256k1",
         "hashAlgorithm": "SHA2_256",
         "index": 0
@@ -38,17 +38,36 @@
         "emulator": "f8d6e0586b0a20c7",
         "testing": "f8d6e0586b0a20c7"
       }
+    },
+    "MemoryLeaderboard": {
+      "source": "contracts/MemoryLeaderboard.cdc",
+      "aliases": {
+        "emulator": "f8d6e0586b0a20c7",
+        "testing": "f8d6e0586b0a20c7"
+      }
     }
   },
   "deployments": {
     "emulator": {
-      "emulator-account": ["MemoryVRF", "MemoryAchievements"]
+      "emulator-account": [
+        "MemoryVRF",
+        "MemoryAchievements",
+        "MemoryLeaderboard"
+      ]
     },
     "testing": {
-      "emulator-account": ["MemoryVRF", "MemoryAchievements"]
+      "emulator-account": [
+        "MemoryVRF",
+        "MemoryAchievements",
+        "MemoryLeaderboard"
+      ]
     },
     "testnet": {
-      "testnet-account": ["MemoryVRF", "MemoryAchievements"]
+      "testnet-account": [
+        "MemoryVRF",
+        "MemoryAchievements",
+        "MemoryLeaderboard"
+      ]
     }
   }
 }

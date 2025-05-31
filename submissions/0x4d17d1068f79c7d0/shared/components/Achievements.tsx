@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../providers/AuthProvider";
+import { UserTierStatus } from "./UserTierStatus";
 import { progressService } from "../services/progressService";
 import { ACHIEVEMENT_POINTS } from "../config/gameRules";
 
@@ -157,18 +158,18 @@ export function Achievements({
 }: {
   gameType?: string;
 }) {
-  const { user } = useAuth();
+  const { user, userTier, canAccessFeature } = useAuth();
   const [userAchievements, setUserAchievements] = useState<Achievement[]>([]);
   const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (canAccessFeature("canEarnAchievements")) {
       loadAchievements();
     } else {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, canAccessFeature]);
 
   const loadAchievements = async () => {
     if (!user) return;
@@ -240,42 +241,36 @@ export function Achievements({
   //   checkForNewAchievements,
   // }));
 
-  // Anonymous user placeholder
-  if (!user) {
+  // Enhanced user experience based on tier
+  if (!canAccessFeature("canEarnAchievements")) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-800">🏆 Badges</h3>
-          <span className="text-xs bg-gray-100 px-2 py-1 rounded">0/6</span>
+          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+            0/{achievements.length}
+          </span>
         </div>
 
-        <div className="text-center py-6">
-          <div className="text-4xl mb-4">🎖️</div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">
-            Unlock achievements
-          </h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Sign in to earn badges and track your memory training milestones.
-          </p>
-
-          {/* Preview of available achievements */}
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {achievements.slice(0, 6).map((achievement) => (
+        {/* Show preview of available achievements */}
+        <div className="mb-4">
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {achievements.slice(0, 6).map((achievement, index) => (
               <div
                 key={achievement.id}
-                className="flex flex-col items-center p-3 rounded-lg border bg-gray-50 border-gray-200 opacity-60 text-center"
+                className="flex flex-col items-center p-2 rounded-lg bg-gray-50 border border-gray-200 opacity-60"
               >
-                <div className="text-2xl mb-1">{achievement.icon}</div>
-                <h4 className="font-medium text-xs text-gray-600">
+                <div className="text-lg mb-1">{achievement.icon}</div>
+                <div className="text-xs text-gray-600 text-center font-medium">
                   {achievement.name}
-                </h4>
-                <p className="text-xs mt-1 text-gray-500">
-                  {achievement.description.split(" ").slice(0, 4).join(" ")}...
-                </p>
+                </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* User tier status with upgrade prompt */}
+        <UserTierStatus showUpgradePrompt={true} />
       </div>
     );
   }

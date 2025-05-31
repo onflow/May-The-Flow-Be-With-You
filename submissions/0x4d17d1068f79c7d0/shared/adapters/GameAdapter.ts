@@ -124,7 +124,7 @@ export interface GameAdapter {
   getAchievements(userId: string): Promise<Achievement[]>;
   
   // Leaderboards
-  submitScore(userId: string, gameType: string, score: number, metadata?: any): Promise<void>;
+  submitScore(userId: string, gameType: string, score: number, metadata?: any): Promise<{ success: boolean; transactionId?: string; error?: string; isVerified?: boolean; isEligible?: boolean }>;
   getLeaderboard(gameType: string, culture?: string, limit?: number): Promise<LeaderboardEntry[]>;
   
   // Game Sessions
@@ -153,7 +153,7 @@ export abstract class BaseGameAdapter implements GameAdapter {
   abstract loadProgress(userId: string): Promise<GameProgress | null>;
   abstract unlockAchievement(userId: string, achievement: Achievement): Promise<void>;
   abstract getAchievements(userId: string): Promise<Achievement[]>;
-  abstract submitScore(userId: string, gameType: string, score: number, metadata?: any): Promise<void>;
+  abstract submitScore(userId: string, gameType: string, score: number, metadata?: any): Promise<{ success: boolean; transactionId?: string; error?: string; isVerified?: boolean; isEligible?: boolean }>;
   abstract getLeaderboard(gameType: string, culture?: string, limit?: number): Promise<LeaderboardEntry[]>;
 
   supportsFeature(featureId: string): boolean {

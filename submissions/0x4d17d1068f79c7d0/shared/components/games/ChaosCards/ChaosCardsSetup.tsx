@@ -2,6 +2,7 @@
 
 import React from "react";
 import { CulturalTheme } from "../../../config/culturalThemes";
+import VRFModeSelector from "../../ui/VRFModeSelector";
 
 interface ChaosCardsSetupProps {
   theme: CulturalTheme;
@@ -65,6 +66,9 @@ export function ChaosCardsSetup({
           </div>
         </div>
       )}
+
+      {/* VRF Mode Selector */}
+      <VRFModeSelector className="mb-4" />
 
       {/* Difficulty Selection */}
       <div className="flex items-center gap-4">

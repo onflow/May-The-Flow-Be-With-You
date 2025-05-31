@@ -128,8 +128,8 @@ export class FlowVRFRandomnessProvider implements RandomnessProvider {
 
   async generateSeed(): Promise<number> {
     try {
-      // Request randomness from Flow VRF
-      const result = await this.flowService.requestRandomness();
+      // Request instant randomness from Flow VRF (no user transaction)
+      const result = await this.flowService.getInstantRandomness();
 
       // Determine the correct explorer URL based on network
       const network = process.env.NEXT_PUBLIC_FLOW_NETWORK || 'emulator';

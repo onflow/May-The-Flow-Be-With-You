@@ -201,20 +201,28 @@ async function runMigrationDirect() {
         `,
       },
       {
-        name: "leaderboards",
+        name: "leaderboard_entries",
         sql: `
-          CREATE TABLE IF NOT EXISTS leaderboards (
+          CREATE TABLE IF NOT EXISTS leaderboard_entries (
             id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
             user_id TEXT NOT NULL,
+            username TEXT NOT NULL,
+            user_tier TEXT NOT NULL CHECK (user_tier IN ('supabase', 'flow')),
             game_type TEXT NOT NULL,
+            culture TEXT NOT NULL,
+            raw_score INTEGER NOT NULL,
+            adjusted_score INTEGER NOT NULL,
             period TEXT NOT NULL CHECK (period IN ('daily', 'weekly', 'monthly', 'all_time')),
-            score INTEGER NOT NULL DEFAULT 0,
-            rank INTEGER,
-            total_sessions INTEGER DEFAULT 0,
-            average_accuracy DECIMAL(5,2) DEFAULT 0.0,
             period_start DATE NOT NULL,
             period_end DATE NOT NULL,
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            verified BOOLEAN DEFAULT FALSE,
+            transaction_id TEXT,
+            block_height BIGINT,
+            vrf_seed BIGINT,
+            session_data JSONB DEFAULT '{}',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            UNIQUE(user_id, game_type, culture, period, period_start)
           );
         `,
       },

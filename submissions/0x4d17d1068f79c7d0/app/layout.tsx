@@ -10,6 +10,45 @@ export const metadata = {
   title: "Memoreee - Memory Training Platform",
   description:
     "A gamified memory training platform that awakens the dormant powers of human memory through classical techniques",
+  icons: {
+    icon: [
+      {
+        url: "/icon.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+    ],
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
+  keywords: [
+    "memory training",
+    "brain games",
+    "cognitive enhancement",
+    "memory palace",
+    "memory techniques",
+    "Flow blockchain",
+    "NFT achievements",
+  ],
+  authors: [{ name: "Memoreee Team" }],
+  creator: "Memoreee",
+  publisher: "Memoreee",
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: "Memoreee - Memory Training Platform",
+    description:
+      "Awaken your memory powers through classical techniques and blockchain-verified achievements",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: "Memoreee - Memory Training Platform",
+    description: "Awaken your memory powers through classical techniques",
+  },
 };
 
 export default function RootLayout({

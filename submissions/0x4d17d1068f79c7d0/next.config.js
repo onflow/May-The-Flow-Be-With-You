@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",
+  // Allow API routes in all environments for VRF functionality
+  // output: process.env.NODE_ENV === "production" ? "export" : undefined,
   trailingSlash: true,
   images: {
     unoptimized: true,
@@ -14,6 +15,8 @@ const nextConfig = {
     });
     return config;
   },
+  // External packages for server components
+  serverExternalPackages: ["@supabase/supabase-js"],
 };
 
 module.exports = nextConfig;

@@ -79,8 +79,12 @@ export class GameService {
    */
   async generateGameSequence(config: GameConfig): Promise<GameSequence> {
     try {
-      // Get randomness seed
+      // Get randomness seed - VRF if available, fallback to local
       const seed = config.customSeed || await this.randomnessProvider.generateSeed();
+
+      // Log randomness source for transparency
+      const isVRFEnabled = this.randomnessProvider.constructor.name === 'FlowVRFRandomnessProvider';
+      console.log(`🎲 Generating sequence with ${isVRFEnabled ? 'Flow VRF' : 'local'} randomness`);
 
       // Get cultural theme and items
       const theme = getThemeByCategory(config.culture);
@@ -164,8 +168,8 @@ export class GameService {
       const updatedProgress = this.updateProgress(currentProgress, result, config);
       await this.adapter.saveProgress(userId, updatedProgress);
 
-      // Submit score to leaderboard
-      await this.adapter.submitScore(userId, config.gameType, result.score, {
+      // Submit score with hybrid approach
+      const submissionResult = await this.adapter.submitScore(userId, config.gameType, result.score, {
         accuracy: result.accuracy,
         duration: result.duration,
         difficultyLevel: this.getDifficultyLevel(config.difficulty),
@@ -173,6 +177,20 @@ export class GameService {
         maxPossibleScore: this.calculateMaxScore(config),
         itemsCount: config.itemCount
       });
+
+      // Provide clear user feedback based on result
+      if (submissionResult.success) {
+        if (submissionResult.isVerified) {
+          console.log('🔗 Score verified on blockchain!');
+        } else if (submissionResult.isEligible) {
+          console.log('⭐ High score saved! Eligible for blockchain verification.');
+        } else {
+          console.log('✅ Score saved successfully');
+        }
+      } else {
+        console.warn('⚠️ Score submission failed:', submissionResult.error);
+        // Continue with the rest of the process even if score submission fails
+      }
 
       // Unlock new achievements
       for (const achievement of newAchievements) {

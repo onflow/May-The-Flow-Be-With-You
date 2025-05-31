@@ -8,8 +8,8 @@ DELETE FROM game_sessions;
 -- Clear achievements (they'll be re-earned with new games)
 DELETE FROM achievements;
 
--- Clear leaderboards (they'll be rebuilt)
-DELETE FROM leaderboards;
+-- Clear leaderboard entries (they'll be rebuilt)
+DELETE FROM leaderboard_entries;
 
 -- Clear user progress (will be recalculated)
 DELETE FROM user_progress;
@@ -20,7 +20,7 @@ DELETE FROM practice_sessions;
 -- Reset sequences if needed (PostgreSQL)
 -- ALTER SEQUENCE game_sessions_id_seq RESTART WITH 1;
 -- ALTER SEQUENCE achievements_id_seq RESTART WITH 1;
--- ALTER SEQUENCE leaderboards_id_seq RESTART WITH 1;
+-- ALTER SEQUENCE leaderboard_entries_id_seq RESTART WITH 1;
 
 -- Verify tables are empty
 SELECT 'game_sessions' as table_name, COUNT(*) as count FROM game_sessions

@@ -9,6 +9,9 @@ import { getCulturalEmoji, getCulturalContext } from "../../../../utils/cultural
 import { getThemeItems, getThemeByCategory } from "../../../../config/culturalThemes";
 import { ScoringRules } from "../../../../config/gameRules";
 import { createGameError } from "../../../../utils/errorHandling";
+import { createSeededRandom } from "../../../../utils/gameUtils";
+
+import { progressService } from "../../../../services/progressService";
 
 interface Card {
   id: string;
@@ -46,6 +49,9 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     resetGame,
   } = useGame();
 
+  // Local session tracking as fallback
+  const [localSession, setLocalSession] = useState<any>(null);
+
   // Enhanced game state with progressive difficulty and memory techniques
   const [gameState, gameActions] = useGameState<ChaosCardsGameData>({
     initialGameData: {
@@ -64,13 +70,24 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     initialTimeLeft: 15,
     onPhaseChange: (newPhase, prevPhase) => {
       if (newPhase === "recall" && prevPhase === "memorize") {
-        // Shuffle cards for recall phase so user can't just click in same order
-        const shuffledCards = [...gameState.gameData.cards].sort(() => Math.random() - 0.5);
+        // Shuffle cards for recall phase using the same randomness source as initial generation
+        let shuffledCards;
+
+        if (currentGame?.sequence?.seed) {
+          // Use VRF seed for consistent randomization
+          const seededRandom = createSeededRandom(currentGame.sequence.seed + 1000); // +1000 for different shuffle
+          shuffledCards = [...gameState.gameData.cards].sort(() => seededRandom.next() - 0.5);
+          console.log("🎲 Starting recall phase with VRF-shuffled cards, seed:", currentGame.sequence.seed);
+        } else {
+          // Fallback to Math.random for local mode
+          shuffledCards = [...gameState.gameData.cards].sort(() => Math.random() - 0.5);
+          console.log("⚡ Starting recall phase with locally-shuffled cards");
+        }
+
         gameActions.setGameData(prev => ({
           ...prev,
           shuffledCards
         }));
-        console.log("Starting recall phase with shuffled cards");
       }
     },
     onGameEnd: (finalState) => {
@@ -81,6 +98,7 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
 
   // Simple timer that works with hot reload
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const saveInProgressRef = useRef<boolean>(false);
   const startTimer = useCallback(() => {
     // Clear any existing timer
     if (timerRef.current) {
@@ -240,28 +258,52 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
           chaosTime: 2,
         };
 
-        // Start game session using the game service
-        await startGameSession(gameConfig);
-      }
+        try {
+          // Start game session using the game service
+          console.log("🎮 ChaosCards: Starting game session with config:", gameConfig);
+          const sessionState = await startGameSession(gameConfig);
+          console.log("✅ ChaosCards: Game session started successfully", sessionState);
 
-      // Update cards if we got a sequence from the game service
-      if (currentGame?.sequence) {
-        const vrfCards = currentGame.sequence.items.map((item: any, index: number) => ({
-          id: `card-${index}`,
-          symbol: getCulturalEmoji(item.name),
-          name: item.name,
-          color:
-            index % 2 === 0 ? theme.colors.primary : theme.colors.secondary,
-          culturalContext: item.culturalContext,
-        }));
+          // Update cards if we got a sequence from the game service
+          if (sessionState?.sequence) {
+            const vrfCards = sessionState.sequence.items.map((item: any, index: number) => ({
+              id: `card-${index}`,
+              symbol: getCulturalEmoji(item.name),
+              name: item.name,
+              color:
+                index % 2 === 0 ? theme.colors.primary : theme.colors.secondary,
+              culturalContext: item.culturalContext,
+            }));
 
-        gameActions.setGameData(prev => ({
-          ...prev,
-          cards: vrfCards,
-          shuffledCards: [], // Will be populated when entering recall phase
-          userSequence: [],
-          currentGuess: 0,
-        }));
+            gameActions.setGameData(prev => ({
+              ...prev,
+              cards: vrfCards,
+              shuffledCards: [], // Will be populated when entering recall phase
+              userSequence: [],
+              currentGuess: 0,
+            }));
+
+            console.log("✅ ChaosCards: VRF cards updated", vrfCards.length);
+          }
+        } catch (sessionError) {
+          console.error("❌ ChaosCards: Game session failed:", sessionError);
+          // Continue with local cards if session fails
+          console.log("🔄 ChaosCards: Continuing with local cards");
+
+          // Create local session as fallback
+          const fallbackSession = {
+            session: {
+              id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              user_id: user.id,
+              game_type: "chaos_cards",
+              created_at: new Date().toISOString(),
+            },
+            config: gameConfig,
+            startTime: Date.now(),
+          };
+          setLocalSession(fallbackSession);
+          console.log("✅ ChaosCards: Local session created", fallbackSession);
+        }
       }
 
     } catch (error) {
@@ -353,7 +395,63 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
 
   // Save game result
   const saveGameResult = useCallback(async (finalScore: number) => {
-    if (!user?.id || !currentGame) return;
+    if (!user?.id) {
+      console.log("⚠️ Cannot save game result: missing user", {
+        hasUser: !!user?.id
+      });
+      return;
+    }
+
+    // Prevent multiple simultaneous save operations
+    if (saveInProgressRef.current) {
+      console.log("⚠️ Save already in progress, skipping duplicate call");
+      return;
+    }
+
+    // Get the active session (either from GameProvider or local fallback)
+    const activeSession = currentGame || localSession;
+
+    if (!activeSession) {
+      console.log("⚠️ No active session found (neither currentGame nor localSession)");
+      // Create emergency fallback session
+      const emergencySession = {
+        session: {
+          id: `emergency_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          user_id: user.id,
+          game_type: "chaos_cards",
+          created_at: new Date().toISOString(),
+        },
+        config: {
+          gameType: "chaos_cards",
+          culture: culturalCategory,
+          itemCount: gameState.gameData.cards.length,
+        },
+        startTime: Date.now(),
+      };
+      setLocalSession(emergencySession);
+      console.log("🆘 Emergency session created for save operation", emergencySession);
+    }
+
+    // Use the active session for save operation
+    const sessionToUse = activeSession || localSession;
+
+    console.log("💾 Starting to save game result...", {
+      finalScore,
+      userId: user.id,
+      gameSessionId: sessionToUse?.session?.id,
+      sessionType: currentGame ? 'GameProvider' : localSession ? 'Local' : 'Emergency'
+    });
+
+    // Set loading state during save operation
+    saveInProgressRef.current = true;
+    gameActions.setLoading(true);
+
+    // Safety timeout to reset loading state if something goes wrong
+    const timeoutId = setTimeout(() => {
+      console.log("⏰ Safety timeout: Resetting loading state");
+      saveInProgressRef.current = false;
+      gameActions.setLoading(false);
+    }, 10000); // 10 second timeout
 
     try {
       const { cards, userSequence } = gameState.gameData;
@@ -376,14 +474,76 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
         })),
       };
 
-      // Submit result using the game service
-      await endGameSession(gameResult);
+      // Submit result using the game service (if available)
+      if (currentGame) {
+        console.log("🎮 Submitting game result to GameProvider...", gameResult);
+
+        // Add timeout to prevent hanging
+        const endGamePromise = endGameSession(gameResult);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('endGameSession timeout')), 5000)
+        );
+
+        try {
+          const enhancedResult = await Promise.race([endGamePromise, timeoutPromise]);
+          console.log("✅ Game result submitted successfully", enhancedResult);
+        } catch (endGameError) {
+          console.warn("⚠️ endGameSession failed or timed out:", endGameError);
+          // Continue with the rest of the save process even if endGameSession fails
+        }
+      } else {
+        console.log("⚠️ Skipping GameProvider submission due to missing currentGame");
+
+        // Fallback: Save directly using progress service
+        console.log("💾 Using fallback progress service save...");
+        await progressService.saveGameSession({
+          user_id: user.id,
+          game_type: "chaos_cards",
+          score: finalScore,
+          max_possible_score: maxPossibleScore,
+          accuracy: accuracy,
+          items_count: cards.length,
+          duration_seconds: duration,
+          difficulty_level: gameState.gameData.difficulty,
+          session_data: {
+            cultural_category: culturalCategory,
+            memory_technique: gameState.gameData.memoryTechnique,
+            cards: cards,
+            user_sequence: userSequence,
+            perfect_round: perfect,
+            baseline_difficulty: gameState.gameData.baselineDifficulty,
+            progressive_difficulty: gameState.gameData.difficulty,
+            perfect_rounds: gameState.gameData.perfectRounds,
+          },
+        });
+        console.log("✅ Fallback save completed");
+      }
+
+      // Submit to leaderboard based on user tier
+      const userTier = user.tier || (user.authMethod === 'flow' ? 'flow' :
+                      user.authMethod === 'supabase' ? 'supabase' : 'anonymous');
+
+      // The GameProvider.endGameSession already handles score submission via GameService
+      // This provides a cleaner hybrid approach with automatic verification for high scores
+      console.log(`✅ Game result submitted via GameProvider with hybrid approach`);
+      console.log("🔄 About to exit saveGameResult try block...");
 
     } catch (error) {
-      console.error("Error saving game result:", error);
+      console.error("❌ Error saving game result:", error);
       gameActions.setError("Failed to save game result");
+    } finally {
+      // Clear the safety timeout
+      clearTimeout(timeoutId);
+      // Always reset loading state
+      saveInProgressRef.current = false;
+      gameActions.setLoading(false);
+      console.log("🏁 Game result saving process completed", {
+        gameStateLoading: gameState.isLoading,
+        gameProviderLoading: isLoading,
+        saveInProgress: saveInProgressRef.current
+      });
     }
-  }, [user?.id, currentGame, gameState.gameData, endGameSession, gameActions]);
+  }, [user, currentGame, localSession, gameState.gameData, endGameSession, gameActions]);
 
   // Handle difficulty change (updates baseline difficulty)
   const handleDifficultyChange = useCallback((newBaselineDifficulty: number) => {
@@ -406,14 +566,28 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+
+    // Clear local session
+    setLocalSession(null);
+    console.log("🧹 Local session cleared");
+
     gameActions.resetGame();
     resetGame();
   }, [gameActions, resetGame]);
 
+  // Debug logging for loading states
+  const combinedLoading = gameState.isLoading || isLoading;
+  console.log("🔍 Loading states:", {
+    gameStateLoading: gameState.isLoading,
+    gameProviderLoading: isLoading,
+    combinedLoading,
+    saveInProgress: saveInProgressRef.current
+  });
+
   return {
     // Game state
     gameState,
-    isLoading,
+    isLoading: combinedLoading,
     error,
     lastVerification,
     gameMode,

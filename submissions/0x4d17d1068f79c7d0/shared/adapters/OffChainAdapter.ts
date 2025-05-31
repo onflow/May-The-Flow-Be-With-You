@@ -237,7 +237,7 @@ export class OffChainAdapter extends BaseGameAdapter {
     }
   }
 
-  async submitScore(userId: string, gameType: string, score: number, metadata?: any): Promise<void> {
+  async submitScore(userId: string, gameType: string, score: number, metadata?: any): Promise<{ success: boolean; transactionId?: string; error?: string; isVerified?: boolean; isEligible?: boolean }> {
     try {
       const isAnonymous = userId.startsWith('anonymous_');
 
@@ -264,6 +264,7 @@ export class OffChainAdapter extends BaseGameAdapter {
 
         if (error) {
           console.error('Failed to submit score to Supabase:', error);
+          return { success: false, error: 'Failed to save score to database' };
         }
       }
 
@@ -294,9 +295,12 @@ export class OffChainAdapter extends BaseGameAdapter {
 
         this.localStorage.setItem(cacheKey, JSON.stringify(leaderboard));
       }
+
+      // Off-chain adapter: always unverified, never eligible for blockchain
+      return { success: true, isVerified: false, isEligible: false };
     } catch (error) {
       console.error('Failed to submit score:', error);
-      throw error;
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 

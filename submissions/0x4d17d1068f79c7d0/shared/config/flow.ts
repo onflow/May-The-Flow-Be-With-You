@@ -3,15 +3,18 @@ let fcl: any;
 if (typeof window !== 'undefined') {
   fcl = require("@onflow/fcl");
 } else {
-  // Server-side mock for FCL
+  // Server-side mock for FCL - minimal to avoid interference
   fcl = {
     config: () => {},
-    authenticate: () => Promise.resolve(),
-    unauthenticate: () => Promise.resolve(),
+    authenticate: () => Promise.reject(new Error('FCL not available on server')),
+    unauthenticate: () => Promise.reject(new Error('FCL not available on server')),
     currentUser: {
       snapshot: () => Promise.resolve({ loggedIn: false, addr: null }),
       subscribe: () => () => {}
-    }
+    },
+    mutate: () => Promise.reject(new Error('FCL not available on server')),
+    query: () => Promise.reject(new Error('FCL not available on server')),
+    authz: null
   };
 }
 

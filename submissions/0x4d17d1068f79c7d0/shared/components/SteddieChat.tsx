@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../providers/AuthProvider";
+import { SteddieAIService } from "../services/SteddieAIService";
 
 interface ChatMessage {
   id: string;
@@ -18,15 +19,17 @@ interface SteddieChatProps {
 // Steddie's knowledge base for memory techniques
 const steddieKnowledge = {
   "method of loci": {
-    description: "The ancient memory palace technique where you place items in familiar locations.",
+    description:
+      "The ancient memory palace technique where you place items in familiar locations.",
     tips: [
       "Start with a place you know well - your home, school, or workplace",
       "Create a specific route through the space",
       "Place items in logical order along your path",
       "Make the images vivid and unusual - the stranger, the more memorable",
-      "Practice walking through your palace regularly"
+      "Practice walking through your palace regularly",
     ],
-    history: "Born from tragedy in ancient Greece when Simonides identified victims by their remembered seating positions. This technique has been used by orators, scholars, and memory champions for over 2,500 years."
+    history:
+      "Born from tragedy in ancient Greece when Simonides identified victims by their remembered seating positions. This technique has been used by orators, scholars, and memory champions for over 2,500 years.",
   },
   "linking method": {
     description: "Connect items in a chain of absurd, memorable stories.",
@@ -35,49 +38,55 @@ const steddieKnowledge = {
       "Use action and movement in your stories",
       "Engage multiple senses - sight, sound, touch, smell",
       "The more ridiculous, the more memorable",
-      "Practice with simple lists first, then build complexity"
+      "Practice with simple lists first, then build complexity",
     ],
-    history: "Popularized by memory masters like Dominic O'Brien and Josh Foer. The key insight: our brains remember stories and emotions far better than abstract lists."
+    history:
+      "Popularized by memory masters like Dominic O'Brien and Josh Foer. The key insight: our brains remember stories and emotions far better than abstract lists.",
   },
   "major system": {
-    description: "Convert numbers into words using consonant sounds, making them easier to remember.",
+    description:
+      "Convert numbers into words using consonant sounds, making them easier to remember.",
     tips: [
       "Learn the basic code: 1=L, 2=N, 3=M, 4=R, 5=L, 6=J/SH, 7=K/G, 8=F/V, 9=P/B, 0=S/Z",
       "Add vowels freely to create words",
       "Create vivid images for your number-words",
       "Practice with phone numbers and dates first",
-      "Build a personal library of number-word images"
+      "Build a personal library of number-word images",
     ],
-    history: "Evolved from 17th-century cipher systems. Modern memory champions use this to memorize thousands of digits of π."
+    history:
+      "Evolved from 17th-century cipher systems. Modern memory champions use this to memorize thousands of digits of π.",
   },
   "peg system": {
-    description: "Create a permanent set of memory 'pegs' to hang new information on.",
+    description:
+      "Create a permanent set of memory 'pegs' to hang new information on.",
     tips: [
       "Start with a simple 1-10 peg system",
       "Use rhyming pegs: 1=sun, 2=shoe, 3=tree, etc.",
       "Or use shape pegs: 1=candle, 2=swan, 3=handcuffs",
       "Make your pegs vivid and personal",
-      "Expand to 100+ pegs as you improve"
+      "Expand to 100+ pegs as you improve",
     ],
-    history: "Allows infinite expansion beyond familiar spaces. Master 100 pegs, then multiply by adding modifiers like fire, ice, or gold."
-  }
+    history:
+      "Allows infinite expansion beyond familiar spaces. Master 100 pegs, then multiply by adding modifiers like fire, ice, or gold.",
+  },
 };
 
 const steddiePersonality = {
-  greeting: "Hello, young memory seeker! I'm Steddie, and I've been carrying the wisdom of memory masters on my shell for millennia. What would you like to learn today?",
+  greeting:
+    "Hello, young memory seeker! I'm Steddie, and I've been carrying the wisdom of memory masters on my shell for millennia. What would you like to learn today?",
   encouragement: [
     "Slow and steady builds the strongest memories!",
     "Even the greatest masters started with simple steps.",
     "Your memory palace grows stronger with each practice session.",
     "Remember, I've seen civilizations rise and fall - your progress is remarkable!",
-    "The ancient Greeks would be proud of your dedication!"
+    "The ancient Greeks would be proud of your dedication!",
   ],
   transitions: [
     "Let me share what I've learned over the centuries...",
     "In my travels through time, I've observed...",
     "The memory masters taught me...",
-    "From my shell's ancient wisdom..."
-  ]
+    "From my shell's ancient wisdom...",
+  ],
 };
 
 export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
@@ -85,7 +94,15 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [aiMode, setAiMode] = useState(false); // Toggle between rule-based and AI
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize Venice AI service
+  const steddieAI = new SteddieAIService({
+    provider: "venice",
+    model: "llama-3.3-70b",
+    fallbackToRules: true,
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -107,9 +124,9 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
       id: Date.now().toString(),
       type: "steddie",
       content,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    setMessages(prev => [...prev, message]);
+    setMessages((prev) => [...prev, message]);
   };
 
   const addUserMessage = (content: string) => {
@@ -117,43 +134,146 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
       id: Date.now().toString(),
       type: "user",
       content,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    setMessages(prev => [...prev, message]);
+    setMessages((prev) => [...prev, message]);
   };
 
   const generateSteddieResponse = (userInput: string): string => {
     const input = userInput.toLowerCase();
-    
-    // Check for technique-specific questions
+
+    // Context-aware responses based on conversation history
+    const recentMessages = messages
+      .slice(-3)
+      .map((m) => m.content.toLowerCase())
+      .join(" ");
+    const hasDiscussedTechnique = Object.keys(steddieKnowledge).some((tech) =>
+      recentMessages.includes(tech.toLowerCase())
+    );
+
+    // Advanced pattern matching with context
+    const patterns = {
+      // Greetings and introductions
+      greeting:
+        /\b(hello|hi|hey|greetings|good\s+(morning|afternoon|evening))\b/,
+
+      // Questions about Steddie himself
+      aboutSteddie:
+        /\b(who\s+are\s+you|tell\s+me\s+about\s+(yourself|you)|what\s+are\s+you)\b/,
+
+      // Specific technique requests
+      techniqueRequest:
+        /\b(teach\s+me|show\s+me|explain|how\s+to|what\s+is)\b.*\b(method|technique|system|palace|linking|major|peg)\b/,
+
+      // Performance and improvement
+      performance:
+        /\b(better|improve|faster|stronger|enhance|boost|increase)\b/,
+
+      // Difficulty and frustration
+      difficulty:
+        /\b(difficult|hard|struggling|confused|stuck|frustrated|can't|cannot)\b/,
+
+      // Cultural interest
+      cultural:
+        /\b(culture|cultural|tradition|ancient|history|greek|roman|african|asian|indigenous)\b/,
+
+      // Games and practice
+      games: /\b(game|play|practice|train|exercise|challenge)\b/,
+
+      // Memory problems
+      memoryProblems:
+        /\b(forget|forgetting|memory\s+loss|can't\s+remember|bad\s+memory)\b/,
+
+      // Motivation and encouragement
+      motivation: /\b(motivation|encourage|inspire|give\s+up|quit|tired)\b/,
+    };
+
+    // Check for technique-specific questions first
     for (const [technique, knowledge] of Object.entries(steddieKnowledge)) {
-      if (input.includes(technique.replace(" ", "")) || input.includes(technique)) {
-        const transition = steddiePersonality.transitions[Math.floor(Math.random() * steddiePersonality.transitions.length)];
-        return `${transition}\n\n**${technique.toUpperCase()}**\n\n${knowledge.description}\n\n**Tips from my shell:**\n${knowledge.tips.map(tip => `• ${tip}`).join('\n')}\n\n**Historical wisdom:** ${knowledge.history}`;
+      if (
+        input.includes(technique.replace(" ", "").toLowerCase()) ||
+        input.includes(technique.toLowerCase()) ||
+        (patterns.techniqueRequest.test(input) &&
+          input.includes(technique.split(" ")[0].toLowerCase()))
+      ) {
+        const transition =
+          steddiePersonality.transitions[
+            Math.floor(Math.random() * steddiePersonality.transitions.length)
+          ];
+        return `${transition}\n\n**${technique.toUpperCase()}**\n\n${
+          knowledge.description
+        }\n\n**Tips from my shell:**\n${knowledge.tips
+          .map((tip) => `• ${tip}`)
+          .join("\n")}\n\n**Historical wisdom:** ${
+          knowledge.history
+        }\n\n*Would you like me to suggest a specific exercise to practice this technique?*`;
       }
     }
 
-    // General encouragement and guidance
-    if (input.includes("help") || input.includes("start") || input.includes("begin")) {
-      return "I recommend starting with the Method of Loci - it's the foundation of all memory techniques! Try creating a simple memory palace using your home. Ask me about 'method of loci' for detailed guidance.";
+    // Pattern-based responses
+    if (patterns.greeting.test(input)) {
+      const greetings = [
+        "Greetings, young memory seeker! I am Steddie, and I've been carrying the wisdom of memory masters for over 2,500 years.",
+        "Hello there! Welcome to my shell of ancient wisdom. I'm here to guide you through the timeless art of memory.",
+        "Ah, a new student approaches! I am Steddie the Tortoise, keeper of memory secrets from across the ages.",
+      ];
+      return (
+        greetings[Math.floor(Math.random() * greetings.length)] +
+        "\n\nWhat aspect of memory training calls to you today?"
+      );
     }
 
-    if (input.includes("difficult") || input.includes("hard") || input.includes("struggling")) {
-      const encouragement = steddiePersonality.encouragement[Math.floor(Math.random() * steddiePersonality.encouragement.length)];
-      return `${encouragement}\n\nRemember, every master struggled at first. Which specific technique are you finding challenging? I can share targeted wisdom from my centuries of observation.`;
+    if (patterns.aboutSteddie.test(input)) {
+      return "I am Steddie, an ancient tortoise who has witnessed the birth and evolution of every major memory technique. From Simonides' first memory palace to modern championship methods, I carry these secrets in the patterns of my shell.\n\nI've observed students in Greek academies, Roman forums, medieval monasteries, and modern memory competitions. Each generation teaches me something new about the art of remembering.\n\nMy purpose? To share this accumulated wisdom with those ready to unlock their memory potential. What would you like to learn?";
     }
 
-    if (input.includes("practice") || input.includes("improve")) {
-      return "Consistent practice is key! I suggest:\n\n• Start with 5-10 minutes daily\n• Begin with simple lists (groceries, to-dos)\n• Gradually increase complexity\n• Use the games here to make practice fun\n\nWhich technique would you like to focus on?";
+    if (patterns.cultural.test(input)) {
+      return "Ah, the rich tapestry of cultural memory traditions! I've witnessed how different cultures developed unique approaches:\n\n🏛️ **Greeks & Romans**: Architectural memory palaces\n🥁 **West African Griots**: Rhythmic storytelling chains\n🧘 **Eastern Sages**: Mindful visualization techniques\n🎨 **Indigenous Peoples**: Songline navigation systems\n\nEach tradition offers unique insights. Which cultural approach resonates with your learning style?";
     }
 
-    if (input.includes("history") || input.includes("ancient") || input.includes("origin")) {
-      return "Ah, the ancient origins! I witnessed Simonides discover the Method of Loci in that tragic banquet hall collapse. I've carried these techniques through Greek academies, Roman forums, medieval monasteries, and modern memory championships. Each era added new insights to the shell of wisdom!";
+    if (patterns.memoryProblems.test(input)) {
+      return "Fear not! What you call 'bad memory' is simply an untrained memory. I've seen countless students transform from forgetful to phenomenal.\n\nThe truth: Your brain is already a magnificent memory machine - it just needs the right techniques to unlock its potential.\n\n**Quick confidence builder:**\nYou remember faces, songs, stories, and emotions perfectly. We're simply going to apply that natural ability to everything else!\n\nShall we start with a simple technique to prove your memory is already amazing?";
     }
 
-    // Default response
-    const encouragement = steddiePersonality.encouragement[Math.floor(Math.random() * steddiePersonality.encouragement.length)];
-    return `${encouragement}\n\nI can help you with:\n• Method of Loci (memory palaces)\n• Linking Method (story chains)\n• Major System (number memory)\n• Peg System (permanent anchors)\n\nWhat interests you most?`;
+    if (patterns.motivation.test(input)) {
+      const motivational = [
+        "Remember: Every memory master was once a beginner who refused to give up. Your persistence today becomes tomorrow's mastery.",
+        "I've watched civilizations rise and fall, but the human capacity for growth never ceases to amaze me. You have that same infinite potential.",
+        "In my 2,500 years, I've learned that the tortoise truly does win the race. Steady, consistent practice beats sporadic brilliance every time.",
+      ];
+      return (
+        motivational[Math.floor(Math.random() * motivational.length)] +
+        "\n\nWhat small step can we take together right now?"
+      );
+    }
+
+    if (patterns.games.test(input)) {
+      return "Excellent! Games make practice joyful and effective. I recommend:\n\n🎮 **Chaos Cards**: Perfect for building visual memory\n🏃 **Speed Challenges**: Develop quick recall under pressure\n🏰 **Memory Palaces**: Create lasting spatial memories\n\nEach game targets different memory skills. Which type of challenge excites you most?";
+    }
+
+    if (patterns.performance.test(input) && hasDiscussedTechnique) {
+      return "To enhance your technique mastery:\n\n**Progressive Training:**\n• Start with 3-5 items, master completely\n• Add one item only when achieving 100% accuracy\n• Practice daily for 10-15 minutes\n• Use spaced repetition (review after 1 day, 3 days, 1 week)\n\n**Advanced Tips:**\n• Combine techniques (palace + linking)\n• Add emotional connections\n• Use all five senses\n• Create personal meaning\n\nWhich aspect would you like to focus on first?";
+    }
+
+    if (patterns.difficulty.test(input)) {
+      const encouragement =
+        steddiePersonality.encouragement[
+          Math.floor(Math.random() * steddiePersonality.encouragement.length)
+        ];
+      return `${encouragement}\n\nDifficulty is the pathway to mastery! Every challenge you face is strengthening your memory muscles.\n\n**When stuck, try:**\n• Break the task into smaller pieces\n• Use more vivid, absurd imagery\n• Add movement or emotion\n• Practice with easier examples first\n\nWhat specific part is challenging you? Let's solve it together.`;
+    }
+
+    // Default response with context awareness
+    if (hasDiscussedTechnique) {
+      return "I sense you're ready to deepen your practice! Would you like:\n\n• Advanced exercises for your current technique\n• Ways to combine multiple methods\n• Cultural variations and applications\n• Troubleshooting specific challenges\n\nWhat direction calls to you?";
+    }
+
+    // First-time or general response
+    const encouragement =
+      steddiePersonality.encouragement[
+        Math.floor(Math.random() * steddiePersonality.encouragement.length)
+      ];
+    return `${encouragement}\n\nI can guide you through:\n• **Method of Loci** (memory palaces)\n• **Linking Method** (story chains)\n• **Major System** (number memory)\n• **Peg System** (permanent anchors)\n• **Cultural Techniques** (global wisdom)\n\nWhat sparks your curiosity?`;
   };
 
   const handleSendMessage = async () => {
@@ -164,12 +284,31 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
     setInputValue("");
     setIsTyping(true);
 
-    // Simulate typing delay
-    setTimeout(() => {
-      const response = generateSteddieResponse(userMessage);
+    try {
+      let response: string;
+
+      if (aiMode) {
+        // Use Venice AI for enhanced responses
+        response = await steddieAI.generateResponse(userMessage, {
+          conversationHistory: messages.map((m) => m.content),
+          userProgress: user ? { level: 1, gamesPlayed: 0 } : undefined,
+          currentGame: undefined,
+          culturalPreference: undefined,
+        });
+      } else {
+        // Use rule-based system
+        response = generateSteddieResponse(userMessage);
+      }
+
       addSteddieMessage(response);
+    } catch (error) {
+      console.error("Error generating Steddie response:", error);
+      // Fallback to rule-based response
+      const fallbackResponse = generateSteddieResponse(userMessage);
+      addSteddieMessage(fallbackResponse);
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 1000); // 1-2 second delay
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -192,15 +331,36 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
             </div>
             <div>
               <h3 className="font-bold">Chat with Steddie</h3>
-              <p className="text-sm opacity-90">Ancient Memory Wisdom</p>
+              <p className="text-sm opacity-90">
+                {aiMode ? "🧠 AI-Powered Wisdom" : "📚 Rule-Based Wisdom"}
+              </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white hover:text-gray-200 transition-colors"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-3">
+            {/* AI Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs opacity-75">AI</span>
+              <button
+                onClick={() => setAiMode(!aiMode)}
+                className={`w-10 h-5 rounded-full transition-colors ${
+                  aiMode ? "bg-blue-400" : "bg-green-700"
+                } relative`}
+              >
+                <div
+                  className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${
+                    aiMode ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+              <span className="text-xs opacity-75">⚡</span>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-gray-200 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -208,7 +368,9 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${
+                message.type === "user" ? "justify-end" : "justify-start"
+              }`}
             >
               <div
                 className={`max-w-[80%] p-3 rounded-lg ${
@@ -220,14 +382,18 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
                 {message.type === "steddie" && (
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-lg">🐢</span>
-                    <span className="font-semibold text-green-700">Steddie</span>
+                    <span className="font-semibold text-green-700">
+                      Steddie
+                    </span>
                   </div>
                 )}
-                <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+                <div className="whitespace-pre-wrap text-sm">
+                  {message.content}
+                </div>
               </div>
             </div>
           ))}
-          
+
           {isTyping && (
             <div className="flex justify-start">
               <div className="bg-gray-100 text-gray-800 p-3 rounded-lg">
@@ -237,8 +403,14 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
                 </div>
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                  <div
+                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.1s" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
                 </div>
               </div>
             </div>

@@ -11,15 +11,9 @@ export const metadata = {
   description:
     "A gamified memory training platform that awakens the dormant powers of human memory through classical techniques",
   icons: {
-    icon: [
-      {
-        url: "/icon.png",
-        sizes: "32x32",
-        type: "image/png",
-      },
-    ],
-    shortcut: "/icon.png",
-    apple: "/icon.png",
+    icon: "/icon",
+    shortcut: "/icon",
+    apple: "/icon",
   },
   keywords: [
     "memory training",

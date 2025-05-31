@@ -6,24 +6,21 @@ import { BaseGameAdapter, GameProgress, Achievement, LeaderboardEntry, GameStati
 import { RandomnessProvider, FlowVRFRandomnessProvider } from "../providers/RandomnessProvider";
 import { FlowVRFService } from "../services/FlowVRFService";
 
-// Conditional import to prevent server-side issues
+// Import FCL dynamically to ensure proper client-side initialization
+const getFCL = async () => {
+  if (typeof window === 'undefined') {
+    throw new Error('Flow operations are only available on the client side');
+  }
+
+  // Dynamic import ensures FCL is only loaded client-side
+  const fcl = await import("@onflow/fcl");
+  return fcl;
+};
+
+// Legacy support for existing code
 let fcl: any;
 if (typeof window !== 'undefined') {
   fcl = require("@onflow/fcl");
-} else {
-  // Server-side mock for FCL
-  fcl = {
-    mutate: () => Promise.resolve('mock-tx-id'),
-    query: () => Promise.resolve(null),
-    tx: () => ({ onceSealed: () => Promise.resolve({ status: 4 }) }),
-    send: () => Promise.resolve({}),
-    decode: (x: any) => x,
-    getTransaction: () => ({}),
-    authz: {},
-    currentUser: {
-      snapshot: () => Promise.resolve({ loggedIn: false, addr: null })
-    }
-  };
 }
 
 export class OnChainAdapter extends BaseGameAdapter {
@@ -458,6 +455,28 @@ export class OnChainAdapter extends BaseGameAdapter {
   }
 
   private async mintAchievementNFT(userId: string, achievement: Achievement): Promise<{ nftId: string; transactionId: string }> {
+    // Ensure we're on client side and user is authenticated
+    if (typeof window === 'undefined') {
+      throw new Error('Flow transactions can only be executed on client side');
+    }
+
+    // Check if user is connected
+    const currentUser = await fcl.currentUser.snapshot();
+    if (!currentUser.loggedIn || !currentUser.addr) {
+      throw new Error('Flow wallet not connected. Please connect your wallet to mint achievement NFTs.');
+    }
+
+    // Diagnostic: Check if fcl.authz is properly initialized
+    console.log('🔍 FCL Authorization Diagnostic:', {
+      userLoggedIn: currentUser.loggedIn,
+      userAddress: currentUser.addr,
+      authzExists: !!fcl.authz,
+      authzType: typeof fcl.authz,
+      fclVersion: fcl.VERSION || 'unknown'
+    });
+
+    console.log(`🎨 Minting achievement NFT for user: ${currentUser.addr}`);
+
     const transactionId = await fcl.mutate({
       cadence: `
         import MemoryAchievements from ${this.contractAddress}
@@ -469,8 +488,8 @@ export class OnChainAdapter extends BaseGameAdapter {
           category: String,
           culture: String?
         ) {
-          prepare(signer: AuthAccount) {
-            let collection = signer.borrow<&MemoryAchievements.Collection>(from: /storage/achievementCollection)
+          prepare(signer: auth(Storage, Capabilities) &Account) {
+            let collection = signer.storage.borrow<&MemoryAchievements.Collection>(from: /storage/achievementCollection)
               ?? panic("No achievement collection found")
 
             let nft <- MemoryAchievements.mintAchievement(
@@ -540,6 +559,11 @@ export class OnChainAdapter extends BaseGameAdapter {
   }
 
   private async submitScoreOnChain(userId: string, gameType: string, score: number, metadata?: any): Promise<string> {
+    // Ensure we're on client side
+    if (typeof window === 'undefined') {
+      throw new Error('Flow transactions can only be executed on client side');
+    }
+
     // Simple validation
     if (userId === '4d17d1068f79c7d0' || userId === '0x4d17d1068f79c7d0') {
       throw new Error('Invalid user ID: Cannot use Supabase project ID as Flow address');
@@ -564,7 +588,7 @@ export class OnChainAdapter extends BaseGameAdapter {
           culture: String,
           vrfSeed: UInt64
         ) {
-          prepare(signer: AuthAccount) {
+          prepare(signer: auth(Storage, Capabilities) &Account) {
             MemoryLeaderboard.submitScore(
               player: signer.address,
               score: score,

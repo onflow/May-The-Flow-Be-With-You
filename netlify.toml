@@ -1,6 +1,6 @@
 [build]
   command = "bun install && bun run build"
-  publish = "out"
+  publish = ".next"
   base = "submissions/0x4d17d1068f79c7d0"
 
 [build.environment]
@@ -14,7 +14,6 @@
 [dev]
   command = "cd submissions/0x4d17d1068f79c7d0 && bun run dev"
   port = 3000
-  publish = "submissions/0x4d17d1068f79c7d0/out"
 
 [[headers]]
   for = "/*"
@@ -24,15 +23,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-XSS-Protection = "1; mode=block"
 
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Redirects are handled automatically by @netlify/plugin-nextjs
 
 [functions]
   node_bundler = "esbuild"

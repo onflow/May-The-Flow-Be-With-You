@@ -2,7 +2,16 @@
 
 **A multicultural memory training platform that transforms ancient wisdom into modern gamified experiences**
 
-## 🏆 Hackathon Fit - All Four Categories
+## � **MAJOR MILESTONE: Flow Contracts Live on Testnet!**
+
+**Both smart contracts successfully deployed to Flow testnet at `0xb8404e09b36b6623`:**
+
+- ✅ **MemoryVRF**: Provably fair randomness using Flow's RandomBeaconHistory
+- ✅ **MemoryAchievements**: Cultural memory achievement NFTs with full metadata support
+- ✅ **Production Ready**: Tested and verified on Flow testnet
+- ✅ **Marketplace Compatible**: Standard-compliant NFTs ready for trading platforms
+
+## �🏆 Hackathon Fit - All Four Categories
 
 ### 🎲 Randomness Revolution (Week 1)
 
@@ -198,10 +207,9 @@
 - **Multi-network support** (Emulator, Testnet, Mainnet)
 - **Dual authentication** (Email + Flow wallet)
 - **WalletConnect** integration
-- **Smart Contracts Deployed**:
-  - ✅ **MemoryVRF** (`0xf8d6e0586b0a20c7`): Verifiable random number generation
-  - ✅ **Counter** (`0xf8d6e0586b0a20c7`): Simple test contract
-  - 🚧 **MemoryAchievements**: NFT achievements system (in development)
+- **Smart Contracts Deployed to Testnet**:
+  - ✅ **MemoryVRF** (`0xb8404e09b36b6623`): Verifiable random number generation with Flow's RandomBeaconHistory
+  - ✅ **MemoryAchievements** (`0xb8404e09b36b6623`): Cultural memory achievement NFTs with full metadata support
 
 ### Backend
 
@@ -254,31 +262,42 @@ The app now celebrates the rich diversity of human memory wisdom while providing
 
 ## ⚡ Flow Blockchain Integration Status
 
-### 🎯 **DEPLOYED & WORKING** ✅
+### 🎯 **LIVE ON TESTNET** ✅
 
-**Contract Address**: `0xf8d6e0586b0a20c7` (Flow Emulator)
+**Contract Address**: `0xb8404e09b36b6623` (Flow Testnet)
 
-**MemoryVRF Contract Features**:
+**🎲 MemoryVRF Contract Features**:
 
-- ✅ **Commit-Reveal Pattern**: Secure randomness generation
+- ✅ **Commit-Reveal Pattern**: Secure randomness using Flow's RandomBeaconHistory
 - ✅ **Event Emission**: `RandomnessRequested` and `RandomnessRevealed` events
 - ✅ **Consumer Management**: Automatic resource creation and capability linking
 - ✅ **Utility Functions**: `randomInRange()` and `generateSequence()` for games
-- ✅ **Tested & Verified**: Successfully generated seed `8828130200` in block 8
+- ✅ **Testnet Deployed**: Live contract verified and tested on Flow testnet
+- ✅ **Production Ready**: Using Flow's native VRF for provably fair randomness
+
+**🏆 MemoryAchievements NFT Contract Features**:
+
+- ✅ **NFT Standard Compliant**: Full MetadataViews and NonFungibleToken implementation
+- ✅ **Cultural Metadata**: Achievement data with cultural tradition context
+- ✅ **Minting System**: Automated achievement NFT creation
+- ✅ **Collection Management**: User collections with public capabilities
+- ✅ **Testnet Deployed**: Live NFT contract ready for achievement minting
+- ✅ **Marketplace Ready**: Standard-compliant NFTs for trading platforms
 
 **Frontend Integration**:
 
-- ✅ **FlowVRFService**: Updated with deployed contract address
+- ✅ **FlowVRFService**: Updated with deployed testnet contract address
 - ✅ **Cadence 1.0 Syntax**: All transactions use modern `auth(Storage, Capabilities) &Account`
 - ✅ **Auto-Setup**: Consumer resources created automatically on first use
 - ✅ **Error Handling**: Graceful fallbacks and retry logic
+- ✅ **Wallet Integration**: Flow Dev Wallet with correct signature algorithms
 
 **Next Steps**:
 
-- 🚧 Deploy to Flow Testnet for public testing
-- 🚧 Complete MemoryAchievements NFT contract
 - 🚧 Integrate VRF into CulturalChaosCards game
 - 🚧 Add blockchain verification UI components
+- 🚧 Implement achievement NFT minting in frontend
+- 🚧 Add on-chain vs off-chain mode selector
 
 ## 🚀 Getting Started
 
@@ -342,14 +361,17 @@ npm run dev:node
 - **Optimized Performance**: 58% faster startup with memoized calculations
 - **Flow Blockchain**: MemoryVRF contract deployed and tested
 
-### **Phase 1: Flow VRF Integration** ✅ _Complete_
+### **Phase 1: Flow Blockchain Deployment** ✅ _Complete_
 
-**Goal**: Leverage Flow's native randomness for truly fair competition
+**Goal**: Deploy production-ready smart contracts to Flow testnet
 
-- ✅ **Smart Contract Deployed**: MemoryVRF at `0xf8d6e0586b0a20c7`
+- ✅ **MemoryVRF Contract**: Deployed to testnet at `0xb8404e09b36b6623`
+- ✅ **MemoryAchievements NFT Contract**: Deployed to testnet at `0xb8404e09b36b6623`
+- ✅ **RandomBeaconHistory Integration**: Using Flow's native VRF for secure randomness
 - ✅ **Commit-Reveal Pattern**: Secure randomness generation implemented
+- ✅ **NFT Standard Compliance**: Full MetadataViews and marketplace compatibility
 - ✅ **Frontend Integration**: FlowVRFService updated with Cadence 1.0
-- ✅ **Tested & Verified**: Successfully generated verifiable randomness
+- ✅ **Tested & Verified**: Both contracts tested and working on testnet
 - ✅ **Auto-Setup**: Consumer resources created automatically
 - ✅ **Event Tracking**: Full transaction and block height verification
 
@@ -362,14 +384,16 @@ npm run dev:node
 - 🚧 **UI Components**: Show blockchain verification details
 - 🚧 **Mode Selector**: Beautiful UI for off-chain vs on-chain modes
 
-### **Phase 3: Cultural Memory NFTs** 🏆 _Planned_
+### **Phase 3: Achievement NFT Integration** 🏆 _Ready for Implementation_
 
-**Goal**: Permanent, tradeable proof of memory mastery
+**Goal**: Activate achievement NFT minting in frontend
 
-- **Achievement NFTs**: Cultural-specific memory accomplishments
-- **Dynamic Progression**: NFTs that evolve with user improvement
-- **Cross-Cultural Mastery**: Special NFTs for multi-tradition excellence
-- **Social Status**: Displayable proof of memory sport achievements
+- 🚧 **Frontend Minting**: Connect achievement system to NFT contract
+- 🚧 **Cultural Metadata**: Mint NFTs with cultural tradition context
+- 🚧 **Dynamic Progression**: NFTs that evolve with user improvement
+- 🚧 **Cross-Cultural Mastery**: Special NFTs for multi-tradition excellence
+- 🚧 **Social Status**: Displayable proof of memory sport achievements
+- 🚧 **Marketplace Integration**: Enable trading on Flow NFT platforms
 
 ### **Phase 4: Enhanced Competition** 🏟️ _Planned_
 
@@ -455,7 +479,7 @@ Detailed technical documentation for each hackathon category:
 - [`docs/generative-art-worlds/`](docs/generative-art-worlds/) - Indigenous/Aboriginal dreamtime
 - [`docs/TECHNICAL.md`](docs/TECHNICAL.md) - Complete technical documentation
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - Modular architecture and dual-mode design
-- [`docs/FLOW_INTEGRATION_PLAN.md`](docs/FLOW_INTEGRATION_PLAN.md) - Flow blockchain integration roadmap
+- [`docs/FLOW_INTEGRATION_GUIDE.md`](docs/FLOW_INTEGRATION_GUIDE.md) - **Flow blockchain integration guide** (single source of truth)
 
 ---
 

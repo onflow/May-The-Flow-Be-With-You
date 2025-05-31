@@ -1,8 +1,9 @@
 // Memory Achievements NFT Contract
 // Provides permanent, tradeable proof of memory training accomplishments
 
-import NonFungibleToken from 0x1d7e57aa55817448
-import MetadataViews from 0x1d7e57aa55817448
+import NonFungibleToken from 0x631e88ae7f1d7c20
+import MetadataViews from 0x631e88ae7f1d7c20
+import ViewResolver from 0x631e88ae7f1d7c20
 
 access(all) contract MemoryAchievements: NonFungibleToken {
 
@@ -93,7 +94,7 @@ access(all) contract MemoryAchievements: NonFungibleToken {
                     )
 
                 case Type<MetadataViews.Editions>():
-                    let editionInfo = MetadataViews.EditionInfo(
+                    let editionInfo = MetadataViews.Edition(
                         name: self.metadata.category.concat(" Achievement"),
                         number: self.id,
                         max: nil
@@ -289,11 +290,65 @@ access(all) contract MemoryAchievements: NonFungibleToken {
         return <-create Collection()
     }
 
+    // Contract-level metadata views
+    access(all) view fun getContractViews(resourceType: Type?): [Type] {
+        return [
+            Type<MetadataViews.NFTCollectionData>(),
+            Type<MetadataViews.NFTCollectionDisplay>()
+        ]
+    }
+
+    access(all) fun resolveContractView(resourceType: Type?, viewType: Type): AnyStruct? {
+        switch viewType {
+            case Type<MetadataViews.NFTCollectionData>():
+                return MetadataViews.NFTCollectionData(
+                    storagePath: self.CollectionStoragePath,
+                    publicPath: self.CollectionPublicPath,
+                    publicCollection: Type<&MemoryAchievements.Collection>(),
+                    publicLinkedType: Type<&MemoryAchievements.Collection>(),
+                    createEmptyCollectionFunction: (fun(): @{NonFungibleToken.Collection} {
+                        return <-MemoryAchievements.createEmptyCollection(nftType: Type<@MemoryAchievements.NFT>())
+                    })
+                )
+            case Type<MetadataViews.NFTCollectionDisplay>():
+                let media = MetadataViews.Media(
+                    file: MetadataViews.HTTPFile(
+                        url: "https://memoreee.app/logo.png"
+                    ),
+                    mediaType: "image/png"
+                )
+                return MetadataViews.NFTCollectionDisplay(
+                    name: "Memory Achievements",
+                    description: "Permanent proof of memory training accomplishments across cultural traditions",
+                    externalURL: MetadataViews.ExternalURL("https://memoreee.app"),
+                    squareImage: media,
+                    bannerImage: media,
+                    socials: {}
+                )
+        }
+        return nil
+    }
+
     // Get achievement data for a specific NFT
     access(all) fun getAchievementData(address: Address, id: UInt64): AchievementMetadata? {
         if let collection = getAccount(address).capabilities.borrow<&MemoryAchievements.Collection>(MemoryAchievements.CollectionPublicPath) {
             if let achievement = collection.borrowAchievement(id: id) {
-                return achievement.metadata
+                // Create a copy of the metadata to return
+                let gameDataCopy: {String: AnyStruct} = {}
+                for key in achievement.metadata.gameData.keys {
+                    gameDataCopy[key] = achievement.metadata.gameData[key]
+                }
+
+                return AchievementMetadata(
+                    achievementId: achievement.metadata.achievementId,
+                    name: achievement.metadata.name,
+                    description: achievement.metadata.description,
+                    category: achievement.metadata.category,
+                    culture: achievement.metadata.culture,
+                    icon: achievement.metadata.icon,
+                    rarity: achievement.metadata.rarity,
+                    gameData: gameDataCopy
+                )
             }
         }
         return nil
@@ -307,7 +362,22 @@ access(all) contract MemoryAchievements: NonFungibleToken {
             let ids = collection.getIDs()
             for id in ids {
                 if let achievement = collection.borrowAchievement(id: id) {
-                    achievements.append(achievement.metadata)
+                    // Create a copy of the metadata to append
+                    let gameDataCopy: {String: AnyStruct} = {}
+                    for key in achievement.metadata.gameData.keys {
+                        gameDataCopy[key] = achievement.metadata.gameData[key]
+                    }
+
+                    achievements.append(AchievementMetadata(
+                        achievementId: achievement.metadata.achievementId,
+                        name: achievement.metadata.name,
+                        description: achievement.metadata.description,
+                        category: achievement.metadata.category,
+                        culture: achievement.metadata.culture,
+                        icon: achievement.metadata.icon,
+                        rarity: achievement.metadata.rarity,
+                        gameData: gameDataCopy
+                    ))
                 }
             }
         }

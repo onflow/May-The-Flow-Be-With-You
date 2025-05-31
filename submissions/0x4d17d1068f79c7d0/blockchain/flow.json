@@ -1,41 +1,54 @@
 {
-	"networks": {
-		"emulator": "127.0.0.1:3569",
-		"mainnet": "access.mainnet.nodes.onflow.org:9000",
-		"testing": "127.0.0.1:3569",
-		"testnet": "access.devnet.nodes.onflow.org:9000"
-	},
-	"accounts": {
-		"emulator-account": {
-			"address": "f8d6e0586b0a20c7",
-			"key": {
-				"type": "file",
-				"location": "emulator-account.pkey"
-			}
-		}
-	},
-	"contracts": {
-		"MemoryVRF": {
-			"source": "cadence/contracts/MemoryVRF.cdc",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"testing": "f8d6e0586b0a20c7"
-			}
-		},
-		"MemoryAchievements": {
-			"source": "cadence/contracts/MemoryAchievements.cdc",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"testing": "f8d6e0586b0a20c7"
-			}
-		}
-	},
-	"deployments": {
-		"emulator": {
-			"emulator-account": ["MemoryVRF", "MemoryAchievements"]
-		},
-		"testing": {
-			"emulator-account": ["MemoryVRF", "MemoryAchievements"]
-		}
-	}
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "mainnet": "access.mainnet.nodes.onflow.org:9000",
+    "testing": "127.0.0.1:3569",
+    "testnet": "access.devnet.nodes.onflow.org:9000"
+  },
+  "accounts": {
+    "emulator-account": {
+      "address": "f8d6e0586b0a20c7",
+      "key": {
+        "type": "file",
+        "location": "emulator-account.pkey"
+      }
+    },
+    "testnet-account": {
+      "address": "$FLOW_TESTNET_ADDRESS",
+      "key": {
+        "type": "hex",
+        "privateKey": "$FLOW_TESTNET_PRIVATE_KEY",
+        "signatureAlgorithm": "ECDSA_secp256k1",
+        "hashAlgorithm": "SHA2_256",
+        "index": 0
+      }
+    }
+  },
+  "contracts": {
+    "MemoryVRF": {
+      "source": "contracts/MemoryVRF.cdc",
+      "aliases": {
+        "emulator": "f8d6e0586b0a20c7",
+        "testing": "f8d6e0586b0a20c7"
+      }
+    },
+    "MemoryAchievements": {
+      "source": "contracts/MemoryAchievements.cdc",
+      "aliases": {
+        "emulator": "f8d6e0586b0a20c7",
+        "testing": "f8d6e0586b0a20c7"
+      }
+    }
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": ["MemoryVRF", "MemoryAchievements"]
+    },
+    "testing": {
+      "emulator-account": ["MemoryVRF", "MemoryAchievements"]
+    },
+    "testnet": {
+      "testnet-account": ["MemoryVRF", "MemoryAchievements"]
+    }
+  }
 }

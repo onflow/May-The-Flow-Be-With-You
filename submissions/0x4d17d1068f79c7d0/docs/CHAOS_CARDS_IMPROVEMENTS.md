@@ -31,6 +31,7 @@ const calculateDifficulty = (perfectRounds: number, totalRounds: number) => {
 - **Real-time Guidance**: Shows technique tips during memorization phase
 
 **Technique Progression**:
+
 - Level 1-3: **Observation** - Basic visual memorization
 - Level 4-5: **Cultural/Loci** - Use cultural context or spatial memory
 - Level 6: **Linking** - Create stories connecting symbols
@@ -57,6 +58,7 @@ const calculateDifficulty = (perfectRounds: number, totalRounds: number) => {
 - **Educational Value**: Learn about cultural significance while playing
 
 **Example Stories**:
+
 - **Greek/Roman**: "In the ancient agora, a philosopher encounters..."
 - **African Griot**: "The griot tells of a journey where..."
 - **Eastern Sage**: "In the temple garden, a sage contemplates..."
@@ -67,7 +69,8 @@ const calculateDifficulty = (perfectRounds: number, totalRounds: number) => {
 **Problem**: Flow VRF requires authentication, limiting accessibility
 **Solution**: Progressive enhancement from practice to competition
 
-- **Practice Mode**: 
+- **Practice Mode**:
+
   - No login required
   - Local randomness (cryptographically secure)
   - Instant gameplay
@@ -85,17 +88,20 @@ const calculateDifficulty = (perfectRounds: number, totalRounds: number) => {
 **Solution**: Rich, informative UI with progressive disclosure
 
 #### **Setup Phase Improvements**:
+
 - Progress tracking (total games, perfect rounds)
 - Difficulty progression preview
 - Updated instructions explaining progressive system
 
 #### **Memorization Phase Improvements**:
+
 - Memory technique guidance cards
 - Cultural story display
 - Dynamic timer based on difficulty
 - Progress indicators
 
 #### **Results Phase Improvements**:
+
 - Perfect round celebration
 - Technique used display
 - Progress toward next difficulty level
@@ -111,33 +117,28 @@ const calculateDifficulty = (perfectRounds: number, totalRounds: number) => {
 4. **Story Method**: "Weave all symbols into one memorable narrative"
 
 ### **Cognitive Load Management**:
+
 - Starts easy (3 cards, 15 seconds)
 - Gradually increases challenge
 - Provides memory aids (stories, techniques)
 - Celebrates progress to maintain motivation
 
 ### **Spaced Repetition Elements**:
+
 - Perfect round tracking encourages mastery
 - Difficulty resets on failure (forgiveness)
 - Progressive challenge maintains engagement
 
-## 🔗 **Flow VRF Integration Status**
+## 🔗 **Flow Integration**
 
-### **Current Implementation**:
-- ✅ VRF service architecture in place
-- ✅ Dual-mode support (local vs blockchain)
-- ✅ Contract deployed and tested
-- ✅ UI shows verification status
+> **Note**: For complete Flow blockchain integration details, see [`FLOW_INTEGRATION_GUIDE.md`](./FLOW_INTEGRATION_GUIDE.md)
 
-### **Next Steps for Full VRF Integration**:
-1. **Game Service Integration**: Use VRF for card sequence generation
-2. **Verification UI**: Show blockchain proof details
-3. **Competitive Features**: Leaderboards with verified scores
-4. **Tournament Mode**: Scheduled competitions with VRF
+Chaos Cards supports dual-mode architecture with Flow VRF for competitive play when users connect their Flow wallets.
 
 ## 📊 **Performance Metrics**
 
 ### **Before Improvements**:
+
 - Static 4-card difficulty
 - 15-second memorization (always)
 - No memory technique guidance
@@ -145,6 +146,7 @@ const calculateDifficulty = (perfectRounds: number, totalRounds: number) => {
 - No progression tracking
 
 ### **After Improvements**:
+
 - Dynamic 3-8 card difficulty
 - 8-15 second memorization (adaptive)
 - 5 memory techniques with guidance
@@ -162,6 +164,7 @@ const calculateDifficulty = (perfectRounds: number, totalRounds: number) => {
 ## 🚀 **Technical Architecture**
 
 ### **Progressive Difficulty Engine**:
+
 ```typescript
 interface ChaosCardsGameData {
   difficulty: number;
@@ -173,12 +176,14 @@ interface ChaosCardsGameData {
 ```
 
 ### **Memory Technique System**:
+
 - Context-aware technique selection
 - Progressive complexity
 - Cultural adaptation
 - Real-time guidance
 
 ### **Dual-Mode Support**:
+
 - Adapter pattern for randomness providers
 - Seamless mode switching
 - Progressive enhancement philosophy

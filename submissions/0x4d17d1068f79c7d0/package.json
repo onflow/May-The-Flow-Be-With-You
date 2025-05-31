@@ -22,6 +22,8 @@
     "flow:emulator": "flow emulator start",
     "flow:dev-wallet": "flow dev-wallet",
     "flow:deploy": "flow project deploy --network emulator",
+    "flow:deploy:testnet": "./scripts/deploy/deploy-testnet.sh",
+    "flow:test": "flow scripts execute blockchain/scripts/test-vrf.cdc --network testnet",
     "db:migrate": "supabase db push",
     "db:reset": "supabase db reset",
     "db:setup": "node scripts/setup-database.js",

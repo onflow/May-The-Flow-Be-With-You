@@ -27,8 +27,10 @@ export class FlowVRFService {
   private contractAddress: string;
 
   constructor(contractAddress?: string) {
-    // Default to deployed emulator contract address, can be overridden
-    this.contractAddress = contractAddress || "0xf8d6e0586b0a20c7";
+    // Use environment variable for contract address, with fallbacks
+    this.contractAddress = contractAddress ||
+      process.env.NEXT_PUBLIC_MEMORY_VRF_CONTRACT ||
+      "0xf8d6e0586b0a20c7"; // Emulator fallback
   }
 
   /**

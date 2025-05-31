@@ -131,19 +131,38 @@ export class FlowVRFRandomnessProvider implements RandomnessProvider {
       // Request randomness from Flow VRF
       const result = await this.flowService.requestRandomness();
 
+      // Determine the correct explorer URL based on network
+      const network = process.env.NEXT_PUBLIC_FLOW_NETWORK || 'emulator';
+      let verificationUrl = '';
+
+      if (network === 'testnet') {
+        verificationUrl = `https://testnet.flowscan.org/transaction/${result.transactionId}`;
+      } else if (network === 'mainnet') {
+        verificationUrl = `https://flowscan.org/transaction/${result.transactionId}`;
+      } else {
+        verificationUrl = `http://localhost:8080/v1/transactions/${result.transactionId}`;
+      }
+
       this.lastVerification = {
         transactionId: result.transactionId,
         blockHeight: result.blockHeight,
         seed: result.seed,
         timestamp: typeof window !== 'undefined' ? Date.now() : 0,
-        verificationUrl: `https://testnet.flowscan.org/transaction/${result.transactionId}`,
+        verificationUrl,
         isVerified: true,
       };
 
       return result.seed;
     } catch (error) {
-      console.error('Flow VRF generation failed, falling back to secure random:', error);
-      // Fallback to secure random if Flow VRF fails
+      console.error('Flow VRF generation failed:', error);
+
+      // In production, we want to fail rather than fallback to ensure true randomness
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Flow VRF is required for competitive mode. Please ensure your wallet is connected and you have sufficient FLOW tokens.');
+      }
+
+      // Only fallback in development
+      console.warn('Development mode: falling back to secure random');
       const fallbackSeed = Math.floor(Math.random() * 1000000) + Date.now();
 
       this.lastVerification = {

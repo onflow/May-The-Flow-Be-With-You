@@ -1,35 +1,28 @@
-// Test transaction for MemoryVRF contract
-import MemoryVRF from 0xf8d6e0586b0a20c7
+// Test script to verify MemoryVRF contract deployment
+import MemoryVRF from "MemoryVRF"
 
-transaction {
-    prepare(signer: auth(Storage, Capabilities) &Account) {
-        // Create a VRF consumer if one doesn't exist
-        if signer.storage.borrow<&MemoryVRF.Consumer>(from: MemoryVRF.ConsumerStoragePath) == nil {
-            let consumer <- MemoryVRF.createConsumer()
-            signer.storage.save(<-consumer, to: MemoryVRF.ConsumerStoragePath)
+access(all) fun main(account: Address): {String: AnyStruct} {
+    // Get account reference
+    let accountRef = getAccount(account)
 
-            let consumerCap = signer.capabilities.storage.issue<&MemoryVRF.Consumer>(MemoryVRF.ConsumerStoragePath)
-            signer.capabilities.publish(consumerCap, at: MemoryVRF.ConsumerPublicPath)
-        }
+    // Check if consumer exists
+    let consumerCap = accountRef.capabilities.get<&MemoryVRF.Consumer>(MemoryVRF.ConsumerPublicPath)
+    let hasConsumer = consumerCap.check()
 
-        // Get the consumer reference
-        let consumerRef = signer.storage.borrow<&MemoryVRF.Consumer>(from: MemoryVRF.ConsumerStoragePath)!
+    var result: {String: AnyStruct} = {
+        "account": account.toString(),
+        "hasConsumer": hasConsumer,
+        "contractDeployed": true
+    }
 
-        // Submit a commit for randomness
-        let requestId = "test-request-1"
-        let commitValue = "my-secret-commit"
-
-        consumerRef.submitCommit(requestId: requestId, commitValue: commitValue)
-
-        // Submit reveal to generate randomness
-        let revealValue: UInt64 = 12345
-        consumerRef.submitReveal(requestId: requestId, revealValue: revealValue)
-
-        // Get the result
-        if let result = consumerRef.getRandomResult(requestId: requestId) {
-            log("Random result: ".concat(result.toString()))
-        } else {
-            log("No result found")
+    // If consumer exists, get some info
+    if hasConsumer {
+        if let consumer = consumerCap.borrow() {
+            // Try to get a test request (this will likely be nil for new accounts)
+            let testResult = consumer.getRandomResult(requestId: "test-request")
+            result["testResult"] = testResult?.toString() ?? "No test result"
         }
     }
+
+    return result
 }

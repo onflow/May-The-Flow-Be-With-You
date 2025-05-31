@@ -271,6 +271,84 @@ NEXT_PUBLIC_MEMORY_ACHIEVEMENTS_CONTRACT=0x...
 
 ## **🚨 Critical Issues Encountered & Solutions (January 2025)**
 
+### **🔥 CRITICAL: WebSocket Bundling Issue (SOLVED)**
+
+**Problem**: Netlify deployment failing with `Cannot find module 'ws'` errors from `isomorphic-ws` package.
+
+**Root Cause**: Flow's FCL library was being imported at module level in adapters, causing WebSocket dependencies to be bundled server-side where they don't exist in serverless environments.
+
+**Error Pattern**:
+
+```
+Error: Cannot find module 'ws'
+Require stack:
+- /var/task/node_modules/isomorphic-ws/node.js
+- /var/task/node_modules/@onflow/transport-http/dist/index.js
+- /var/task/node_modules/@onflow/sdk/dist/sdk.js
+- /var/task/node_modules/@onflow/fcl-core/dist/fcl-core.js
+- /var/task/node_modules/@onflow/fcl/dist/fcl.js
+- /var/task/.next/server/app/[page]/page.js
+```
+
+**Solution Applied**:
+
+1. **Conditional FCL Imports** in all Flow services:
+
+```typescript
+// ❌ WRONG: Module-level import
+import * as fcl from "@onflow/fcl";
+
+// ✅ CORRECT: Conditional import
+let fcl: any;
+if (typeof window !== "undefined") {
+  fcl = require("@onflow/fcl");
+} else {
+  // Server-side mock
+  fcl = {
+    mutate: () => Promise.resolve("mock-tx-id"),
+    query: () => Promise.resolve(null),
+    currentUser: {
+      snapshot: () => Promise.resolve({ loggedIn: false, addr: null }),
+    },
+  };
+}
+```
+
+2. **Comprehensive Webpack Externals** in `next.config.js`:
+
+```javascript
+webpack: (config, { isServer }) => {
+  if (isServer) {
+    config.externals.push('ws');
+    config.externals.push('isomorphic-ws');
+    config.externals.push('@onflow/fcl');
+    config.externals.push('@onflow/sdk');
+    config.externals.push('@onflow/transport-http');
+    config.externals.push('@onflow/fcl-core');
+  }
+  return config;
+},
+serverExternalPackages: [
+  '@onflow/fcl',
+  '@onflow/sdk',
+  'ws',
+  'isomorphic-ws'
+]
+```
+
+3. **Files That Needed Updates**:
+
+- `shared/config/flow.ts`
+- `shared/services/FlowVRFService.ts`
+- `shared/adapters/OnChainAdapter.ts`
+- `next.config.js`
+
+**Result**: ✅ Deployment works on Netlify/Vercel while preserving full Flow wallet functionality.
+
+**Key Lesson**: Flow packages must be client-side only in serverless environments. Always use conditional imports and webpack externals.
+
+**⚠️ Important for Other Developers**: If you're using Flow + Next.js + serverless deployment (Netlify/Vercel), you WILL encounter this issue. Apply this solution preemptively to avoid deployment failures.
+
 ### **FCL (Flow Client Library) Development Challenges**
 
 During development, we encountered several **common Flow development issues** that led to our production-ready hybrid architecture:

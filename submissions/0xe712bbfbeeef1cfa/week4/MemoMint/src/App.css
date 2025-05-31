@@ -1,0 +1,156 @@
+/* App.css - Ecstatic, Vibrant, Visually Pleasing Styles */
+
+.app-ecstatic-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+  background-attachment: fixed;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.app-ecstatic-bg::before {
+  content: '';
+  position: fixed;
+  top: -10%;
+  left: -10%;
+  width: 120vw;
+  height: 120vh;
+  background: radial-gradient(circle at 20% 30%, #ffb6b9 0%, transparent 60%),
+              radial-gradient(circle at 80% 70%, #a1c4fd 0%, transparent 60%),
+              radial-gradient(circle at 50% 90%, #fbc2eb 0%, transparent 70%);
+  opacity: 0.45;
+  z-index: 0;
+  pointer-events: none;
+  animation: ecstatic-bg-move 18s linear infinite alternate;
+}
+
+@keyframes ecstatic-bg-move {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.05) translateY(-30px); }
+}
+
+.app-header-ecstatic {
+  background: linear-gradient(90deg, #7f53ac 0%, #657ced 50%, #ff6a88 100%);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  border-bottom-left-radius: 2.5rem;
+  border-bottom-right-radius: 2.5rem;
+  z-index: 2;
+  position: relative;
+  animation: ecstatic-header-fade 1.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+@keyframes ecstatic-header-fade {
+  from { opacity: 0; transform: translateY(-40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.app-chat-card {
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(8px);
+  border: 2px solid #e0c3fc;
+  position: relative;
+  z-index: 1;
+  transition: box-shadow 0.3s;
+}
+.app-chat-card:hover {
+  box-shadow: 0 12px 40px 0 rgba(127, 83, 172, 0.18);
+}
+
+.app-bubble {
+  position: relative;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.app-bubble-user {
+  background: linear-gradient(135deg, #657ced 0%, #ff6a88 100%);
+  color: #fff;
+  border-bottom-right-radius: 0.5rem !important;
+  box-shadow: 0 2px 12px 0 rgba(255, 106, 136, 0.12);
+  animation: bubble-pop-user 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+.app-bubble-ai {
+  background: rgba(255,255,255,0.95);
+  color: #5a189a;
+  border-bottom-left-radius: 0.5rem !important;
+  border: 1.5px solid #e0c3fc;
+  box-shadow: 0 2px 12px 0 rgba(101, 124, 237, 0.10);
+  animation: bubble-pop-ai 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes bubble-pop-user {
+  from { transform: scale(0.95) translateX(30px); opacity: 0; }
+  to { transform: scale(1) translateX(0); opacity: 1; }
+}
+@keyframes bubble-pop-ai {
+  from { transform: scale(0.95) translateX(-30px); opacity: 0; }
+  to { transform: scale(1) translateX(0); opacity: 1; }
+}
+
+.bubble-icon-user, .bubble-icon-ai {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0.5rem;
+  font-size: 1.3rem;
+  box-shadow: 0 2px 8px 0 rgba(127, 83, 172, 0.10);
+  background: linear-gradient(135deg, #ff6a88 0%, #657ced 100%);
+  color: #fff;
+  animation: icon-pop 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+.bubble-icon-ai {
+  background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+  color: #7f53ac;
+}
+@keyframes icon-pop {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.app-summarize-btn {
+  background: linear-gradient(90deg, #ffe259 0%, #ffa751 100%);
+  color: #fff;
+  font-weight: 800;
+  padding: 0.9rem 2.5rem;
+  border-radius: 9999px;
+  box-shadow: 0 4px 24px 0 rgba(255, 226, 89, 0.18);
+  font-size: 1.2rem;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+.app-summarize-btn:hover:not(:disabled) {
+  background: linear-gradient(90deg, #ffb347 0%, #ffcc33 100%);
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 8px 32px 0 rgba(255, 204, 51, 0.18);
+}
+
+.app-summary-card {
+  background: linear-gradient(120deg, #fffbe6 0%, #fbc2eb 100%);
+  border-left: 8px solid #ffe259;
+  box-shadow: 0 8px 32px 0 rgba(255, 226, 89, 0.10);
+  animation: summary-fade-in 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes summary-fade-in {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Add a little sparkle! */
+.app-ecstatic-bg::after {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+  left: 0; top: 0; width: 100vw; height: 100vh;
+  background-image: url('data:image/svg+xml;utf8,<svg width="100%25" height="100%25" xmlns="http://www.w3.org/2000/svg"><g><circle fill="%23fffbe6" fill-opacity="0.5" cx="10" cy="10" r="2"/><circle fill="%23ffe259" fill-opacity="0.4" cx="80" cy="40" r="1.5"/><circle fill="%23a1c4fd" fill-opacity="0.3" cx="60" cy="90" r="2.5"/><circle fill="%23ffb6b9" fill-opacity="0.3" cx="120" cy="60" r="1.2"/></g></svg>');
+  z-index: 1;
+  opacity: 0.5;
+  mix-blend-mode: lighten;
+  animation: sparkle-move 12s linear infinite alternate;
+}
+@keyframes sparkle-move {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 40px; }
+} 

@@ -1,8 +1,10 @@
+/* Tailwind CSS v3 imports */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Silk Components - for premium UI/UX */
 @import "@silk-hq/components/unlayered-styles";
-
-/* Tailwind CSS v4 imports */
-@import "tailwindcss";
 
 /* Custom base styles */
 @layer base {

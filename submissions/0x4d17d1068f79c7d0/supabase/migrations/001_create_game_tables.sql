@@ -1,12 +1,13 @@
--- Create tables for Memoreee game progress tracking
--- This migration sets up the core database schema for user progress, game sessions, and social features
+-- Simplified Database Setup for Memoreee
+-- Run this in your Supabase SQL Editor to create the required tables
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- User profiles table (extends Supabase auth.users)
+-- 1. User profiles table (supports both auth users and anonymous users)
 CREATE TABLE IF NOT EXISTS user_profiles (
-    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    id TEXT PRIMARY KEY, -- Can be UUID from auth.users or anonymous ID
+    auth_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE, -- Optional link to auth
     username TEXT UNIQUE,
     display_name TEXT,
     avatar_url TEXT,
@@ -19,25 +20,54 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Practice sessions table
+-- 2. Practice sessions table
 CREATE TABLE IF NOT EXISTS practice_sessions (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
-    game_type TEXT NOT NULL CHECK (game_type IN ('random_palace', 'chaos_cards', 'entropy_storytelling', 'memory_speed', 'memory_race', 'digit_duel', 'story_chain')),
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id TEXT NOT NULL, -- Using TEXT instead of UUID for flexibility
+    game_type TEXT NOT NULL,
     score INTEGER NOT NULL DEFAULT 0,
     max_possible_score INTEGER NOT NULL DEFAULT 0,
     accuracy DECIMAL(5,2) NOT NULL DEFAULT 0.0, -- Percentage 0-100
     items_count INTEGER NOT NULL DEFAULT 0,
     duration_seconds INTEGER NOT NULL DEFAULT 0,
     difficulty_level INTEGER NOT NULL DEFAULT 1,
-    session_data JSONB DEFAULT '{}', -- Store game-specific data like seed, items, guesses
+    session_data JSONB DEFAULT '{}', -- Store game-specific data
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Memory palaces table
+-- 3. Achievements table
+CREATE TABLE IF NOT EXISTS achievements (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id TEXT NOT NULL, -- Using TEXT for flexibility
+    achievement_type TEXT NOT NULL,
+    achievement_name TEXT NOT NULL,
+    description TEXT,
+    icon TEXT,
+    points INTEGER DEFAULT 0,
+    nft_token_id TEXT, -- Flow NFT token ID if minted
+    metadata JSONB DEFAULT '{}',
+    unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 4. Leaderboards table
+CREATE TABLE IF NOT EXISTS leaderboards (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    game_type TEXT NOT NULL,
+    period TEXT NOT NULL CHECK (period IN ('daily', 'weekly', 'monthly', 'all_time')),
+    score INTEGER NOT NULL DEFAULT 0,
+    rank INTEGER,
+    total_sessions INTEGER DEFAULT 0,
+    average_accuracy DECIMAL(5,2) DEFAULT 0.0,
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 5. Memory palaces table (optional for now)
 CREATE TABLE IF NOT EXISTS memory_palaces (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
     layout_data JSONB NOT NULL DEFAULT '{}', -- 3D layout, rooms, items
@@ -51,163 +81,166 @@ CREATE TABLE IF NOT EXISTS memory_palaces (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Achievements table
-CREATE TABLE IF NOT EXISTS achievements (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
-    achievement_type TEXT NOT NULL,
-    achievement_name TEXT NOT NULL,
-    description TEXT,
-    icon TEXT,
-    points INTEGER DEFAULT 0,
-    nft_token_id TEXT, -- Flow NFT token ID if minted
-    metadata JSONB DEFAULT '{}',
-    unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Leaderboards table
-CREATE TABLE IF NOT EXISTS leaderboards (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
+-- 6. User progress tracking table
+CREATE TABLE IF NOT EXISTS user_progress (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id TEXT NOT NULL,
     game_type TEXT NOT NULL,
-    period TEXT NOT NULL CHECK (period IN ('daily', 'weekly', 'monthly', 'all_time')),
-    score INTEGER NOT NULL DEFAULT 0,
-    rank INTEGER,
+    level INTEGER DEFAULT 1,
+    experience_points INTEGER DEFAULT 0,
     total_sessions INTEGER DEFAULT 0,
+    best_score INTEGER DEFAULT 0,
     average_accuracy DECIMAL(5,2) DEFAULT 0.0,
-    period_start DATE NOT NULL,
-    period_end DATE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, game_type, period, period_start)
-);
-
--- Social challenges table
-CREATE TABLE IF NOT EXISTS challenges (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    creator_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
-    challenge_type TEXT NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    parameters JSONB DEFAULT '{}', -- Game-specific challenge parameters
-    start_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    end_time TIMESTAMP WITH TIME ZONE,
-    max_participants INTEGER,
-    is_public BOOLEAN DEFAULT TRUE,
-    prize_pool INTEGER DEFAULT 0, -- In points or Flow tokens
-    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Challenge participants table
-CREATE TABLE IF NOT EXISTS challenge_participants (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    challenge_id UUID REFERENCES challenges(id) ON DELETE CASCADE NOT NULL,
-    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
-    score INTEGER DEFAULT 0,
-    rank INTEGER,
-    submission_data JSONB DEFAULT '{}',
-    completed_at TIMESTAMP WITH TIME ZONE,
-    joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(challenge_id, user_id)
-);
-
--- User friendships/follows table
-CREATE TABLE IF NOT EXISTS user_relationships (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    follower_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
-    following_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
-    relationship_type TEXT DEFAULT 'follow' CHECK (relationship_type IN ('follow', 'friend', 'blocked')),
+    total_time_played INTERVAL DEFAULT '0 seconds',
+    streak_current INTEGER DEFAULT 0,
+    streak_best INTEGER DEFAULT 0,
+    last_played_at TIMESTAMP WITH TIME ZONE,
+    statistics JSONB DEFAULT '{}', -- Detailed stats per game type
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(follower_id, following_id)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, game_type)
+);
+
+-- 7. Game sessions table for detailed session tracking
+CREATE TABLE IF NOT EXISTS game_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    game_type TEXT NOT NULL,
+    session_id TEXT UNIQUE NOT NULL, -- External session ID from game service
+    score INTEGER NOT NULL DEFAULT 0,
+    max_possible_score INTEGER NOT NULL DEFAULT 0,
+    accuracy DECIMAL(5,2) NOT NULL DEFAULT 0.0,
+    duration_seconds INTEGER NOT NULL DEFAULT 0,
+    difficulty_level INTEGER NOT NULL DEFAULT 1,
+    items_count INTEGER NOT NULL DEFAULT 0,
+    perfect_game BOOLEAN DEFAULT FALSE,
+    session_data JSONB DEFAULT '{}', -- Detailed game data
+    flow_transaction_id TEXT, -- Flow blockchain transaction ID
+    verification_status TEXT DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'failed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_practice_sessions_user_id ON practice_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_practice_sessions_game_type ON practice_sessions(game_type);
 CREATE INDEX IF NOT EXISTS idx_practice_sessions_created_at ON practice_sessions(created_at);
-CREATE INDEX IF NOT EXISTS idx_memory_palaces_user_id ON memory_palaces(user_id);
-CREATE INDEX IF NOT EXISTS idx_memory_palaces_public ON memory_palaces(is_public) WHERE is_public = TRUE;
 CREATE INDEX IF NOT EXISTS idx_achievements_user_id ON achievements(user_id);
 CREATE INDEX IF NOT EXISTS idx_leaderboards_game_type_period ON leaderboards(game_type, period);
-CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status);
-CREATE INDEX IF NOT EXISTS idx_challenge_participants_challenge_id ON challenge_participants(challenge_id);
+CREATE INDEX IF NOT EXISTS idx_memory_palaces_user_id ON memory_palaces(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_progress_user_id ON user_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_progress_game_type ON user_progress(game_type);
+CREATE INDEX IF NOT EXISTS idx_game_sessions_user_id ON game_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_game_sessions_game_type ON game_sessions(game_type);
+CREATE INDEX IF NOT EXISTS idx_game_sessions_session_id ON game_sessions(session_id);
+CREATE INDEX IF NOT EXISTS idx_game_sessions_created_at ON game_sessions(created_at);
 
--- Create updated_at trigger function
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Create triggers for updated_at
-CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_memory_palaces_updated_at BEFORE UPDATE ON memory_palaces FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_leaderboards_updated_at BEFORE UPDATE ON leaderboards FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Row Level Security (RLS) policies
+-- Enable Row Level Security (RLS) - Important for Supabase
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE memory_palaces ENABLE ROW LEVEL SECURITY;
 ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE leaderboards ENABLE ROW LEVEL SECURITY;
-ALTER TABLE challenges ENABLE ROW LEVEL SECURITY;
-ALTER TABLE challenge_participants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_relationships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE memory_palaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE game_sessions ENABLE ROW LEVEL SECURITY;
 
--- User profiles policies
-CREATE POLICY "Users can view their own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update their own profile" ON user_profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Users can insert their own profile" ON user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
-CREATE POLICY "Public profiles are viewable" ON user_profiles FOR SELECT USING (TRUE); -- Allow viewing other profiles
+-- Create RLS policies for public read access (for leaderboards)
+CREATE POLICY "Public leaderboards are viewable by everyone" ON leaderboards
+    FOR SELECT USING (true);
+
+-- Create RLS policies for user data access
+CREATE POLICY "Users can view own profile" ON user_profiles
+    FOR SELECT USING (auth_user_id = auth.uid() OR auth.uid() IS NULL);
+
+CREATE POLICY "Users can update own profile" ON user_profiles
+    FOR UPDATE USING (auth_user_id = auth.uid());
+
+CREATE POLICY "Users can insert own profile" ON user_profiles
+    FOR INSERT WITH CHECK (auth_user_id = auth.uid() OR auth.uid() IS NULL);
 
 -- Practice sessions policies
-CREATE POLICY "Users can view their own sessions" ON practice_sessions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert their own sessions" ON practice_sessions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view own sessions" ON practice_sessions
+    FOR SELECT USING (user_id = auth.uid()::text OR user_id = COALESCE(auth.uid()::text, user_id));
 
--- Memory palaces policies
-CREATE POLICY "Users can manage their own palaces" ON memory_palaces FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Public palaces are viewable" ON memory_palaces FOR SELECT USING (is_public = TRUE);
+CREATE POLICY "Users can insert own sessions" ON practice_sessions
+    FOR INSERT WITH CHECK (user_id = auth.uid()::text OR auth.uid() IS NULL);
 
 -- Achievements policies
-CREATE POLICY "Users can view their own achievements" ON achievements FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert their own achievements" ON achievements FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view own achievements" ON achievements
+    FOR SELECT USING (user_id = auth.uid()::text OR user_id = COALESCE(auth.uid()::text, user_id));
 
--- Leaderboards policies (public read)
-CREATE POLICY "Leaderboards are publicly viewable" ON leaderboards FOR SELECT USING (TRUE);
-CREATE POLICY "Users can update their own leaderboard entries" ON leaderboards FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own achievements" ON achievements
+    FOR INSERT WITH CHECK (user_id = auth.uid()::text OR auth.uid() IS NULL);
 
--- Challenges policies
-CREATE POLICY "Public challenges are viewable" ON challenges FOR SELECT USING (is_public = TRUE);
-CREATE POLICY "Users can create challenges" ON challenges FOR INSERT WITH CHECK (auth.uid() = creator_id);
-CREATE POLICY "Challenge creators can manage their challenges" ON challenges FOR ALL USING (auth.uid() = creator_id);
+-- Memory palaces policies
+CREATE POLICY "Users can view own palaces" ON memory_palaces
+    FOR SELECT USING (user_id = auth.uid()::text OR is_public = true);
 
--- Challenge participants policies
-CREATE POLICY "Users can view challenge participants" ON challenge_participants FOR SELECT USING (TRUE);
-CREATE POLICY "Users can join challenges" ON challenge_participants FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update their own participation" ON challenge_participants FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own palaces" ON memory_palaces
+    FOR INSERT WITH CHECK (user_id = auth.uid()::text OR auth.uid() IS NULL);
 
--- User relationships policies
-CREATE POLICY "Users can manage their own relationships" ON user_relationships FOR ALL USING (auth.uid() = follower_id);
-CREATE POLICY "Users can view relationships involving them" ON user_relationships FOR SELECT USING (auth.uid() = follower_id OR auth.uid() = following_id);
+CREATE POLICY "Users can update own palaces" ON memory_palaces
+    FOR UPDATE USING (user_id = auth.uid()::text);
 
--- Create function to automatically create user profile on signup
+-- User progress policies (allow both authenticated users and Flow wallet users)
+CREATE POLICY "Users can view own progress" ON user_progress
+    FOR SELECT USING (
+        user_id = auth.uid()::text OR
+        auth.uid() IS NULL OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
+
+CREATE POLICY "Users can insert own progress" ON user_progress
+    FOR INSERT WITH CHECK (
+        user_id = auth.uid()::text OR
+        auth.uid() IS NULL OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
+
+CREATE POLICY "Users can update own progress" ON user_progress
+    FOR UPDATE USING (
+        user_id = auth.uid()::text OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
+
+-- Game sessions policies (allow both authenticated users and Flow wallet users)
+CREATE POLICY "Users can view own sessions" ON game_sessions
+    FOR SELECT USING (
+        user_id = auth.uid()::text OR
+        auth.uid() IS NULL OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
+
+CREATE POLICY "Users can insert own sessions" ON game_sessions
+    FOR INSERT WITH CHECK (
+        user_id = auth.uid()::text OR
+        auth.uid() IS NULL OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
+
+CREATE POLICY "Users can update own sessions" ON game_sessions
+    FOR UPDATE USING (
+        user_id = auth.uid()::text OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
+
+-- Create a function to handle new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.user_profiles (id, username, display_name, avatar_url)
-    VALUES (
-        NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'username', NEW.email),
-        COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
-        NEW.raw_user_meta_data->>'avatar_url'
-    );
-    RETURN NEW;
+  INSERT INTO public.user_profiles (id, auth_user_id, username, display_name)
+  VALUES (
+    NEW.id::text,
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'username', NEW.email),
+    COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.email)
+  );
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create trigger for new user signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

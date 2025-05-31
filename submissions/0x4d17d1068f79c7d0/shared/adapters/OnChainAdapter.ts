@@ -57,6 +57,8 @@ export class OnChainAdapter extends BaseGameAdapter {
             last_played_at: new Date(progress.lastPlayed).toISOString(),
             statistics: progress.statistics,
             updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,game_type'
           });
 
         if (error) {
@@ -83,17 +85,18 @@ export class OnChainAdapter extends BaseGameAdapter {
           .from('user_progress')
           .select('*')
           .eq('user_id', userId)
-          .single();
+          .eq('game_type', 'general')
+          .maybeSingle();
 
         if (!error && data) {
           return {
             userId: data.user_id,
             level: data.level,
-            totalScore: data.total_score,
-            gamesPlayed: data.games_played,
-            bestStreak: data.best_streak,
-            culturalMastery: data.cultural_mastery || {},
-            lastPlayed: new Date(data.last_played).getTime(),
+            totalScore: data.experience_points || 0,
+            gamesPlayed: data.total_sessions,
+            bestStreak: data.streak_best,
+            culturalMastery: {}, // Not stored in database yet, use empty object
+            lastPlayed: data.last_played_at ? new Date(data.last_played_at).getTime() : Date.now(),
             achievements: await this.getAchievements(userId),
             statistics: data.statistics || this.createDefaultStatistics()
           };

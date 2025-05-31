@@ -25,8 +25,12 @@ export function Leaderboard({
   const [selectedPeriod, setSelectedPeriod] = useState(period);
 
   useEffect(() => {
-    loadLeaderboard();
-  }, [gameType, selectedPeriod]);
+    if (user) {
+      loadLeaderboard();
+    } else {
+      setLoading(false);
+    }
+  }, [gameType, selectedPeriod, user]);
 
   const loadLeaderboard = async () => {
     setLoading(true);
@@ -103,6 +107,37 @@ export function Leaderboard({
     };
     return periodNames[period] || period;
   };
+
+  // Anonymous user placeholder
+  if (!user) {
+    return (
+      <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            🏅 Rankings
+          </h3>
+        </div>
+
+        {/* Anonymous Content */}
+        <div className="p-6 text-center">
+          <div className="text-4xl mb-4">🏆</div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            Join the competition
+          </h3>
+          <p className="text-gray-600 text-sm mb-4">
+            Sign in to see your ranking and compete with other memory athletes.
+          </p>
+          <div className="space-y-2 text-xs text-gray-500">
+            <div>🥇 Compete for top rankings</div>
+            <div>📊 Track your progress over time</div>
+            <div>🎯 Challenge other players</div>
+            <div>🏆 Earn recognition for your skills</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

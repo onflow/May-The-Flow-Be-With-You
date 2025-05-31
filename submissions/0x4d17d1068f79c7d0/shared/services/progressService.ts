@@ -56,9 +56,18 @@ class ProgressService {
   // Save a game session
   async saveGameSession(session: Omit<GameSession, 'id' | 'created_at'>): Promise<GameSession | null> {
     try {
+      // Use game_sessions table instead of practice_sessions
+      const sessionData = {
+        ...session,
+        session_id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        difficulty_level: session.difficulty_level || 1,
+        perfect_game: session.accuracy >= 100,
+        completed_at: new Date().toISOString()
+      };
+
       const { data, error } = await this.supabase
-        .from('practice_sessions')
-        .insert(session)
+        .from('game_sessions')
+        .insert(sessionData)
         .select()
         .single();
 
@@ -83,9 +92,9 @@ class ProgressService {
         return this.getDefaultUserStats();
       }
 
-      // Get basic session stats
+      // Get basic session stats from game_sessions table
       const { data: sessions, error: sessionsError } = await this.supabase
-        .from('practice_sessions')
+        .from('game_sessions')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
@@ -373,9 +382,9 @@ class ProgressService {
       const gameTypes = ['random_palace', 'chaos_cards', 'entropy_storytelling', 'memory_speed'];
 
       for (const gameType of gameTypes) {
-        // Get top performers for this game type
+        // Get top performers for this game type from game_sessions table
         const { data: topPerformers, error } = await this.supabase
-          .from('practice_sessions')
+          .from('game_sessions')
           .select('user_id, score, accuracy')
           .eq('game_type', gameType)
           .order('score', { ascending: false });

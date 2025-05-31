@@ -10,6 +10,8 @@ interface ChaosCardsSetupProps {
   onDifficultyChange: (difficulty: number) => void;
   onStartGame: () => void;
   isLoading: boolean;
+  perfectRounds?: number;
+  totalRounds?: number;
 }
 
 export function ChaosCardsSetup({
@@ -19,9 +21,38 @@ export function ChaosCardsSetup({
   onDifficultyChange,
   onStartGame,
   isLoading,
+  perfectRounds = 0,
+  totalRounds = 0,
 }: ChaosCardsSetupProps) {
   return (
     <>
+      {/* Progress Info */}
+      {totalRounds > 0 && (
+        <div
+          className="mb-4 p-3 rounded-lg"
+          style={{ backgroundColor: theme.colors.primary + "10" }}
+        >
+          <div className="text-center">
+            <div
+              className="text-sm"
+              style={{ color: theme.colors.text + "80" }}
+            >
+              Progress: {totalRounds} games played • {perfectRounds} perfect
+              rounds
+            </div>
+            {perfectRounds >= 2 && (
+              <div
+                className="text-xs mt-1"
+                style={{ color: theme.colors.primary }}
+              >
+                🎯 Difficulty will increase after {2 - (perfectRounds % 2)} more
+                perfect rounds!
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Difficulty Selection */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
@@ -76,13 +107,17 @@ export function ChaosCardsSetup({
           className="text-sm space-y-1"
           style={{ color: theme.colors.text + "80" }}
         >
-          <li>1. Choose your difficulty level (3-6 cards)</li>
           <li>
-            2. Study the {theme.culture} symbols and their sequence for 15
-            seconds
+            1. Progressive difficulty: starts at 3 cards, increases with perfect
+            rounds
           </li>
-          <li>3. Recall the symbols in the correct order</li>
-          <li>4. Earn 10 points for each correct selection!</li>
+          <li>
+            2. Study the {theme.culture} symbols and their sequence (time
+            decreases with difficulty)
+          </li>
+          <li>3. Use the suggested memory technique for better recall</li>
+          <li>4. Recall the symbols in the correct order</li>
+          <li>5. Earn 10 points for each correct selection!</li>
         </ol>
       </div>
     </>

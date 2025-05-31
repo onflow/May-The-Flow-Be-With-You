@@ -33,6 +33,12 @@ export function ChaosCardsGame({
     handleDifficultyChange,
     handleReset,
     timeLeft,
+    memoryTechnique,
+    culturalStory,
+    perfectRounds,
+    totalRounds,
+    cards,
+    shuffledCards,
   } = useChaosCardsGame(culturalCategory, theme);
 
   const renderGamePhase = () => {
@@ -46,17 +52,28 @@ export function ChaosCardsGame({
             onDifficultyChange={handleDifficultyChange}
             onStartGame={startGame}
             isLoading={isLoading}
+            perfectRounds={perfectRounds}
+            totalRounds={totalRounds}
           />
         );
 
       case "memorize":
-        return <ChaosCardsMemorize theme={theme} timeLeft={timeLeft} />;
+        return (
+          <ChaosCardsMemorize
+            theme={theme}
+            timeLeft={timeLeft}
+            memoryTechnique={memoryTechnique}
+            culturalStory={culturalStory}
+            difficulty={gameState.gameData.difficulty}
+            perfectRounds={perfectRounds}
+          />
+        );
 
       case "recall":
         return (
           <ChaosCardsRecall
             theme={theme}
-            cards={gameState.gameData.cards}
+            cards={cards} // Use original sequence for progress indicator
             currentGuess={gameState.gameData.currentGuess}
           />
         );
@@ -67,12 +84,15 @@ export function ChaosCardsGame({
             theme={theme}
             gameInfo={gameInfo}
             score={gameState.score}
-            cards={gameState.gameData.cards}
+            cards={cards} // Use original sequence for results
             culturalCategory={culturalCategory}
             lastVerification={lastVerification}
             gameMode={gameMode}
             onPlayAgain={startGame}
             isLoading={isLoading}
+            perfectRounds={perfectRounds}
+            totalRounds={totalRounds}
+            memoryTechnique={memoryTechnique}
           />
         );
 
@@ -163,7 +183,7 @@ export function ChaosCardsGame({
         {gameState.gameData.cards.length > 0 && (
           <ChaosCardsDisplay
             theme={theme}
-            cards={gameState.gameData.cards}
+            cards={gameState.phase === "recall" ? shuffledCards : cards}
             phase={gameState.phase}
             userSequence={gameState.gameData.userSequence}
             onCardSelect={handleCardSelect}

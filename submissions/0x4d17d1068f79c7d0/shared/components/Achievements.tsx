@@ -78,6 +78,8 @@ export function Achievements({
   useEffect(() => {
     if (user) {
       loadAchievements();
+    } else {
+      setIsLoading(false);
     }
   }, [user]);
 
@@ -171,6 +173,46 @@ export function Achievements({
   // React.useImperativeHandle(ref, () => ({
   //   checkForNewAchievements,
   // }));
+
+  // Anonymous user placeholder
+  if (!user) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-gray-800">🏆 Badges</h3>
+          <span className="text-xs bg-gray-100 px-2 py-1 rounded">0/6</span>
+        </div>
+
+        <div className="text-center py-6">
+          <div className="text-4xl mb-4">🎖️</div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            Unlock achievements
+          </h3>
+          <p className="text-gray-600 text-sm mb-4">
+            Sign in to earn badges and track your memory training milestones.
+          </p>
+
+          {/* Preview of available achievements */}
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            {achievements.slice(0, 6).map((achievement) => (
+              <div
+                key={achievement.id}
+                className="flex flex-col items-center p-3 rounded-lg border bg-gray-50 border-gray-200 opacity-60 text-center"
+              >
+                <div className="text-2xl mb-1">{achievement.icon}</div>
+                <h4 className="font-medium text-xs text-gray-600">
+                  {achievement.name}
+                </h4>
+                <p className="text-xs mt-1 text-gray-500">
+                  {achievement.description.split(" ").slice(0, 4).join(" ")}...
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

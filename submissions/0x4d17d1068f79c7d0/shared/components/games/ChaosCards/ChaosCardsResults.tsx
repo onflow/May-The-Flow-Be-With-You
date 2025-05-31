@@ -24,6 +24,9 @@ interface ChaosCardsResultsProps {
   gameMode: "offchain" | "onchain";
   onPlayAgain: () => void;
   isLoading: boolean;
+  perfectRounds?: number;
+  totalRounds?: number;
+  memoryTechnique?: string;
 }
 
 export function ChaosCardsResults({
@@ -36,26 +39,56 @@ export function ChaosCardsResults({
   gameMode,
   onPlayAgain,
   isLoading,
+  perfectRounds = 0,
+  totalRounds = 0,
+  memoryTechnique = "observation",
 }: ChaosCardsResultsProps) {
   const accuracy = Math.round((score / (cards.length * 10)) * 100);
   const maxScore = cards.length * 10;
+  const isPerfect = score === maxScore;
 
   return (
-    <div className="text-center">
+    <div className="text-center space-y-4">
       <h3
         className="text-2xl font-bold mb-2"
         style={{ color: theme.colors.text }}
       >
-        {gameInfo.name} Complete! 🎉
+        {gameInfo.name} Complete! {isPerfect ? "🎯" : "🎉"}
       </h3>
 
-      <p className="text-lg mb-4">
-        Final Score: {score} / {maxScore}
-      </p>
+      <div className="space-y-2">
+        <p className="text-lg">
+          Final Score: {score} / {maxScore}
+        </p>
+        <p className="text-sm" style={{ color: theme.colors.text + "80" }}>
+          Accuracy: {accuracy}% • Level {cards.length} • {memoryTechnique}{" "}
+          technique
+        </p>
+      </div>
 
-      <p className="text-sm mb-4" style={{ color: theme.colors.text + "80" }}>
-        Accuracy: {accuracy}%
-      </p>
+      {/* Progress & Achievement Info */}
+      <div
+        className="p-3 rounded-lg"
+        style={{ backgroundColor: theme.colors.primary + "10" }}
+      >
+        <div className="text-sm space-y-1">
+          <div style={{ color: theme.colors.text + "80" }}>
+            Perfect Rounds: {isPerfect ? perfectRounds + 1 : 0} • Total Games:{" "}
+            {totalRounds}
+          </div>
+          {isPerfect && (
+            <div
+              style={{ color: theme.colors.primary }}
+              className="font-medium"
+            >
+              🎯 Perfect round!{" "}
+              {(perfectRounds + 1) % 2 === 0
+                ? "Difficulty will increase next game!"
+                : ""}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Action Buttons */}
       <div className="flex gap-3 justify-center mb-4">

@@ -31,6 +31,8 @@ export function UserStatsComponent({
   useEffect(() => {
     if (user) {
       loadUserData();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -87,6 +89,55 @@ export function UserStatsComponent({
             <div className="h-4 bg-gray-200 rounded"></div>
             <div className="h-4 bg-gray-200 rounded w-3/4"></div>
             <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Anonymous user placeholder
+  if (!user) {
+    return (
+      <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        {/* Tab Navigation */}
+        <div className="flex border-b border-gray-200">
+          {[
+            { id: "stats", label: "Stats", icon: Target },
+            { id: "achievements", label: "Achievements", icon: Medal },
+            ...(showLeaderboard
+              ? [{ id: "leaderboard", label: "Leaderboard", icon: Trophy }]
+              : []),
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id as any)}
+              className={`flex-1 px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                activeTab === id
+                  ? "bg-blue-50 text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+              }`}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Anonymous Content */}
+        <div className="p-6 text-center">
+          <div className="text-4xl mb-4">🎮</div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            Sign in to track your progress
+          </h3>
+          <p className="text-gray-600 text-sm mb-4">
+            Create an account to save your stats, earn achievements, and compete
+            on leaderboards.
+          </p>
+          <div className="space-y-2 text-xs text-gray-500">
+            <div>✅ Track your memory training progress</div>
+            <div>✅ Earn cultural achievement badges</div>
+            <div>✅ Compete with other memory athletes</div>
+            <div>✅ Access advanced memory techniques</div>
           </div>
         </div>
       </div>

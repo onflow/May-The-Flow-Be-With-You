@@ -66,6 +66,8 @@ export class OffChainAdapter extends BaseGameAdapter {
             last_played_at: new Date(progress.lastPlayed).toISOString(),
             statistics: progress.statistics,
             updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,game_type'
           });
 
         if (error) {
@@ -107,7 +109,8 @@ export class OffChainAdapter extends BaseGameAdapter {
           .from('user_progress')
           .select('*')
           .eq('user_id', userId)
-          .single();
+          .eq('game_type', 'general')
+          .maybeSingle();
 
         if (!error && data) {
           return {
@@ -116,8 +119,8 @@ export class OffChainAdapter extends BaseGameAdapter {
             totalScore: data.experience_points || 0,
             gamesPlayed: data.total_sessions,
             bestStreak: data.streak_best,
-            culturalMastery: data.cultural_mastery || {},
-            lastPlayed: new Date(data.last_played_at).getTime(),
+            culturalMastery: {}, // Not stored in database yet, use empty object
+            lastPlayed: data.last_played_at ? new Date(data.last_played_at).getTime() : Date.now(),
             achievements: await this.getAchievements(userId),
             statistics: data.statistics || this.createDefaultStatistics()
           };
@@ -354,7 +357,8 @@ export class OffChainAdapter extends BaseGameAdapter {
           .from('user_progress')
           .select('statistics')
           .eq('user_id', userId)
-          .single();
+          .eq('game_type', 'general')
+          .maybeSingle();
 
         if (!error && data?.statistics) {
           return data.statistics;
@@ -383,7 +387,8 @@ export class OffChainAdapter extends BaseGameAdapter {
         const { error } = await this.supabase
           .from('user_progress')
           .update({ statistics: stats })
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .eq('game_type', 'general');
 
         if (error) {
           console.error('Failed to save statistics to Supabase:', error);

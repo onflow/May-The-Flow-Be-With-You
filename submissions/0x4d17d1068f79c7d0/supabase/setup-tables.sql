@@ -179,25 +179,47 @@ CREATE POLICY "Users can insert own palaces" ON memory_palaces
 CREATE POLICY "Users can update own palaces" ON memory_palaces
     FOR UPDATE USING (user_id = auth.uid()::text);
 
--- User progress policies
+-- User progress policies (allow both authenticated users and Flow wallet users)
 CREATE POLICY "Users can view own progress" ON user_progress
-    FOR SELECT USING (user_id = auth.uid()::text OR auth.uid() IS NULL);
+    FOR SELECT USING (
+        user_id = auth.uid()::text OR
+        auth.uid() IS NULL OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
 
 CREATE POLICY "Users can insert own progress" ON user_progress
-    FOR INSERT WITH CHECK (user_id = auth.uid()::text OR auth.uid() IS NULL);
+    FOR INSERT WITH CHECK (
+        user_id = auth.uid()::text OR
+        auth.uid() IS NULL OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
 
 CREATE POLICY "Users can update own progress" ON user_progress
-    FOR UPDATE USING (user_id = auth.uid()::text);
+    FOR UPDATE USING (
+        user_id = auth.uid()::text OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
 
--- Game sessions policies
+-- Game sessions policies (allow both authenticated users and Flow wallet users)
 CREATE POLICY "Users can view own sessions" ON game_sessions
-    FOR SELECT USING (user_id = auth.uid()::text OR auth.uid() IS NULL);
+    FOR SELECT USING (
+        user_id = auth.uid()::text OR
+        auth.uid() IS NULL OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
 
 CREATE POLICY "Users can insert own sessions" ON game_sessions
-    FOR INSERT WITH CHECK (user_id = auth.uid()::text OR auth.uid() IS NULL);
+    FOR INSERT WITH CHECK (
+        user_id = auth.uid()::text OR
+        auth.uid() IS NULL OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
 
 CREATE POLICY "Users can update own sessions" ON game_sessions
-    FOR UPDATE USING (user_id = auth.uid()::text);
+    FOR UPDATE USING (
+        user_id = auth.uid()::text OR
+        user_id LIKE '0x%' -- Allow Flow wallet addresses
+    );
 
 -- Create a function to handle new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

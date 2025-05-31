@@ -6,7 +6,7 @@ import { useAuth } from "../../../../providers/AuthProvider";
 import { useGame } from "../../../../providers/GameProvider";
 import { useGameState } from "../../../../hooks/useGameState";
 import { getCulturalEmoji, getCulturalContext } from "../../../../utils/culturalMapping";
-import { getThemeItems } from "../../../../config/culturalThemes";
+import { getThemeItems, getThemeByCategory } from "../../../../config/culturalThemes";
 import { createGameError } from "../../../../utils/errorHandling";
 
 interface Card {
@@ -19,9 +19,14 @@ interface Card {
 
 interface ChaosCardsGameData {
   cards: Card[];
+  shuffledCards: Card[]; // Cards in randomized order for recall phase
   userSequence: string[];
   currentGuess: number;
   difficulty: number;
+  perfectRounds: number;
+  totalRounds: number;
+  memoryTechnique: "observation" | "loci" | "linking" | "story" | "cultural";
+  culturalStory: string;
 }
 
 export function useChaosCardsGame(culturalCategory: string, theme: any) {
@@ -38,24 +43,34 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     resetGame,
   } = useGame();
 
-  // Initialize game state
+  // Enhanced game state with progressive difficulty and memory techniques
   const [gameState, gameActions] = useGameState<ChaosCardsGameData>({
     initialGameData: {
       cards: [],
+      shuffledCards: [], // Cards in randomized order for recall
       userSequence: [],
       currentGuess: 0,
-      difficulty: 4,
+      difficulty: 3, // Start easier for progressive difficulty
+      perfectRounds: 0, // Track consecutive perfect rounds
+      totalRounds: 0, // Track total rounds played
+      memoryTechnique: "observation", // Current suggested technique
+      culturalStory: "", // Cultural narrative for current sequence
     },
     initialPhase: "setup",
     initialTimeLeft: 15,
     onPhaseChange: (newPhase, prevPhase) => {
       if (newPhase === "recall" && prevPhase === "memorize") {
-        // Start recall phase
-        console.log("Starting recall phase");
+        // Shuffle cards for recall phase so user can't just click in same order
+        const shuffledCards = [...gameState.gameData.cards].sort(() => Math.random() - 0.5);
+        gameActions.setGameData(prev => ({
+          ...prev,
+          shuffledCards
+        }));
+        console.log("Starting recall phase with shuffled cards");
       }
     },
     onGameEnd: (finalState) => {
-      // Handle game completion
+      // Handle game completion with enhanced scoring
       saveGameResult(finalState.score);
     }
   });
@@ -95,21 +110,65 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     };
   }, []);
 
-  // Generate culturally appropriate cards
+  // Progressive difficulty calculation
+  const calculateDifficulty = useCallback((perfectRounds: number, totalRounds: number) => {
+    // Start at 3, increase by 1 every 2 perfect rounds, max 8
+    const baseDifficulty = 3;
+    const difficultyIncrease = Math.floor(perfectRounds / 2);
+    return Math.min(baseDifficulty + difficultyIncrease, 8);
+  }, []);
+
+  // Calculate memorization time based on difficulty
+  const calculateMemorizationTime = useCallback((difficulty: number) => {
+    // Start at 15s, reduce by 1s per difficulty level above 3, min 8s
+    return Math.max(15 - (difficulty - 3), 8);
+  }, []);
+
+  // Determine memory technique based on difficulty and cultural context
+  const selectMemoryTechnique = useCallback((difficulty: number, culturalCategory: string) => {
+    if (difficulty <= 3) return "observation";
+    if (difficulty <= 5) return culturalCategory === "randomness-revolution" ? "loci" : "cultural";
+    if (difficulty <= 6) return "linking";
+    return "story";
+  }, []);
+
+  // Generate cultural story for memory aid
+  const generateCulturalStory = useCallback((cards: Card[], culturalCategory: string) => {
+    const theme = getThemeByCategory(culturalCategory);
+    const storyTemplates = {
+      "randomness-revolution": "In the ancient agora, a philosopher encounters",
+      "actually-fun-games": "The griot tells of a journey where",
+      "ai-and-llms": "In the temple garden, a sage contemplates",
+      "generative-art-worlds": "Along the songline, the ancestors placed"
+    };
+
+    const template = storyTemplates[culturalCategory as keyof typeof storyTemplates] || storyTemplates["randomness-revolution"];
+    const cardNames = cards.map(card => card.name).join(", then ");
+    return `${template} ${cardNames}. Each symbol holds ancient wisdom.`;
+  }, []);
+
+  // Generate culturally appropriate cards with enhanced randomization
   const generateCards = useCallback((count: number): Card[] => {
     const culturalObjects = getThemeItems(culturalCategory, "objects");
     const culturalConcepts = getThemeItems(culturalCategory, "concepts");
+    const culturalPlaces = getThemeItems(culturalCategory, "places");
 
-    const allItems = [...culturalObjects, ...culturalConcepts];
-    const selectedItems = allItems.slice(0, Math.min(count, allItems.length));
+    // Combine all items for more variety
+    const allItems = [...culturalObjects, ...culturalConcepts, ...culturalPlaces];
 
-    return selectedItems.map((item, index) => ({
+    // Shuffle the array for true randomization
+    const shuffled = [...allItems].sort(() => Math.random() - 0.5);
+    const selectedItems = shuffled.slice(0, Math.min(count, allItems.length));
+
+    const cards = selectedItems.map((item, index) => ({
       id: `card-${index}`,
       symbol: getCulturalEmoji(item),
       name: item,
       color: index % 2 === 0 ? theme.colors.primary : theme.colors.secondary,
       culturalContext: getCulturalContext(culturalCategory, item),
     }));
+
+    return cards;
   }, [culturalCategory, theme.colors.primary, theme.colors.secondary]);
 
   // Start new game
@@ -118,35 +177,59 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
       gameActions.setLoading(true);
       gameActions.setError(null);
 
-      // Generate cards immediately for anonymous users
-      const cards = generateCards(gameState.gameData.difficulty);
+      // Calculate progressive difficulty
+      const newDifficulty = calculateDifficulty(
+        gameState.gameData.perfectRounds,
+        gameState.gameData.totalRounds
+      );
 
-      // Update game state
+      // Calculate memorization time based on difficulty
+      const memorizationTime = calculateMemorizationTime(newDifficulty);
+
+      // Select appropriate memory technique
+      const memoryTechnique = selectMemoryTechnique(newDifficulty, culturalCategory);
+
+      // Generate cards for current difficulty with true randomization
+      const cards = generateCards(newDifficulty);
+
+      // Generate cultural story for memory aid
+      const culturalStory = generateCulturalStory(cards, culturalCategory);
+
+      // Update game state with enhanced data
       gameActions.setGameData({
         cards,
+        shuffledCards: [], // Will be populated when entering recall phase
         userSequence: [],
         currentGuess: 0,
-        difficulty: gameState.gameData.difficulty,
+        difficulty: newDifficulty,
+        perfectRounds: gameState.gameData.perfectRounds,
+        totalRounds: gameState.gameData.totalRounds + 1,
+        memoryTechnique,
+        culturalStory,
       });
 
+      // Set dynamic memorization time and start game
+      gameActions.setTimeLeft(memorizationTime);
       gameActions.setPhase("memorize");
       gameActions.setScore(0);
       startTimer();
 
       // Only try game service if user is authenticated
       if (user?.id) {
-        // Create game configuration
+        // Create game configuration with dynamic values
         const gameConfig = {
           gameType: "chaos_cards" as const,
           difficulty:
-            gameState.gameData.difficulty <= 3
+            newDifficulty <= 3
               ? ("easy" as const)
-              : gameState.gameData.difficulty <= 4
+              : newDifficulty <= 5
               ? ("medium" as const)
-              : ("hard" as const),
+              : newDifficulty <= 7
+              ? ("hard" as const)
+              : ("expert" as const),
           culture: culturalCategory,
-          itemCount: gameState.gameData.difficulty,
-          studyTime: 15,
+          itemCount: newDifficulty,
+          studyTime: memorizationTime,
           chaosTime: 2,
         };
 
@@ -165,12 +248,13 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
           culturalContext: item.culturalContext,
         }));
 
-        gameActions.setGameData({
+        gameActions.setGameData(prev => ({
+          ...prev,
           cards: vrfCards,
+          shuffledCards: [], // Will be populated when entering recall phase
           userSequence: [],
           currentGuess: 0,
-          difficulty: gameState.gameData.difficulty,
-        });
+        }));
       }
 
     } catch (error) {
@@ -181,28 +265,37 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     }
   }, [
     user?.id,
-    gameState.gameData.difficulty,
+    gameState.gameData.perfectRounds,
+    gameState.gameData.totalRounds,
     culturalCategory,
     theme.colors,
     startGameSession,
     currentGame,
     generateCards,
+    calculateDifficulty,
+    calculateMemorizationTime,
+    selectMemoryTechnique,
+    generateCulturalStory,
     gameActions,
     startTimer
   ]);
 
-  // Handle card selection during recall
+  // Handle card selection during recall with progressive difficulty tracking
   const handleCardSelect = useCallback((cardId: string) => {
-    const { cards, userSequence, currentGuess } = gameState.gameData;
+    const { cards, userSequence, currentGuess, perfectRounds } = gameState.gameData;
     const newSequence = [...userSequence, cardId];
     const isCorrect = cards[currentGuess]?.id === cardId;
     const newScore = isCorrect ? gameState.score + 10 : gameState.score;
 
     if (currentGuess >= cards.length - 1) {
-      // Game finished
+      // Game finished - check if perfect round
+      const maxPossibleScore = cards.length * 10;
+      const isPerfectRound = newScore === maxPossibleScore;
+
       gameActions.setGameData(prev => ({
         ...prev,
         userSequence: newSequence,
+        perfectRounds: isPerfectRound ? prev.perfectRounds + 1 : 0, // Reset streak if not perfect
       }));
       gameActions.setScore(newScore);
       gameActions.setPhase("results");
@@ -284,5 +377,15 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
 
     // Timer
     timeLeft: gameState.timeLeft,
+
+    // Enhanced game info
+    memoryTechnique: gameState.gameData.memoryTechnique,
+    culturalStory: gameState.gameData.culturalStory,
+    perfectRounds: gameState.gameData.perfectRounds,
+    totalRounds: gameState.gameData.totalRounds,
+
+    // Card arrays for different phases
+    cards: gameState.gameData.cards, // Original sequence for memorization
+    shuffledCards: gameState.gameData.shuffledCards, // Shuffled for recall
   };
 }

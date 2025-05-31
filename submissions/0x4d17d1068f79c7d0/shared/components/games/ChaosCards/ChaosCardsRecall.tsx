@@ -20,22 +20,25 @@ interface ChaosCardsRecallProps {
 export function ChaosCardsRecall({
   theme,
   cards,
-  currentGuess
+  currentGuess,
 }: ChaosCardsRecallProps) {
   return (
     <div className="text-center">
       <p
-        className="text-lg font-medium mb-4"
+        className="text-lg font-medium mb-2"
         style={{ color: theme.colors.text }}
       >
         Select the symbols in the correct order
       </p>
-      
-      <p className="text-sm" style={{ color: theme.colors.text + "80" }}>
-        Next: {cards[currentGuess]?.name} (
-        {currentGuess + 1}/{cards.length})
+
+      <p className="text-xs mb-3" style={{ color: theme.colors.text + "60" }}>
+        🔀 Cards have been shuffled - remember the original sequence!
       </p>
-      
+
+      <p className="text-sm" style={{ color: theme.colors.text + "80" }}>
+        Next: {cards[currentGuess]?.name} ({currentGuess + 1}/{cards.length})
+      </p>
+
       {/* Progress indicator */}
       <div className="mt-2 flex justify-center gap-1">
         {cards.map((_, index) => (
@@ -43,11 +46,12 @@ export function ChaosCardsRecall({
             key={index}
             className="w-3 h-3 rounded-full"
             style={{
-              backgroundColor: index < currentGuess 
-                ? theme.colors.primary 
-                : index === currentGuess
-                ? theme.colors.secondary
-                : theme.colors.primary + "30"
+              backgroundColor:
+                index < currentGuess
+                  ? theme.colors.primary
+                  : index === currentGuess
+                  ? theme.colors.secondary
+                  : theme.colors.primary + "30",
             }}
           />
         ))}

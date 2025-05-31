@@ -7,16 +7,32 @@ const nextConfig = {
     unoptimized: true,
     domains: ["localhost"],
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     // Handle Three.js and other 3D libraries
     config.externals.push({
       "utf-8-validate": "commonjs utf-8-validate",
       bufferutil: "commonjs bufferutil",
     });
+
+    // Exclude WebSocket and Flow dependencies from server bundle
+    if (isServer) {
+      config.externals.push("ws");
+      config.externals.push("@onflow/fcl");
+      config.externals.push("@onflow/types");
+      config.externals.push("@onflow/util-encode-key");
+      config.externals.push("canvas");
+    }
+
     return config;
   },
   // External packages for server components
-  serverExternalPackages: ["@supabase/supabase-js"],
+  serverExternalPackages: [
+    "@supabase/supabase-js",
+    "@onflow/fcl",
+    "@onflow/types",
+    "@onflow/util-encode-key",
+    "ws",
+  ],
 };
 
 module.exports = nextConfig;

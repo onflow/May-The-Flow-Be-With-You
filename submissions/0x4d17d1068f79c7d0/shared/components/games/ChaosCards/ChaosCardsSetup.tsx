@@ -6,7 +6,8 @@ import { CulturalTheme } from "../../../config/culturalThemes";
 interface ChaosCardsSetupProps {
   theme: CulturalTheme;
   gameInfo: any;
-  difficulty: number;
+  difficulty: number; // Current active difficulty (may be higher than baseline)
+  baselineDifficulty?: number; // User's chosen baseline difficulty
   onDifficultyChange: (difficulty: number) => void;
   onStartGame: () => void;
   isLoading: boolean;
@@ -18,12 +19,15 @@ export function ChaosCardsSetup({
   theme,
   gameInfo,
   difficulty,
+  baselineDifficulty = difficulty,
   onDifficultyChange,
   onStartGame,
   isLoading,
   perfectRounds = 0,
   totalRounds = 0,
 }: ChaosCardsSetupProps) {
+  // Check if difficulty has progressed beyond baseline
+  const hasProgressed = difficulty > baselineDifficulty;
   return (
     <>
       {/* Progress Info */}
@@ -40,7 +44,16 @@ export function ChaosCardsSetup({
               Progress: {totalRounds} games played • {perfectRounds} perfect
               rounds
             </div>
-            {perfectRounds >= 2 && (
+            {hasProgressed && (
+              <div
+                className="text-sm mt-1 font-medium"
+                style={{ color: theme.colors.primary }}
+              >
+                🚀 Difficulty increased to {difficulty} cards! (from{" "}
+                {baselineDifficulty} baseline)
+              </div>
+            )}
+            {perfectRounds >= 1 && !hasProgressed && (
               <div
                 className="text-xs mt-1"
                 style={{ color: theme.colors.primary }}
@@ -56,16 +69,26 @@ export function ChaosCardsSetup({
       {/* Difficulty Selection */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium">Cards:</label>
+          <label className="text-sm font-medium">
+            Starting Difficulty:
+            {hasProgressed && (
+              <span
+                className="text-xs ml-1"
+                style={{ color: theme.colors.primary }}
+              >
+                (Currently: {difficulty} cards)
+              </span>
+            )}
+          </label>
           <select
-            value={difficulty}
+            value={baselineDifficulty}
             onChange={(e) => onDifficultyChange(parseInt(e.target.value))}
             className="px-2 py-1 border rounded"
           >
-            <option value={3}>3 (Easy)</option>
-            <option value={4}>4 (Medium)</option>
-            <option value={5}>5 (Hard)</option>
-            <option value={6}>6 (Expert)</option>
+            <option value={5}>5 (Easy)</option>
+            <option value={6}>6 (Medium)</option>
+            <option value={7}>7 (Hard)</option>
+            <option value={8}>8 (Expert)</option>
           </select>
         </div>
 
@@ -108,8 +131,8 @@ export function ChaosCardsSetup({
           style={{ color: theme.colors.text + "80" }}
         >
           <li>
-            1. Progressive difficulty: starts at 3 cards, increases with perfect
-            rounds
+            1. Choose your starting difficulty: 5-8 cards. Difficulty
+            automatically increases with perfect rounds!
           </li>
           <li>
             2. Study the {theme.culture} symbols and their sequence (time

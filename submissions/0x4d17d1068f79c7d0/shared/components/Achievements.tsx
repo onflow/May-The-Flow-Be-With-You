@@ -3,6 +3,63 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../providers/AuthProvider";
 import { progressService } from "../services/progressService";
+import { ACHIEVEMENT_POINTS } from "../config/gameRules";
+
+// Optimized achievement stats calculation (memoized)
+const calculateAchievementStats = (stats: any) => {
+  // Pre-filter sessions once
+  const chaosCardsSessions = stats.recent_sessions.filter(
+    (s: any) => s.game_type === "chaos_cards"
+  );
+  const speedChallengeSessions = stats.recent_sessions.filter(
+    (s: any) => s.game_type === "memory_speed"
+  );
+  const highAccuracySessions = stats.recent_sessions.filter(
+    (s: any) => s.accuracy >= 90
+  );
+
+  // Pre-calculate sets
+  const difficultyLevels = new Set(
+    stats.recent_sessions.map((s: any) => s.difficulty_level)
+  );
+  const gameTypes = new Set(stats.recent_sessions.map((s: any) => s.game_type));
+
+  return {
+    bestAccuracy: stats.best_score || 0,
+    totalGames: stats.total_sessions || 0,
+    maxStreak: stats.current_streak || 0,
+    highAccuracyGames: highAccuracySessions.length,
+    difficultiesPlayed: difficultyLevels.size,
+    gameTypesPlayed: gameTypes.size,
+
+    // Chaos Cards specific stats (optimized)
+    maxDifficulty:
+      chaosCardsSessions.length > 0
+        ? Math.max(
+            ...chaosCardsSessions.map((s: any) => s.difficulty_level || 5)
+          )
+        : 5,
+    maxProgression:
+      chaosCardsSessions.length > 0
+        ? Math.max(
+            ...chaosCardsSessions.map((s: any) => (s.difficulty_level || 5) - 5)
+          )
+        : 0,
+    chaosCardsPerfectRounds: chaosCardsSessions.filter(
+      (s: any) => s.accuracy >= 100
+    ).length,
+
+    // Speed Challenge specific stats (optimized)
+    speedChallengeHighScore:
+      speedChallengeSessions.length > 0
+        ? Math.max(...speedChallengeSessions.map((s: any) => s.score || 0))
+        : 0,
+    speedChallengeCorrectAnswers: speedChallengeSessions.reduce(
+      (sum: number, s: any) => sum + (s.session_data?.correctAnswers || 0),
+      0
+    ),
+  };
+};
 
 interface Achievement {
   id: string;
@@ -12,9 +69,11 @@ interface Achievement {
   condition: (stats: any) => boolean;
   unlocked: boolean;
   unlockedAt?: Date;
+  points?: number;
 }
 
 const achievements: Achievement[] = [
+  // Universal Achievements (All Games)
   {
     id: "first_perfect",
     name: "Perfect Memory",
@@ -22,46 +81,74 @@ const achievements: Achievement[] = [
     icon: "🌟",
     condition: (stats) => stats.bestAccuracy >= 100,
     unlocked: false,
-  },
-  {
-    id: "speed_demon",
-    name: "Speed Demon",
-    description: "Complete 10 Memory Speed Challenges",
-    icon: "⚡",
-    condition: (stats) => stats.totalGames >= 10,
-    unlocked: false,
-  },
-  {
-    id: "streak_master",
-    name: "Streak Master",
-    description: "Get 5 perfect rounds in a row",
-    icon: "🔥",
-    condition: (stats) => stats.maxStreak >= 5,
-    unlocked: false,
+    points: ACHIEVEMENT_POINTS.first_perfect,
   },
   {
     id: "memory_athlete",
     name: "Memory Athlete",
-    description: "Score over 80% accuracy 20 times",
+    description: "Score over 90% accuracy 10 times",
     icon: "🏆",
-    condition: (stats) => stats.highAccuracyGames >= 20,
+    condition: (stats) => stats.highAccuracyGames >= 10,
     unlocked: false,
+    points: ACHIEVEMENT_POINTS.memory_athlete,
   },
   {
     id: "challenger",
     name: "The Challenger",
-    description: "Try all three difficulty levels",
+    description: "Try different difficulty levels",
     icon: "🎯",
     condition: (stats) => stats.difficultiesPlayed >= 3,
     unlocked: false,
+    points: ACHIEVEMENT_POINTS.challenger,
+  },
+
+  // Chaos Cards Specific (Memory & Progression)
+  {
+    id: "memory_champion",
+    name: "Memory Champion",
+    description: "Reach 7+ cards (Miller's magical number)",
+    icon: "🧠",
+    condition: (stats) => stats.maxDifficulty >= 7,
+    unlocked: false,
+    points: ACHIEVEMENT_POINTS.memory_champion,
   },
   {
-    id: "versatile",
-    name: "Versatile Mind",
-    description: "Play all three game types (Numbers, Words, Colors)",
-    icon: "🧠",
-    condition: (stats) => stats.gameTypesPlayed >= 3,
+    id: "progression_master",
+    name: "Progression Master",
+    description: "Advance 3+ levels from starting difficulty",
+    icon: "📈",
+    condition: (stats) => stats.maxProgression >= 3,
     unlocked: false,
+    points: ACHIEVEMENT_POINTS.progression_master,
+  },
+  {
+    id: "sequence_master",
+    name: "Sequence Master",
+    description: "Get 5 perfect rounds in Chaos Cards",
+    icon: "🔗",
+    condition: (stats) => stats.chaosCardsPerfectRounds >= 5,
+    unlocked: false,
+    points: ACHIEVEMENT_POINTS.sequence_master,
+  },
+
+  // Speed Challenge Specific (Speed & Reactions)
+  {
+    id: "speed_demon",
+    name: "Speed Demon",
+    description: "Score 50+ points in Speed Challenge",
+    icon: "🚀",
+    condition: (stats) => stats.speedChallengeHighScore >= 50,
+    unlocked: false,
+    points: ACHIEVEMENT_POINTS.speed_demon,
+  },
+  {
+    id: "lightning_reflexes",
+    name: "Lightning Reflexes",
+    description: "Answer 20 items correctly in Speed Challenge",
+    icon: "⚡",
+    condition: (stats) => stats.speedChallengeCorrectAnswers >= 20,
+    unlocked: false,
+    points: ACHIEVEMENT_POINTS.lightning_reflexes,
   },
 ];
 
@@ -92,19 +179,8 @@ export function Achievements({
       const stats = await progressService.getUserStats(user.id);
       if (!stats) return;
 
-      // Calculate achievement stats
-      const achievementStats = {
-        bestAccuracy: stats.best_score || 0,
-        totalGames: stats.total_sessions || 0,
-        maxStreak: stats.current_streak || 0,
-        highAccuracyGames:
-          stats.recent_sessions.filter((s) => s.accuracy >= 90).length || 0,
-        difficultiesPlayed:
-          new Set(stats.recent_sessions.map((s) => s.difficulty_level)).size ||
-          0,
-        gameTypesPlayed:
-          new Set(stats.recent_sessions.map((s) => s.game_type)).size || 0,
-      };
+      // Optimized achievement stats calculation
+      const achievementStats = calculateAchievementStats(stats);
 
       // Check which achievements are unlocked
       const updatedAchievements = achievements.map((achievement) => ({
@@ -127,18 +203,8 @@ export function Achievements({
       const stats = await progressService.getUserStats(user.id);
       if (!stats) return;
 
-      const achievementStats = {
-        bestAccuracy: stats.best_score || 0,
-        totalGames: stats.total_sessions || 0,
-        maxStreak: stats.current_streak || 0,
-        highAccuracyGames:
-          stats.recent_sessions.filter((s) => s.accuracy >= 90).length || 0,
-        difficultiesPlayed:
-          new Set(stats.recent_sessions.map((s) => s.difficulty_level)).size ||
-          0,
-        gameTypesPlayed:
-          new Set(stats.recent_sessions.map((s) => s.game_type)).size || 0,
-      };
+      // Use optimized achievement stats calculation
+      const achievementStats = calculateAchievementStats(stats);
 
       const newUnlocked: Achievement[] = [];
       const updatedAchievements = userAchievements.map((achievement) => {

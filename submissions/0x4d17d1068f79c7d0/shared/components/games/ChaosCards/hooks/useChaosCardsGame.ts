@@ -7,6 +7,7 @@ import { useGame } from "../../../../providers/GameProvider";
 import { useGameState } from "../../../../hooks/useGameState";
 import { getCulturalEmoji, getCulturalContext } from "../../../../utils/culturalMapping";
 import { getThemeItems, getThemeByCategory } from "../../../../config/culturalThemes";
+import { ScoringRules } from "../../../../config/gameRules";
 import { createGameError } from "../../../../utils/errorHandling";
 
 interface Card {
@@ -22,11 +23,13 @@ interface ChaosCardsGameData {
   shuffledCards: Card[]; // Cards in randomized order for recall phase
   userSequence: string[];
   currentGuess: number;
-  difficulty: number;
+  difficulty: number; // Current active difficulty (can be higher than baseline)
+  baselineDifficulty: number; // User's chosen starting difficulty
   perfectRounds: number;
   totalRounds: number;
   memoryTechnique: "observation" | "loci" | "linking" | "story" | "cultural";
   culturalStory: string;
+  scoreBreakdown?: string[]; // Detailed score breakdown for results display
 }
 
 export function useChaosCardsGame(culturalCategory: string, theme: any) {
@@ -50,7 +53,8 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
       shuffledCards: [], // Cards in randomized order for recall
       userSequence: [],
       currentGuess: 0,
-      difficulty: 3, // Start easier for progressive difficulty
+      difficulty: 5, // Current active difficulty
+      baselineDifficulty: 5, // User's chosen starting difficulty (5 = easy)
       perfectRounds: 0, // Track consecutive perfect rounds
       totalRounds: 0, // Track total rounds played
       memoryTechnique: "observation", // Current suggested technique
@@ -110,25 +114,27 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     };
   }, []);
 
-  // Progressive difficulty calculation
-  const calculateDifficulty = useCallback((perfectRounds: number, totalRounds: number) => {
-    // Start at 3, increase by 1 every 2 perfect rounds, max 8
-    const baseDifficulty = 3;
+  // Progressive difficulty calculation from user's chosen baseline
+  const calculateProgressiveDifficulty = useCallback((
+    baselineDifficulty: number,
+    perfectRounds: number
+  ) => {
+    // Increase difficulty by 1 card every 2 perfect rounds, max 10 cards
     const difficultyIncrease = Math.floor(perfectRounds / 2);
-    return Math.min(baseDifficulty + difficultyIncrease, 8);
+    return Math.min(baselineDifficulty + difficultyIncrease, 10);
   }, []);
 
   // Calculate memorization time based on difficulty
   const calculateMemorizationTime = useCallback((difficulty: number) => {
-    // Start at 15s, reduce by 1s per difficulty level above 3, min 8s
-    return Math.max(15 - (difficulty - 3), 8);
+    // Start at 20s for 5 cards, reduce by 2.5s per difficulty level above 5, min 10s
+    return Math.max(20 - (difficulty - 5) * 2.5, 10);
   }, []);
 
   // Determine memory technique based on difficulty and cultural context
   const selectMemoryTechnique = useCallback((difficulty: number, culturalCategory: string) => {
-    if (difficulty <= 3) return "observation";
-    if (difficulty <= 5) return culturalCategory === "randomness-revolution" ? "loci" : "cultural";
-    if (difficulty <= 6) return "linking";
+    if (difficulty <= 5) return "observation";
+    if (difficulty <= 6) return culturalCategory === "randomness-revolution" ? "loci" : "cultural";
+    if (difficulty <= 7) return "linking";
     return "story";
   }, []);
 
@@ -177,20 +183,20 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
       gameActions.setLoading(true);
       gameActions.setError(null);
 
-      // Calculate progressive difficulty
-      const newDifficulty = calculateDifficulty(
-        gameState.gameData.perfectRounds,
-        gameState.gameData.totalRounds
+      // Calculate progressive difficulty from user's baseline
+      const currentDifficulty = calculateProgressiveDifficulty(
+        gameState.gameData.baselineDifficulty,
+        gameState.gameData.perfectRounds
       );
 
-      // Calculate memorization time based on difficulty
-      const memorizationTime = calculateMemorizationTime(newDifficulty);
+      // Calculate memorization time based on current difficulty
+      const memorizationTime = calculateMemorizationTime(currentDifficulty);
 
       // Select appropriate memory technique
-      const memoryTechnique = selectMemoryTechnique(newDifficulty, culturalCategory);
+      const memoryTechnique = selectMemoryTechnique(currentDifficulty, culturalCategory);
 
       // Generate cards for current difficulty with true randomization
-      const cards = generateCards(newDifficulty);
+      const cards = generateCards(currentDifficulty);
 
       // Generate cultural story for memory aid
       const culturalStory = generateCulturalStory(cards, culturalCategory);
@@ -201,7 +207,8 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
         shuffledCards: [], // Will be populated when entering recall phase
         userSequence: [],
         currentGuess: 0,
-        difficulty: newDifficulty,
+        difficulty: currentDifficulty, // Use calculated progressive difficulty
+        baselineDifficulty: gameState.gameData.baselineDifficulty, // Keep user's baseline
         perfectRounds: gameState.gameData.perfectRounds,
         totalRounds: gameState.gameData.totalRounds + 1,
         memoryTechnique,
@@ -220,15 +227,15 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
         const gameConfig = {
           gameType: "chaos_cards" as const,
           difficulty:
-            newDifficulty <= 3
+            currentDifficulty <= 5
               ? ("easy" as const)
-              : newDifficulty <= 5
+              : currentDifficulty <= 6
               ? ("medium" as const)
-              : newDifficulty <= 7
+              : currentDifficulty <= 7
               ? ("hard" as const)
               : ("expert" as const),
           culture: culturalCategory,
-          itemCount: newDifficulty,
+          itemCount: currentDifficulty,
           studyTime: memorizationTime,
           chaosTime: 2,
         };
@@ -265,14 +272,14 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     }
   }, [
     user?.id,
+    gameState.gameData.baselineDifficulty,
     gameState.gameData.perfectRounds,
-    gameState.gameData.totalRounds,
     culturalCategory,
     theme.colors,
     startGameSession,
     currentGame,
     generateCards,
-    calculateDifficulty,
+    calculateProgressiveDifficulty,
     calculateMemorizationTime,
     selectMemoryTechnique,
     generateCulturalStory,
@@ -280,34 +287,69 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     startTimer
   ]);
 
-  // Handle card selection during recall with progressive difficulty tracking
+  // Optimized scoring calculation (memoized)
+  const calculateFinalScore = useCallback((
+    correctAnswers: number,
+    totalCards: number,
+    difficulty: number,
+    memoryTechnique: string,
+    isProgression: boolean
+  ) => {
+    const memorizationTime = calculateMemorizationTime(difficulty);
+    const timeUsed = memorizationTime; // For now, assume full time used
+
+    return ScoringRules.calculateChaosCardsScore(
+      correctAnswers,
+      totalCards,
+      difficulty,
+      memorizationTime,
+      timeUsed,
+      memoryTechnique,
+      isProgression,
+      culturalCategory
+    );
+  }, [calculateMemorizationTime, culturalCategory]);
+
+  // Handle card selection during recall with optimized scoring
   const handleCardSelect = useCallback((cardId: string) => {
-    const { cards, userSequence, currentGuess, perfectRounds } = gameState.gameData;
+    const { cards, userSequence, currentGuess, perfectRounds, baselineDifficulty, difficulty, memoryTechnique } = gameState.gameData;
     const newSequence = [...userSequence, cardId];
-    const isCorrect = cards[currentGuess]?.id === cardId;
-    const newScore = isCorrect ? gameState.score + 10 : gameState.score;
 
     if (currentGuess >= cards.length - 1) {
-      // Game finished - check if perfect round
-      const maxPossibleScore = cards.length * 10;
-      const isPerfectRound = newScore === maxPossibleScore;
+      // Game finished - calculate score only once at the end
+      const correctAnswers = newSequence.filter((answer, index) => answer === cards[index]?.id).length;
+      const isProgression = difficulty > baselineDifficulty;
+
+      const scoreResult = calculateFinalScore(
+        correctAnswers,
+        cards.length,
+        difficulty,
+        memoryTechnique,
+        isProgression
+      );
+
+      const isPerfectRound = correctAnswers === cards.length;
+      const newPerfectRounds = isPerfectRound ? perfectRounds + 1 : 0;
+      const newDifficulty = calculateProgressiveDifficulty(baselineDifficulty, newPerfectRounds);
 
       gameActions.setGameData(prev => ({
         ...prev,
         userSequence: newSequence,
-        perfectRounds: isPerfectRound ? prev.perfectRounds + 1 : 0, // Reset streak if not perfect
+        perfectRounds: newPerfectRounds,
+        difficulty: newDifficulty,
+        scoreBreakdown: scoreResult.breakdown,
       }));
-      gameActions.setScore(newScore);
+      gameActions.setScore(scoreResult.totalScore);
       gameActions.setPhase("results");
     } else {
+      // Just update sequence and guess - no heavy calculations
       gameActions.setGameData(prev => ({
         ...prev,
         userSequence: newSequence,
         currentGuess: prev.currentGuess + 1,
       }));
-      gameActions.setScore(newScore);
     }
-  }, [gameState.gameData, gameState.score, gameActions]);
+  }, [gameState.gameData, gameActions, calculateProgressiveDifficulty, calculateFinalScore]);
 
   // Save game result
   const saveGameResult = useCallback(async (finalScore: number) => {
@@ -316,7 +358,7 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     try {
       const { cards, userSequence } = gameState.gameData;
       const maxPossibleScore = cards.length * 10;
-      const accuracy = finalScore / maxPossibleScore;
+      const accuracy = (finalScore / maxPossibleScore) * 100; // Convert to percentage (0-100)
       const duration = 15; // Study time + recall time
       const perfect = finalScore === maxPossibleScore;
 
@@ -343,13 +385,20 @@ export function useChaosCardsGame(culturalCategory: string, theme: any) {
     }
   }, [user?.id, currentGame, gameState.gameData, endGameSession, gameActions]);
 
-  // Handle difficulty change
-  const handleDifficultyChange = useCallback((difficulty: number) => {
+  // Handle difficulty change (updates baseline difficulty)
+  const handleDifficultyChange = useCallback((newBaselineDifficulty: number) => {
+    // Calculate what the current difficulty should be with the new baseline
+    const newCurrentDifficulty = calculateProgressiveDifficulty(
+      newBaselineDifficulty,
+      gameState.gameData.perfectRounds
+    );
+
     gameActions.setGameData(prev => ({
       ...prev,
-      difficulty
+      baselineDifficulty: newBaselineDifficulty,
+      difficulty: newCurrentDifficulty
     }));
-  }, [gameActions]);
+  }, [gameActions, gameState.gameData.perfectRounds, calculateProgressiveDifficulty]);
 
   // Reset game
   const handleReset = useCallback(() => {

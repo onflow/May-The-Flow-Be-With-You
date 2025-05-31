@@ -28,31 +28,31 @@ export interface GameTypeConfig {
 const CHAOS_CARDS_DIFFICULTIES: Record<DifficultyLevel, DifficultyConfig> = {
   easy: {
     level: 'easy',
-    itemCount: 3,
+    itemCount: 5,
     studyTime: 20,
     scoreMultiplier: 1.0,
-    description: '3 cards, 20 seconds to memorize'
+    description: '5 cards, 20 seconds to memorize'
   },
   medium: {
     level: 'medium',
-    itemCount: 4,
+    itemCount: 6,
     studyTime: 15,
     scoreMultiplier: 1.5,
-    description: '4 cards, 15 seconds to memorize'
+    description: '6 cards, 15 seconds to memorize'
   },
   hard: {
     level: 'hard',
-    itemCount: 5,
+    itemCount: 7,
     studyTime: 12,
     scoreMultiplier: 2.0,
-    description: '5 cards, 12 seconds to memorize'
+    description: '7 cards, 12 seconds to memorize'
   },
   expert: {
     level: 'expert',
-    itemCount: 6,
+    itemCount: 8,
     studyTime: 10,
     scoreMultiplier: 2.5,
-    description: '6 cards, 10 seconds to memorize'
+    description: '8 cards, 10 seconds to memorize'
   }
 };
 
@@ -215,10 +215,86 @@ export const GAME_CONFIGS: Record<GameType, GameTypeConfig> = {
   }
 };
 
-// Scoring utilities
+// Enhanced Scoring System
 export const ScoringRules = {
   /**
-   * Calculate base score for a game
+   * Calculate enhanced Chaos Cards score with multiple bonuses
+   */
+  calculateChaosCardsScore(
+    correctCards: number,
+    totalCards: number,
+    difficulty: number,
+    memorizationTime: number,
+    timeUsed: number,
+    memoryTechnique: string,
+    isProgression: boolean = false,
+    culturalCategory: string = ''
+  ): {
+    baseScore: number;
+    difficultyBonus: number;
+    timeBonus: number;
+    techniqueBonus: number;
+    progressionBonus: number;
+    culturalBonus: number;
+    totalScore: number;
+    breakdown: string[];
+  } {
+    // Base points per card (scales with difficulty)
+    const basePointsPerCard = 5 + Math.max(0, (difficulty - 5) * 2); // 5-11 points per card
+
+    // Accuracy score
+    const baseScore = correctCards * basePointsPerCard;
+
+    // Difficulty multiplier (exponential growth for higher difficulties)
+    const difficultyMultiplier = Math.pow(1.15, Math.max(0, difficulty - 5)); // 1.0x to 2.0x
+    const difficultyBonus = Math.floor(baseScore * (difficultyMultiplier - 1));
+
+    // Time bonus (faster memorization = bonus, max 20 points)
+    const timeEfficiency = Math.max(0, (memorizationTime - timeUsed) / memorizationTime);
+    const timeBonus = Math.floor(timeEfficiency * 20);
+
+    // Memory technique bonus
+    const techniqueMultipliers = {
+      'observation': 0,
+      'loci': 10,
+      'linking': 15,
+      'story': 20,
+      'cultural': 25
+    };
+    const techniqueBonus = techniqueMultipliers[memoryTechnique as keyof typeof techniqueMultipliers] || 0;
+
+    // Progression bonus (advancing difficulty)
+    const progressionBonus = isProgression ? 25 : 0;
+
+    // Cultural exploration bonus (first time playing a culture)
+    const culturalBonus = culturalCategory && culturalCategory !== 'randomness-revolution' ? 10 : 0;
+
+    const totalScore = baseScore + difficultyBonus + timeBonus + techniqueBonus + progressionBonus + culturalBonus;
+
+    // Create breakdown for display (optimized)
+    const breakdown: string[] = [
+      `Base: ${baseScore} pts (${correctCards}/${totalCards} × ${basePointsPerCard} pts)`,
+      ...(difficultyBonus > 0 ? [`Difficulty: +${difficultyBonus} pts (Level ${difficulty})`] : []),
+      ...(timeBonus > 0 ? [`Speed: +${timeBonus} pts (Quick memorization)`] : []),
+      ...(techniqueBonus > 0 ? [`Technique: +${techniqueBonus} pts (${memoryTechnique})`] : []),
+      ...(progressionBonus > 0 ? [`Progression: +${progressionBonus} pts (Level up!)`] : []),
+      ...(culturalBonus > 0 ? [`Cultural: +${culturalBonus} pts (New culture)`] : [])
+    ];
+
+    return {
+      baseScore,
+      difficultyBonus,
+      timeBonus,
+      techniqueBonus,
+      progressionBonus,
+      culturalBonus,
+      totalScore,
+      breakdown
+    };
+  },
+
+  /**
+   * Calculate base score for other game types (legacy support)
    */
   calculateBaseScore(
     gameType: GameType,
@@ -229,16 +305,16 @@ export const ScoringRules = {
     const config = GAME_CONFIGS[gameType];
     const difficultyConfig = config.difficulties[difficulty];
     const accuracy = correctAnswers / totalQuestions;
-    
+
     return Math.floor(
-      config.basePoints * 
-      accuracy * 
+      config.basePoints *
+      accuracy *
       difficultyConfig.scoreMultiplier
     );
   },
 
   /**
-   * Calculate time bonus
+   * Calculate time bonus (legacy)
    */
   calculateTimeBonus(
     timeSpent: number,
@@ -270,6 +346,39 @@ export const ScoringRules = {
   }
 };
 
+// Milestone rewards for reaching difficulty levels
+export const MILESTONE_REWARDS = {
+  7: { points: 50, title: "Miller's Number Reached!", description: "Reached the magical number seven!" },
+  8: { points: 75, title: "Beyond Human Limits!", description: "Exceeded normal memory capacity!" },
+  9: { points: 100, title: "Memory Superhuman!", description: "Achieved superhuman memory performance!" },
+  10: { points: 150, title: "Legendary Memory Master!", description: "Reached legendary memory mastery!" }
+};
+
+// Cultural exploration bonuses
+export const CULTURAL_BONUSES = {
+  'first_culture': 10,      // First game in any culture
+  'culture_explorer': 25,   // Play 3 different cultures
+  'culture_master': 50,     // Perfect game in 5 cultures
+  'global_memory': 100,     // Master all available cultures
+};
+
+// Balanced achievement point values
+export const ACHIEVEMENT_POINTS = {
+  // Tier 1: Basic achievements (1-2 good games worth)
+  'first_perfect': 25,
+  'challenger': 30,
+
+  // Tier 2: Skill achievements (3-5 good games worth)
+  'memory_champion': 75,
+  'progression_master': 60,
+  'sequence_master': 90,
+
+  // Tier 3: Mastery achievements (10+ good games worth)
+  'memory_athlete': 150,
+  'speed_demon': 120,
+  'lightning_reflexes': 100,
+};
+
 // Achievement thresholds
 export const AchievementThresholds = {
   PERFECT_GAME: 1.0, // 100% accuracy
@@ -279,7 +388,7 @@ export const AchievementThresholds = {
   STREAK_MASTER: 10, // 10 correct in a row
   CULTURE_EXPLORER: 5, // Play 5 different cultures
   DEDICATION: 50, // Play 50 games
-  MASTERY: 1000, // Score 1000+ points in a single game
+  MASTERY: 150, // Score 150+ points in a single game (updated for new scoring)
 };
 
 // Utility functions
@@ -288,7 +397,7 @@ export function getGameConfig(gameType: GameType): GameTypeConfig {
 }
 
 export function getDifficultyConfig(
-  gameType: GameType, 
+  gameType: GameType,
   difficulty: DifficultyLevel
 ): DifficultyConfig {
   return GAME_CONFIGS[gameType].difficulties[difficulty];
@@ -318,6 +427,6 @@ export function validateGameConfig(
   gameType: GameType,
   difficulty: DifficultyLevel
 ): boolean {
-  return gameType in GAME_CONFIGS && 
+  return gameType in GAME_CONFIGS &&
          difficulty in GAME_CONFIGS[gameType].difficulties;
 }

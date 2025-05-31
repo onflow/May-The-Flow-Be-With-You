@@ -264,44 +264,101 @@ export function UserStatsComponent({
 
         {/* Achievements Tab */}
         {activeTab === "achievements" && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800">
-              Your Achievements
-            </h3>
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">🏆 Badges</h3>
             {achievements.length === 0 ? (
-              <p className="text-gray-600 text-center py-8">
+              <p className="text-gray-600 text-center py-6 text-sm">
                 No achievements yet. Keep playing to unlock them!
               </p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {achievements.map((achievement) => (
-                  <div
-                    key={achievement.id}
-                    className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="text-2xl">{achievement.icon}</div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-800">
-                          {achievement.achievement_name}
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {achievement.description}
-                        </p>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-yellow-600 font-medium">
-                            +{achievement.points} points
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(
-                              achievement.unlocked_at!
-                            ).toLocaleDateString()}
-                          </span>
-                        </div>
+              <div className="space-y-3">
+                {/* Earned Achievements - Just Emojis */}
+                <div>
+                  <h4 className="text-xs font-medium text-gray-700 mb-1">
+                    Earned
+                  </h4>
+                  <div className="flex flex-wrap gap-1 p-2 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                    {achievements.slice(0, 10).map((achievement, index) => (
+                      <div
+                        key={achievement.id || index}
+                        className="text-lg hover:scale-110 transition-transform cursor-pointer"
+                        title={`${achievement.achievement_name} (+${
+                          achievement.points
+                        } pts) - ${new Date(
+                          achievement.unlocked_at!
+                        ).toLocaleDateString()}`}
+                      >
+                        {achievement.icon}
+                      </div>
+                    ))}
+                    {achievements.length > 10 && (
+                      <div className="text-xs text-gray-500 self-center ml-1">
+                        +{achievements.length - 10} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Available by Game Type */}
+                <div>
+                  <h4 className="text-xs font-medium text-gray-700 mb-1">
+                    Available
+                  </h4>
+                  <div className="space-y-2">
+                    {/* Chaos Cards Achievements */}
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded border border-blue-200">
+                      <span className="text-xs font-medium text-blue-800">
+                        Chaos Cards:
+                      </span>
+                      <div className="flex gap-1">
+                        <span title="Memory Champion - Reach 7+ cards">🧠</span>
+                        <span title="Progression Master - Advance 3+ levels">
+                          📈
+                        </span>
+                        <span title="Sequence Master - 5 perfect rounds">
+                          🔗
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Speed Challenge Achievements */}
+                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded border border-green-200">
+                      <span className="text-xs font-medium text-green-800">
+                        Speed Challenge:
+                      </span>
+                      <div className="flex gap-1">
+                        <span title="Speed Demon - Score 50+ points">🚀</span>
+                        <span title="Lightning Reflexes - 20 correct answers">
+                          ⚡
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Universal Achievements */}
+                    <div className="flex items-center gap-2 p-2 bg-purple-50 rounded border border-purple-200">
+                      <span className="text-xs font-medium text-purple-800">
+                        All Games:
+                      </span>
+                      <div className="flex gap-1">
+                        <span title="Perfect Memory - 100% accuracy">🌟</span>
+                        <span title="Memory Athlete - 90%+ accuracy 10 times">
+                          🏆
+                        </span>
+                        <span title="The Challenger - Try different difficulties">
+                          🎯
+                        </span>
                       </div>
                     </div>
                   </div>
-                ))}
+                </div>
+
+                {/* Achievement Summary */}
+                <div className="text-xs text-gray-600 text-center">
+                  {achievements.length} achievement
+                  {achievements.length !== 1 ? "s" : ""} earned •{" "}
+                  {achievements.reduce((sum, a) => sum + (a.points || 0), 0)}{" "}
+                  total points
+                </div>
               </div>
             )}
           </div>

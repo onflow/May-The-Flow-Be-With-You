@@ -49,6 +49,7 @@ export function ChaosCardsGame({
             theme={theme}
             gameInfo={gameInfo}
             difficulty={gameState.gameData.difficulty}
+            baselineDifficulty={gameState.gameData.baselineDifficulty}
             onDifficultyChange={handleDifficultyChange}
             onStartGame={startGame}
             isLoading={isLoading}
@@ -93,6 +94,10 @@ export function ChaosCardsGame({
             perfectRounds={perfectRounds}
             totalRounds={totalRounds}
             memoryTechnique={memoryTechnique}
+            difficulty={gameState.gameData.difficulty}
+            baselineDifficulty={gameState.gameData.baselineDifficulty}
+            userSequence={gameState.gameData.userSequence}
+            scoreBreakdown={gameState.gameData.scoreBreakdown}
           />
         );
 

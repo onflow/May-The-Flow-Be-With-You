@@ -8,7 +8,7 @@ import { prepareAgentkitAndWalletProvider } from "./prepare-agentkit";
  * Agent Configuration Guide
  *
  * This file handles the core configuration of your AI agent's behavior and capabilities.
- *
+
  * Key Steps to Customize Your Agent:
  *
  * 1. Select your LLM:
@@ -19,6 +19,7 @@ import { prepareAgentkitAndWalletProvider } from "./prepare-agentkit";
  *    - Pass the LLM, tools, and memory into `createReactAgent()`
  *    - Configure agent-specific parameters
  */
+
 
 // The agent
 let agent: ReturnType<typeof createReactAgent>;
@@ -40,14 +41,10 @@ export async function createAgent(): Promise<ReturnType<typeof createReactAgent>
     return agent;
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("I need an OPENAI_API_KEY in your .env file to power my intelligence.");
-  }
-
-  const { agentkit, walletProvider } = await prepareAgentkitAndWalletProvider();
-
   try {
-    // Initialize LLM: https://platform.openai.com/docs/models#gpt-4o
+    const { agentkit, walletProvider } = await prepareAgentkitAndWalletProvider();
+
+    // Initialize LLM
     const llm = new ChatOpenAI({ model: "gpt-4o-mini" });
 
     const tools = await getLangChainTools(agentkit);
@@ -56,56 +53,42 @@ export async function createAgent(): Promise<ReturnType<typeof createReactAgent>
     // Initialize Agent
     const canUseFaucet = walletProvider.getNetwork().networkId == "flow-testnet";
     const faucetMessage = `If you ever need funds, you can request them from the faucet.`;
-    const flowContextMessage = canUseFaucet
-      ? `
-  You are now operating on the Flow blockchain testnet using a Viem wallet. Flow is a fast, decentralized, and
-  developer-friendly blockchain designed for NFTs, games, and apps. 
-
-  Key facts about Flow:
-  - Flow uses a proof-of-stake consensus mechanism
-  - The native token is FLOW
-  - Flow has a unique multi-role architecture for high throughput
-  - The testnet is EVM-compatible (works with MetaMask + Viem)
-  - RPC URL: https://testnet.evm.nodes.onflow.org
-  - Chain ID: 545
-
-  Your wallet address is \${await walletProvider.getAddress()}.
-`
-      : '';
-const cantUseFaucetMessage = `If you need funds, you can provide your wallet details and request funds from the user.`;
+    const cantUseFaucetMessage = `If you need funds, you can provide your wallet details and request funds from the user.`;
+    
+    // Flow-specific knowledge
+    const flowContextMessage = canUseFaucet ? `
+      You are now operating on the Flow blockchain testnet using a Viem wallet. Flow is a fast, decentralized, and
+      developer-friendly blockchain designed for NFTs, games, and apps. 
+      
+      Key facts about Flow:
+      - Flow uses a proof-of-stake consensus mechanism
+      - The native token is FLOW
+      - Flow has a unique multi-role architecture that allows for high throughput
+      - The testnet is EVM-compatible, which allows it to work with MetaMask and Viem
+      - The testnet RPC URL is "https://testnet.evm.nodes.onflow.org"
+      - The Flow testnet chain ID is 545
+      
+      Users can interact with Flow through MetaMask by adding the Flow testnet network.
+      My wallet address is ${await walletProvider.getAddress()}.
+    ` : '';
+    
     agent = createReactAgent({
       llm,
       tools,
       checkpointSaver: memory,
       messageModifier: `
-    You are a helpful agent interacting with the Flow blockchain testnet using a Viem wallet.
-    Flow testnet supports EVM, so you can use Ethereum-compatible tools.
-     ${flowContextMessage}
-
-    Before your first action, check the wallet details. If you see a 5XX error, ask the user to try again later.
-    If a task is unsupported, let the user know and point them to CDP SDK + AgentKit at:
-    https://docs.cdp.coinbase.com or https://developers.flow.com.
-
-    Be concise, helpful, and avoid repeating tool descriptions unless asked.
-  `,
+        You are a helpful agent that can interact with the Flow blockchain testnet using a Viem wallet.
+        You are empowered to interact with the blockchain using standard Ethereum-compatible tools since
+        Flow testnet supports EVM compatibility.
+        ${flowContextMessage}
+        Before executing your first action, get the wallet details to see what network 
+        you're on. If there is a 5XX (internal) HTTP error code, ask the user to try again later. If someone 
+        asks you to do something you can't do with your currently available tools, you must say so, and 
+        encourage them to implement it themselves using the CDP SDK + Agentkit, recommend they go to 
+        docs.cdp.coinbase.com or developers.flow.com for more information. Be concise and helpful with your responses. Refrain from 
+        restating your tools' descriptions unless it is explicitly requested.
+        `,
     });
-
-    // agent = createReactAgent({
-    //   llm,
-    //   tools,
-    //   checkpointSaver: memory,
-    //   messageModifier: `
-    //     You are a helpful agent that can interact onchain using the Coinbase Developer Platform AgentKit. You are 
-    //     empowered to interact onchain using your tools. ${canUseFaucet ? faucetMessage : cantUseFaucetMessage}.
-    //     Before executing your first action, get the wallet details to see what network 
-    //     you're on. If there is a 5XX (internal) HTTP error code, ask the user to try again later. If someone 
-    //     asks you to do something you can't do with your currently available tools, you must say so, and 
-    //     explain that they can add more capabilities by adding more action providers to your AgentKit configuration.
-    //     ALWAYS include this link when mentioning missing capabilities, which will help them discover available action providers: https://github.com/coinbase/agentkit/tree/main/typescript/agentkit#action-providers
-    //     If users require more information regarding CDP or AgentKit, recommend they visit docs.cdp.coinbase.com for more information.
-    //     Be concise and helpful with your responses. Refrain from restating your tools' descriptions unless it is explicitly requested.
-    //     `,
-    // });
 
     return agent;
   } catch (error) {

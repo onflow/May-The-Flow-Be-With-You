@@ -75,6 +75,7 @@ export async function prepareAgentkitAndWalletProvider(): Promise<{
         );
       }
     }
+    console.log("privateKey", privateKey);
     const account = privateKeyToAccount(privateKey);
 
     const rpcUrl = process.env.RPC_URL as string;
@@ -107,12 +108,12 @@ export async function prepareAgentkitAndWalletProvider(): Promise<{
       walletActionProvider(),
       erc20ActionProvider(),
     ];
-    const canUseCdpApi = process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET;
+    const canUseCdpApi = process.env.CDP_API_KEY_NAME && process.env.CDP_API_KEY_PRIVATE_KEY;
     if (canUseCdpApi) {
       actionProviders.push(
         cdpApiActionProvider({
-          apiKeyId: process.env.CDP_API_KEY_ID,
-          apiKeySecret: process.env.CDP_API_KEY_SECRET,
+          apiKeyName: process.env.CDP_API_KEY_NAME,
+          apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY,
         }),
       );
     }

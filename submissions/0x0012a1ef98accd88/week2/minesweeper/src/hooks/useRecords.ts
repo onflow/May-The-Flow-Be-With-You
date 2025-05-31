@@ -19,6 +19,7 @@ interface OnChainRecord {
   player: string;
   timestamp: bigint;
   timeTaken: bigint;
+  level: number;
 }
 
 interface LeaderboardRecord {
@@ -40,13 +41,21 @@ const useRecords = () => {
   });
 
   // Convert on-chain records to LeaderboardRecord format
-  const convertToLeaderboardRecord = useCallback((record: OnChainRecord): LeaderboardRecord => ({
-    timestamp: Number(record.timestamp),
-    duration: Number(record.timeTaken),
-    level: "beginner", // Default to beginner since on-chain records don't store level
-    status: "win", // All on-chain records are wins
-    player: record.player
-  }), []);
+  const convertToLeaderboardRecord = useCallback((record: OnChainRecord): LeaderboardRecord => {
+    const levelMap = {
+      0: 'beginner',
+      1: 'intermediate',
+      2: 'expert'
+    } as const;
+
+    return {
+      timestamp: Number(record.timestamp),
+      duration: Number(record.timeTaken),
+      level: levelMap[record.level as keyof typeof levelMap] || 'beginner',
+      status: "win", // All on-chain records are wins
+      player: record.player
+    };
+  }, []);
 
   useEffect(() => {
     if (onChainRecords && onChainRecords.length > 0) {

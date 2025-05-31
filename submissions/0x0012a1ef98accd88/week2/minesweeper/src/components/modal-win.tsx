@@ -65,7 +65,12 @@ const ModalWin = () => {
   const handleSaveScore = async () => {
     try {
       setIsSaving(true);
-      await saveScore(latestRecord.duration);
+      const levelMap = {
+        'beginner': 0,
+        'intermediate': 1,
+        'expert': 2
+      };
+      await saveScore(latestRecord.duration, levelMap[level as keyof typeof levelMap]);
     } catch (error) {
       console.error('Failed to save score:', error);
       alert('Failed to save score. Please try again.');

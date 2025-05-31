@@ -1,5 +1,5 @@
 import { useAccount, useConnect, useDisconnect, useSwitchChain, type Connector } from 'wagmi'
-import { flowTestnet } from 'wagmi/chains'
+import { flowMainnet } from 'wagmi/chains'
 import React from 'react'
 
 function Account() {
@@ -9,7 +9,7 @@ function Account() {
 
     const handleSwitchChain = async () => {
         try {
-            await switchChain({ chainId: flowTestnet.id })
+            await switchChain({ chainId: flowMainnet.id })
         } catch (error) {
             console.error('Failed to switch chain:', error)
         }
@@ -20,13 +20,13 @@ function Account() {
             <div className="px-6 py-3 bg-blue-500 text-white rounded-lg font-medium text-lg border border-white-500">
                 {address?.slice(0, 6)}...{address?.slice(-4)}
             </div>
-            {chain?.id !== flowTestnet.id ? (
+            {chain?.id !== flowMainnet.id ? (
                 <button
                     type="button"
                     onClick={handleSwitchChain}
                     className="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-lg font-medium"
                 >
-                    Switch to Flow Testnet
+                    Switch to Flow Mainnet
                 </button>
             ) : (
                 <button
@@ -76,23 +76,23 @@ function WalletOptions() {
     const { isConnected, chain } = useAccount()
 
     React.useEffect(() => {
-        const switchToFlowTestnet = async () => {
-            if (isConnected && chain?.id !== flowTestnet.id) {
+        const switchToFlowMainnet = async () => {
+            if (isConnected && chain?.id !== flowMainnet.id) {
                 try {
-                    await switchChain({ chainId: flowTestnet.id })
+                    await switchChain({ chainId: flowMainnet.id })
                 } catch (error) {
                     console.error('Failed to switch chain:', error)
                 }
             }
         }
-        switchToFlowTestnet()
+        switchToFlowMainnet()
     }, [isConnected, chain, switchChain])
 
     const handleConnect = async (connector: Connector) => {
         try {
             await connect({
                 connector,
-                chainId: flowTestnet.id
+                chainId: flowMainnet.id
             })
             setIsOpen(false)
         } catch (error) {

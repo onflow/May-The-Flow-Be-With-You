@@ -64,3 +64,10 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+## deploy to flow testnet
+forge create --broadcast src/QuizResults.sol:QuizResults \
+    --rpc-url https://testnet.evm.nodes.onflow.org \
+    --private-key 'your private key' \
+    --constructor-args 42000000 \
+    --legacy

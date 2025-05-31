@@ -231,6 +231,24 @@ access(all) contract EvolutionPotentialModule: TraitModule {
         )
     }
     
+    access(all) fun createMitosisChild(parent: &{TraitModule.Trait}, seed: UInt64): @{TraitModule.Trait} {
+        // Get parent values
+        let parentPot = self.parsePotencial(parent.getValue())
+        
+        // Small mutation (±5% like CreatureNFTV6)
+        let mutationFactor = 0.95 + (UFix64(seed % 100) / 1000.0) // 0.95-1.05
+        let childPot = parentPot * mutationFactor
+        
+        // Lifespan inheritance with slight improvement (mitosis can enhance child)
+        let lifespanMutation = 1.0 + (UFix64((seed >> 8) % 50) / 1000.0) // 1.0-1.05 (slight improvement)
+        let childLifespan = 5.0 * lifespanMutation
+        
+        return <- create EvolutionPotential(
+            potencialEvolutivo: childPot,
+            max_lifespan_dias_base: childLifespan
+        )
+    }
+    
     // === MODULE IDENTITY ===
     
     access(all) view fun getModuleType(): String {

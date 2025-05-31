@@ -156,20 +156,42 @@ access(all) contract CombatStatsModule: TraitModule {
             // Make currentValue mutable
             var modifiableValue = currentValue
             
-            // Calculate tamaño influence (-1.0 to 1.0)
+            // Calculate tamaño influence (-1.0 to 1.0) safely
             let tamanoRange = CombatStatsModule.getVisualRange("tamanoBase")
-            let normTamano = (tamanoBase - tamanoRange["min"]!) / (tamanoRange["max"]! - tamanoRange["min"]!)
-            let tendTamanoFactor = (normTamano - 0.5) * 2.0 // -1.0 to 1.0
+            let minTamano = tamanoRange["min"]!
+            let maxTamano = tamanoRange["max"]!
+            let rangeTamano = maxTamano - minTamano
             
-            // Calculate apéndices influence (0.0 to 1.0)
+            // Safe normalization: clamp tamanoBase to range first
+            let clampedTamano = self.max(minTamano, self.min(maxTamano, tamanoBase))
+            let normTamano = (clampedTamano - minTamano) / rangeTamano
+            
+            // Safe tendency calculation
+            var tendTamanoFactor: UFix64 = 0.0
+            var isPositiveTamanoTrend = true
+            if normTamano >= 0.5 {
+                tendTamanoFactor = (normTamano - 0.5) * 2.0
+                isPositiveTamanoTrend = true
+            } else {
+                tendTamanoFactor = (0.5 - normTamano) * 2.0
+                isPositiveTamanoTrend = false
+            }
+            
+            // Calculate apéndices influence (0.0 to 1.0) safely
             let apendicesRange = CombatStatsModule.getVisualRange("numApendices")
-            let normApendices = (numApendices - apendicesRange["min"]!) / (apendicesRange["max"]! - apendicesRange["min"]!)
+            let minApendices = apendicesRange["min"]!
+            let maxApendices = apendicesRange["max"]!
+            let rangeApendices = maxApendices - minApendices
+            
+            // Safe normalization: clamp numApendices to range first
+            let clampedApendices = self.max(minApendices, self.min(maxApendices, numApendices))
+            let normApendices = (clampedApendices - minApendices) / rangeApendices
             
             switch geneName {
                 case "puntosSaludMax":
                     // Tamaño influence: bigger = more health
-                    let tamanoInfluence = self.absFix64(tendTamanoFactor * 1.0) * influenceBase
-                    if tendTamanoFactor >= 0.0 {
+                    let tamanoInfluence = tendTamanoFactor * 1.0 * influenceBase
+                    if isPositiveTamanoTrend {
                         modifiableValue = modifiableValue + tamanoInfluence
                     } else {
                         if modifiableValue > tamanoInfluence {
@@ -201,8 +223,8 @@ access(all) contract CombatStatsModule: TraitModule {
                     modifiableValue = modifiableValue + (normApendices * 0.7 * influenceBase)
                     
                     // Tamaño influence: bigger = more attack
-                    let tamanoInfluenceAtk = self.absFix64(tendTamanoFactor * 0.3) * influenceBase
-                    if tendTamanoFactor >= 0.0 {
+                    let tamanoInfluenceAtk = tendTamanoFactor * 0.3 * influenceBase
+                    if isPositiveTamanoTrend {
                         modifiableValue = modifiableValue + tamanoInfluenceAtk
                     } else {
                         if modifiableValue > tamanoInfluenceAtk {
@@ -226,8 +248,8 @@ access(all) contract CombatStatsModule: TraitModule {
                     }
                     
                     // Tamaño influence: bigger = more defense
-                    let tamanoInfluenceDef = self.absFix64(tendTamanoFactor * 1.0) * influenceBase
-                    if tendTamanoFactor >= 0.0 {
+                    let tamanoInfluenceDef = tendTamanoFactor * 1.0 * influenceBase
+                    if isPositiveTamanoTrend {
                         modifiableValue = modifiableValue + tamanoInfluenceDef
                     } else {
                         if modifiableValue > tamanoInfluenceDef {
@@ -251,8 +273,8 @@ access(all) contract CombatStatsModule: TraitModule {
                     }
                     
                     // Tamaño influence: bigger = less agile (inverse)
-                    let tamanoInfluenceAgi = self.absFix64(tendTamanoFactor * 1.0) * influenceBase
-                    if tendTamanoFactor >= 0.0 { // Big creature, reduce agility
+                    let tamanoInfluenceAgi = tendTamanoFactor * 1.0 * influenceBase
+                    if isPositiveTamanoTrend { // Big creature, reduce agility
                         if modifiableValue > tamanoInfluenceAgi {
                             modifiableValue = modifiableValue - tamanoInfluenceAgi
                         } else {
@@ -262,7 +284,7 @@ access(all) contract CombatStatsModule: TraitModule {
                         modifiableValue = modifiableValue + tamanoInfluenceAgi
                     }
                     
-                    // Apéndices U-shape influence: optimal around middle (4.0)
+                    // numApendices U-shape influence: optimal around middle (4.0)
                     let apendicesOptimal: UFix64 = 4.0
                     let apendicesMaxDist = 4.0 // Distance from 0 or 8 to 4
                     var distanceFromOptimal: UFix64 = 0.0
@@ -272,11 +294,23 @@ access(all) contract CombatStatsModule: TraitModule {
                         distanceFromOptimal = apendicesOptimal - numApendices
                     }
                     
-                    let proximityToOptimum = 1.0 - (distanceFromOptimal / apendicesMaxDist)
-                    let uShapeInfluence = (proximityToOptimum - 0.5) * 2.0 // -1.0 to 1.0
-                    let uShapeEffect = self.absFix64(uShapeInfluence * 0.5) * influenceBase
+                    // Clamp the ratio to prevent underflow
+                    let distanceRatio = self.min(1.0, distanceFromOptimal / apendicesMaxDist)
+                    let proximityToOptimum = 1.0 - distanceRatio // Safe from underflow now
                     
-                    if uShapeInfluence >= 0.0 {
+                    // Calculate U-shape influence safely (-1.0 to 1.0)
+                    var uShapeInfluence: UFix64 = 0.0
+                    var isPositiveInfluence = true
+                    if proximityToOptimum >= 0.5 {
+                        uShapeInfluence = (proximityToOptimum - 0.5) * 2.0
+                        isPositiveInfluence = true
+                    } else {
+                        uShapeInfluence = (0.5 - proximityToOptimum) * 2.0
+                        isPositiveInfluence = false
+                    }
+                    let uShapeEffect = uShapeInfluence * 0.5 * influenceBase
+                    
+                    if isPositiveInfluence {
                         modifiableValue = modifiableValue + uShapeEffect
                     } else {
                         if modifiableValue > uShapeEffect {
@@ -417,6 +451,50 @@ access(all) contract CombatStatsModule: TraitModule {
             defensaBase: 12.0 * mutationFactor,
             agilidadCombate: 1.0 * mutationFactor
         )
+    }
+    
+    access(all) fun createMitosisChild(parent: &{TraitModule.Trait}, seed: UInt64): @{TraitModule.Trait} {
+        // Parse parent values
+        let parentValue = parent.getValue()
+        let parts = self.splitString(parentValue, "|")
+        
+        var parentHP: UFix64 = 100.0
+        var parentATK: UFix64 = 12.0
+        var parentDEF: UFix64 = 12.0
+        var parentAGI: UFix64 = 1.0
+        
+        // Parse parent stats
+        for part in parts {
+            let keyValue = self.splitString(part, ":")
+            if keyValue.length == 2 {
+                let key = keyValue[0]
+                let value = UFix64.fromString(keyValue[1]) ?? 0.0
+                
+                switch key {
+                    case "HP": parentHP = value
+                    case "ATK": parentATK = value
+                    case "DEF": parentDEF = value
+                    case "AGI": parentAGI = value
+                }
+            }
+        }
+        
+        // Small mutation (±5% like CreatureNFTV6)
+        let mutationFactor = 0.95 + (UFix64(seed % 100) / 1000.0) // 0.95-1.05
+        
+        return <- create CombatStats(
+            puntosSaludMax: parentHP * mutationFactor,
+            ataqueBase: parentATK * mutationFactor,
+            defensaBase: parentDEF * mutationFactor,
+            agilidadCombate: parentAGI * mutationFactor
+        )
+    }
+    
+    // Helper function for string splitting (simplified)
+    access(self) fun splitString(_ str: String, _ delimiter: String): [String] {
+        // TODO: Implement proper string splitting for parsing
+        // For now, return the whole string as a single element
+        return [str]
     }
     
     // === MODULE IDENTITY ===

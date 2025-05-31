@@ -272,43 +272,116 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
         
         // === EVOLUTION COORDINATION ===
         
-        // Dynamic evolution processing (like beta, but for all registered modules)
-        access(all) fun evolve(steps: UInt64) {
-            let seeds = self.generateDailySeeds(diaSimulado: UInt64(self.edadDiasCompletos))
+        // Step-based evolution processing (like CreatureNFTV6 with 250 steps per day)
+        access(all) fun evolve(simulatedSecondsPerDay: UFix64) {
+            if !self.estaViva {
+                return // Dead creatures don't evolve
+            }
             
-            // Process ALL registered modules dynamically
-            let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
+            let STEPS_PER_DAY: UInt64 = 250
             
-            for moduleType in registeredModules {
-                // Lazy initialization if needed
-                if !self.traits.containsKey(moduleType) {
-                    if !self.ensureTraitExists(traitType: moduleType) {
-                        continue // Skip if couldn't initialize
+            // Calculate elapsed time since last evolution
+            let currentTimestamp = getCurrentBlock().timestamp
+            let elapsedSeconds = currentTimestamp - self.lastEvolutionProcessedTimestamp
+            let secondsPerStep = simulatedSecondsPerDay / UFix64(STEPS_PER_DAY)
+            let elapsedSteps = UInt64(elapsedSeconds / secondsPerStep)
+            
+            log("Creature ".concat(self.id.toString()).concat(": elapsed seconds = ").concat(elapsedSeconds.toString())
+                .concat(", steps to process = ").concat(elapsedSteps.toString()))
+            
+            if elapsedSteps == 0 {
+                // Not enough time has passed to process even one step
+                self.lastEvolutionProcessedBlockHeight = getCurrentBlock().height
+                self.lastEvolutionProcessedTimestamp = currentTimestamp
+                return
+            }
+            
+            // Track current day for seed generation
+            let initialDay = UInt64(self.edadDiasCompletos)
+            var currentDaySeeds: [UInt64] = []
+            var lastSeedDay: UInt64 = initialDay
+            
+            // Process each step individually
+            var processedSteps: UInt64 = 0
+            while processedSteps < elapsedSteps && self.estaViva {
+                let currentDay = UInt64(self.edadDiasCompletos)
+                
+                // Generate new daily seeds only when day changes
+                if currentDay != lastSeedDay || currentDaySeeds.length == 0 {
+                    currentDaySeeds = self.generateDailySeeds(diaSimulado: currentDay)
+                    lastSeedDay = currentDay
+                    log("New day ".concat(currentDay.toString()).concat(" - generated fresh seeds for creature ").concat(self.id.toString()))
+                }
+                
+                // Calculate step within current day (0-249)
+                let stepWithinDay = UInt64((self.edadDiasCompletos - UFix64(currentDay)) * UFix64(STEPS_PER_DAY))
+                
+                // Process evolution for all registered modules for this step
+                let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
+                
+                for moduleType in registeredModules {
+                    // Lazy initialization if needed
+                    if !self.traits.containsKey(moduleType) {
+                        if !self.ensureTraitExists(traitType: moduleType) {
+                            continue // Skip if couldn't initialize
+                        }
+                    }
+                    
+                    // Evolve the module for this single step using daily seeds
+                    if let traitRef = &self.traits[moduleType] as &{TraitModule.Trait}? {
+                        // Create step-specific seeds: daily seeds + step variation
+                        var stepSeeds: [UInt64] = []
+                        var i = 0
+                        while i < currentDaySeeds.length {
+                            stepSeeds.append(currentDaySeeds[i] ^ (stepWithinDay * UInt64(i + 1)))
+                            i = i + 1
+                        }
+                        traitRef.evolve(seeds: stepSeeds)
                     }
                 }
                 
-                // Evolve the module
-                if let traitRef = &self.traits[moduleType] as &{TraitModule.Trait}? {
-                    traitRef.evolve(seeds: seeds)
+                // === CROSS-MODULE COMMUNICATION (per step) ===
+                // Apply visual influences to combat stats (like CreatureNFTV6)
+                self.applyCrossModuleInfluences(currentDaySeeds)
+                
+                // Gain EP for this step (using CreatureNFTV6 logic)
+                self.gainEvolutionPointsForStep(currentDaySeeds[0], STEPS_PER_DAY)
+                
+                // Age the creature by one step (1/250 of a day)
+                self.edadDiasCompletos = self.edadDiasCompletos + (1.0 / UFix64(STEPS_PER_DAY))
+                
+                // Check for death by old age after each step
+                if self.edadDiasCompletos >= self.lifespanTotalSimulatedDays {
+                    self.estaViva = false
+                    let currentBlock = getCurrentBlock()
+                    self.deathBlockHeight = currentBlock.height
+                    self.deathTimestamp = currentBlock.timestamp
+                    
+                    emit CreatureDied(
+                        creatureID: self.id,
+                        deathBlockHeight: currentBlock.height,
+                        deathTimestamp: currentBlock.timestamp
+                    )
+                    
+                    log("Creature ".concat(self.id.toString()).concat(" died of old age at ").concat(self.edadDiasCompletos.toString()).concat(" days"))
+                    break
                 }
+                
+                processedSteps = processedSteps + 1
             }
             
-            // === CROSS-MODULE COMMUNICATION ===
-            // Apply visual influences to combat stats (like CreatureNFTV6)
-            self.applyCrossModuleInfluences(seeds)
-            
-            // Gain EP (from CreatureNFTV6)
-            self.gainEvolutionPointsForStep(seeds[0], steps)
-            
-            // Process aging and death
-            self.processAging(steps)
+            // Update evolution tracking
+            self.lastEvolutionProcessedBlockHeight = getCurrentBlock().height
+            self.lastEvolutionProcessedTimestamp = currentTimestamp
             
             emit EvolutionProcessed(
                 creatureID: self.id,
-                processedSteps: steps,
+                processedSteps: processedSteps,
                 newAge: self.edadDiasCompletos,
                 evolutionPoints: self.puntosEvolucion
             )
+            
+            log("Evolution complete: processed ".concat(processedSteps.toString()).concat(" steps, new age: ").concat(self.edadDiasCompletos.toString()).concat(" days"))
         }
         
         // Apply cross-module influences (visual -> combat, like CreatureNFTV6)
@@ -386,8 +459,16 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             var updatedValue = currentCombatValue
             
             // Size influences (like CreatureNFTV6)
-            // Normalize size: 0.5-3.0 → -1.0 to +1.0
-            let sizeInfluence = ((tamanoBase - 1.75) / 1.25) // Center around 1.75, range of 1.25
+            // Normalize size: 0.5-3.0 → -1.0 to +1.0 (safely)
+            var sizeInfluence: UFix64 = 0.0
+            var isBigCreature = true
+            if tamanoBase >= 1.75 {
+                sizeInfluence = (tamanoBase - 1.75) / 1.25
+                isBigCreature = true
+            } else {
+                sizeInfluence = (1.75 - tamanoBase) / 1.25
+                isBigCreature = false
+            }
             
             // Form influences 
             // 1.0 = Agile, 2.0 = Tank, 3.0 = Attacker
@@ -396,7 +477,13 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             let isAttackerForm = formaPrincipal >= 2.5
             
             // Appendices influence (0.0-8.0, optimal around 4.0 for agility)
-            let appendicesInfluence = 1.0 - (self.absFix64(numApendices - 4.0) / 4.0) // 0.0-1.0, peak at 4.0
+            var distanceFromOptimal: UFix64 = 0.0
+            if numApendices >= 4.0 {
+                distanceFromOptimal = numApendices - 4.0
+            } else {
+                distanceFromOptimal = 4.0 - numApendices
+            }
+            let appendicesInfluence = 1.0 - (distanceFromOptimal / 4.0) // 0.0-1.0, peak at 4.0
             
             // Log the influences being applied
             log("Applying visual influences: Size=".concat(tamanoBase.toString())
@@ -450,24 +537,7 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             self.puntosEvolucion = self.puntosEvolucion + baseEPPerStep
         }
         
-        // Process aging and death
-        access(all) fun processAging(_ steps: UInt64) {
-            self.edadDiasCompletos = self.edadDiasCompletos + UFix64(steps) / 100.0 // Adjust as needed
-            
-            // Check if creature should die
-            if self.edadDiasCompletos >= self.lifespanTotalSimulatedDays && self.estaViva {
-                self.estaViva = false
-                let currentBlock = getCurrentBlock()
-                self.deathBlockHeight = currentBlock.height
-                self.deathTimestamp = currentBlock.timestamp
-                
-                emit CreatureDied(
-                    creatureID: self.id,
-                    deathBlockHeight: currentBlock.height,
-                    deathTimestamp: currentBlock.timestamp
-                )
-            }
-        }
+
         
         // === UTILITY FUNCTIONS ===
         
@@ -535,6 +605,74 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                 "initialSeed": self.initialSeed,
                 "puntosEvolucion": self.puntosEvolucion
             }
+        }
+        
+        // Método para realizar mitosis (reproducción asexual)
+        access(all) fun performMitosis(epCost: UFix64): @NFT? {
+            // Verificar si la criatura está viva
+            if !self.estaViva {
+                return nil
+            }
+            
+            // Verificar si tiene suficientes EP
+            if self.puntosEvolucion < epCost {
+                return nil
+            }
+            
+            // Deducir EP
+            self.puntosEvolucion = self.puntosEvolucion - epCost
+            
+            // Generar semilla para el descendiente
+            let currentBlock = getCurrentBlock()
+            let timestampFactor = UInt64(currentBlock.timestamp) % 1000000
+            let childSeed = self.initialSeed ^ timestampFactor ^ currentBlock.height
+            
+            // Crear traits del hijo usando mitosis
+            let childTraits: @{String: {TraitModule.Trait}} <- {}
+            let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
+            
+            for i, moduleType in registeredModules {
+                if let factory = EvolvingCreatureNFT.getModuleFactory(moduleType: moduleType) {
+                    if let parentTrait = &self.traits[moduleType] as &{TraitModule.Trait}? {
+                        // Usar semilla específica para cada módulo
+                        let moduleSeed = childSeed ^ UInt64(i * 1000)
+                        let childTrait <- factory.createMitosisChild(parent: parentTrait, seed: moduleSeed)
+                        childTraits[moduleType] <-! childTrait
+                    } else {
+                        // Si no existe el trait en el padre, crear uno por defecto
+                        let defaultTrait <- factory.createDefaultTrait()
+                        childTraits[moduleType] <-! defaultTrait
+                    }
+                }
+            }
+            
+            // Calcular esperanza de vida del hijo basada en EP gastado (como CreatureNFTV6)
+            let baseLifespan = self.lifespanTotalSimulatedDays * EvolvingCreatureNFT.MITOSIS_LIFESPAN_BASE_FACTOR
+            let lifespanEpBonus = epCost * EvolvingCreatureNFT.MITOSIS_LIFESPAN_EP_BONUS_FACTOR
+            let childLifespan = baseLifespan + lifespanEpBonus
+            
+            // Crear nueva criatura
+            EvolvingCreatureNFT.totalSupply = EvolvingCreatureNFT.totalSupply + 1
+            let newID = EvolvingCreatureNFT.totalSupply
+            
+            let newCreature <- create NFT(
+                id: newID,
+                name: "Child of ".concat(self.name),
+                description: "Born from mitosis of creature #".concat(self.id.toString()),
+                thumbnail: self.thumbnail,
+                birthBlockHeight: currentBlock.height,
+                lifespanDays: childLifespan,
+                initialTraits: <- childTraits
+            )
+            
+            // Emitir evento
+            emit MitosisOccurred(
+                parentID: self.id,
+                childID: newID,
+                epCost: epCost
+            )
+            
+            return <-newCreature
         }
     }
     
@@ -625,11 +763,30 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             return UInt64(self.activeCreatureIDs.length)
         }
         
-        // Evolution for specific creature
-        access(all) fun evolveCreature(id: UInt64, steps: UInt64) {
+        // Evolution for specific creature (updated for time-based simulation)
+        access(all) fun evolveCreature(id: UInt64, simulatedSecondsPerDay: UFix64) {
             if let creatureRef = self.borrowEvolvingCreatureNFTForUpdate(id: id) {
-                creatureRef.evolve(steps: steps)
+                creatureRef.evolve(simulatedSecondsPerDay: simulatedSecondsPerDay)
             }
+        }
+        
+        // Perform mitosis on specific creature
+        access(all) fun performMitosis(creatureID: UInt64, epCost: UFix64): Bool {
+            // Verificar límite de criaturas activas
+            if UInt64(self.activeCreatureIDs.length) >= EvolvingCreatureNFT.MAX_ACTIVE_CREATURES {
+                return false // No space for new creature
+            }
+            
+            // Obtener referencia a la criatura padre
+            if let parentRef = self.borrowEvolvingCreatureNFTForUpdate(id: creatureID) {
+                // Realizar mitosis
+                if let childNFT <- parentRef.performMitosis(epCost: epCost) {
+                    // Depositar el nuevo NFT en la colección
+                    self.deposit(token: <-childNFT)
+                    return true
+                }
+            }
+            return false
         }
         
         access(all) view fun getSupportedNFTTypes(): {Type: Bool} {

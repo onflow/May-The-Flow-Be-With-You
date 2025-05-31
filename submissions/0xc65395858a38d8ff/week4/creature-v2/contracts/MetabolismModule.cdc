@@ -243,6 +243,24 @@ access(all) contract MetabolismModule: TraitModule {
         )
     }
     
+    access(all) fun createMitosisChild(parent: &{TraitModule.Trait}, seed: UInt64): @{TraitModule.Trait} {
+        // Get parent values
+        let parentMet = self.parseMetabolism(parent.getValue())
+        let parentFert = self.parseFertilidad(parent.getValue())
+        
+        // Small mutation (±5% like CreatureNFTV6)
+        let mutationFactor = 0.95 + (UFix64(seed % 100) / 1000.0) // 0.95-1.05
+        let childMet = parentMet * mutationFactor
+        
+        let fertMutation = 0.95 + (UFix64((seed >> 8) % 100) / 1000.0) // 0.95-1.05
+        let childFert = parentFert * fertMutation
+        
+        return <- create Metabolism(
+            tasaMetabolica: childMet,
+            fertilidad: childFert
+        )
+    }
+    
     // === MODULE IDENTITY ===
     
     access(all) view fun getModuleType(): String {

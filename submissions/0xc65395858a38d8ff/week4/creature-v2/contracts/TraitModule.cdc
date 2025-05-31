@@ -31,6 +31,9 @@ access(all) contract interface TraitModule {
     // Create a child trait from two parents (for reproduction)
     access(all) fun createChildTrait(parent1: &{Trait}, parent2: &{Trait}, seed: UInt64): @{Trait}
     
+    // Create a child trait from single parent (for mitosis)
+    access(all) fun createMitosisChild(parent: &{Trait}, seed: UInt64): @{Trait}
+    
     // NEW: Factory function for seed-based trait creation
     access(all) fun createTraitWithSeed(seed: UInt64): @{Trait}
     

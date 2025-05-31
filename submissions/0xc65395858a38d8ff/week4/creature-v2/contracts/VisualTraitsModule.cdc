@@ -316,6 +316,54 @@ access(all) contract VisualTraitsModule: TraitModule {
         )
     }
     
+    access(all) fun createMitosisChild(parent: &{TraitModule.Trait}, seed: UInt64): @{TraitModule.Trait} {
+        // Parse parent visual traits
+        let parentValue = parent.getValue()
+        // Format: "R:0.72|G:0.86|B:0.20|Size:0.50|Form:1.08|Apps:5.40|Mov:2.32"
+        
+        var parentR: UFix64 = 0.5
+        var parentG: UFix64 = 0.5
+        var parentB: UFix64 = 0.5
+        var parentSize: UFix64 = 1.5
+        var parentForm: UFix64 = 2.0
+        var parentApps: UFix64 = 4.0
+        var parentMov: UFix64 = 2.5
+        
+        // Parse parent values
+        let components = parentValue.split(separator: "|")
+        for component in components {
+            let parts = component.split(separator: ":")
+            if parts.length >= 2 {
+                let key = parts[0]
+                let valueStr = parts[1]
+                if let parsedValue = UFix64.fromString(valueStr) {
+                    switch key {
+                        case "R": parentR = parsedValue
+                        case "G": parentG = parsedValue
+                        case "B": parentB = parsedValue
+                        case "Size": parentSize = parsedValue
+                        case "Form": parentForm = parsedValue
+                        case "Apps": parentApps = parsedValue
+                        case "Mov": parentMov = parsedValue
+                    }
+                }
+            }
+        }
+        
+        // Small mutation (±5% like CreatureNFTV6)
+        let mutationFactor = 0.95 + (UFix64(seed % 100) / 1000.0) // 0.95-1.05
+        
+        return <- create VisualTraits(
+            colorR: parentR * mutationFactor,
+            colorG: parentG * mutationFactor,
+            colorB: parentB * mutationFactor,
+            tamanoBase: parentSize * mutationFactor,
+            formaPrincipal: parentForm * mutationFactor,
+            numApendices: parentApps * mutationFactor,
+            patronMovimiento: parentMov * mutationFactor
+        )
+    }
+    
     // === MODULE IDENTITY ===
     
     access(all) view fun getModuleType(): String {

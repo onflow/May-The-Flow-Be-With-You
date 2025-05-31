@@ -5,7 +5,26 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { BaseGameAdapter, GameProgress, Achievement, LeaderboardEntry, GameStatistics, GAME_FEATURES } from "./GameAdapter";
 import { RandomnessProvider, FlowVRFRandomnessProvider } from "../providers/RandomnessProvider";
 import { FlowVRFService } from "../services/FlowVRFService";
-import * as fcl from "@onflow/fcl";
+
+// Conditional import to prevent server-side issues
+let fcl: any;
+if (typeof window !== 'undefined') {
+  fcl = require("@onflow/fcl");
+} else {
+  // Server-side mock for FCL
+  fcl = {
+    mutate: () => Promise.resolve('mock-tx-id'),
+    query: () => Promise.resolve(null),
+    tx: () => ({ onceSealed: () => Promise.resolve({ status: 4 }) }),
+    send: () => Promise.resolve({}),
+    decode: (x: any) => x,
+    getTransaction: () => ({}),
+    authz: {},
+    currentUser: {
+      snapshot: () => Promise.resolve({ loggedIn: false, addr: null })
+    }
+  };
+}
 
 export class OnChainAdapter extends BaseGameAdapter {
   private supabase: any;
@@ -410,7 +429,7 @@ export class OnChainAdapter extends BaseGameAdapter {
             }
           }
         `,
-        args: (arg, t) => [arg(addressToQuery, t.Address)]
+        args: (arg: any, t: any) => [arg(addressToQuery, t.Address)]
       });
 
       if (result) {
@@ -466,7 +485,7 @@ export class OnChainAdapter extends BaseGameAdapter {
           }
         }
       `,
-      args: (arg, t) => [
+      args: (arg: any, t: any) => [
         arg(achievement.id, t.String),
         arg(achievement.name, t.String),
         arg(achievement.description, t.String),
@@ -501,7 +520,7 @@ export class OnChainAdapter extends BaseGameAdapter {
             return MemoryAchievements.getAchievements(address: address)
           }
         `,
-        args: (arg, t) => [arg(addressToQuery, t.Address)]
+        args: (arg: any, t: any) => [arg(addressToQuery, t.Address)]
       });
 
       return result.map((item: any) => ({
@@ -556,7 +575,7 @@ export class OnChainAdapter extends BaseGameAdapter {
           }
         }
       `,
-      args: (arg, t) => [
+      args: (arg: any, t: any) => [
         arg(score.toString(), t.UInt64),
         arg(gameType, t.String),
         arg(metadata?.culture || 'general', t.String),
@@ -582,7 +601,7 @@ export class OnChainAdapter extends BaseGameAdapter {
             return MemoryLeaderboard.getTopScores(gameType: gameType, culture: culture, limit: limit)
           }
         `,
-        args: (arg, t) => [
+        args: (arg: any, t: any) => [
           arg(gameType, t.Optional(t.String)),
           arg(culture || null, t.Optional(t.String)),
           arg(limit.toString(), t.Int)

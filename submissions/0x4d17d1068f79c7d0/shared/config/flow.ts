@@ -1,4 +1,19 @@
-import * as fcl from "@onflow/fcl";
+// Conditional import to prevent server-side issues in Netlify
+let fcl: any;
+if (typeof window !== 'undefined') {
+  fcl = require("@onflow/fcl");
+} else {
+  // Server-side mock for FCL
+  fcl = {
+    config: () => {},
+    authenticate: () => Promise.resolve(),
+    unauthenticate: () => Promise.resolve(),
+    currentUser: {
+      snapshot: () => Promise.resolve({ loggedIn: false, addr: null }),
+      subscribe: () => () => {}
+    }
+  };
+}
 
 // Flow network configuration
 interface NetworkConfig {
@@ -67,7 +82,10 @@ if (networkConfig.discoveryAuthnEndpoint) {
   fclConfig['discovery.authn.endpoint'] = networkConfig.discoveryAuthnEndpoint;
 }
 
-fcl.config(fclConfig);
+// Only configure FCL on the client side
+if (typeof window !== 'undefined') {
+  fcl.config(fclConfig);
+}
 
 // Network and wallet type detection
 export const getWalletType = (user: any) => {

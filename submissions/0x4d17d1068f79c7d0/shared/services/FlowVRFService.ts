@@ -1,7 +1,26 @@
 // Flow VRF Service for Provably Fair Randomness
 // Implements Flow's native VRF for secure, verifiable random number generation
 
-import * as fcl from "@onflow/fcl";
+// Conditional import to prevent server-side issues in Netlify
+let fcl: any;
+if (typeof window !== 'undefined') {
+  fcl = require("@onflow/fcl");
+} else {
+  // Server-side mock for FCL
+  fcl = {
+    mutate: () => Promise.resolve('mock-tx-id'),
+    query: () => Promise.resolve(null),
+    tx: () => ({ onceSealed: () => Promise.resolve({ status: 4 }) }),
+    send: () => Promise.resolve({}),
+    decode: (x: any) => x,
+    getTransaction: () => ({}),
+    authz: {},
+    currentUser: {
+      snapshot: () => Promise.resolve({ loggedIn: false, addr: null })
+    }
+  };
+}
+
 import { createVRFError } from "../utils/errorHandling";
 
 export interface VRFRequest {
@@ -121,7 +140,7 @@ export class FlowVRFService {
           }
         }
       `,
-      args: (arg, t) => [
+      args: (arg: any, t: any) => [
         arg(requestId, t.String),
         arg(commitValue, t.String)
       ],
@@ -160,7 +179,7 @@ export class FlowVRFService {
           }
         }
       `,
-      args: (arg, t) => [
+      args: (arg: any, t: any) => [
         arg(requestId, t.String),
         arg(revealValue.toString(), t.UInt64)
       ],
@@ -241,7 +260,7 @@ export class FlowVRFService {
             return MemoryVRF.getRandomResult(address: address, requestId: requestId)
           }
         `,
-        args: (arg, t) => [
+        args: (arg: any, t: any) => [
           arg(userAddress, t.Address),
           arg(requestId, t.String)
         ]

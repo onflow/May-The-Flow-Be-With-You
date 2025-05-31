@@ -14,7 +14,8 @@ MemoMint is a reflective journaling dApp that transforms meaningful conversation
 
 - Node.js 14+ and npm
 - Flow CLI for contract deployment and minting
-- OpenAI API key
+- OpenAI API key (for backend, if using OpenAI)
+- HuggingFace API key (for frontend, required)
 
 ## 🚀 Getting Started
 
@@ -42,7 +43,12 @@ MEMO_MINT_ADDRESS=your_deployed_contract_address
 REACT_APP_FLOW_ACCESS_NODE=https://access-testnet.onflow.org
 REACT_APP_NON_FUNGIBLE_TOKEN_ADDRESS=0x631e88ae7f1d7c20
 REACT_APP_MEMO_MINT_ADDRESS=your_deployed_contract_address
+REACT_APP_HUGGINGFACE_API_KEY='your_huggingface_api_key_here'
 ```
+
+> **Note:**
+> - To use the AI chat and summarization features, you must create a `.env` file in the `src/frontend` directory and add your HuggingFace API key as shown above.
+> - You can obtain a HuggingFace API key by signing up at https://huggingface.co/ and generating an access token from your account settings.
 
 4. Deploy the smart contract:
 ```bash
@@ -73,7 +79,7 @@ The frontend will be available at `http://localhost:3000` and the backend at `ht
 
 - Frontend: React, TypeScript, TailwindCSS
 - Backend: Node.js, Express
-- AI: OpenAI API
+- AI: OpenAI API, HuggingFace Inference API
 - Blockchain: Flow
 - Smart Contracts: Cadence
 

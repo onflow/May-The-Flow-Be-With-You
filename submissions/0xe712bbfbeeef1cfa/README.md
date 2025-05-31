@@ -61,7 +61,7 @@ Blending AI creativity with smart contract logic to create composable, interpret
 
 For Week 4, I built **MemoMint**, a reflective journaling dApp where users chat with an AI agent about their thoughts or week. At the end of the conversation, the AI summarizes it and mints the reflection as a Flow NFT diary entry.
 
-- ✅ LLM-powered chatbot
+- ✅ LLM-powered bot
 - ✅ Backend powered by FastAPI, with endpoints for chat and summary
 - ✅ Flow integration: summary is minted as an NFT using Cadence and Flow CLI
 - ✅ Frontend lets users chat, view summary, and mint with one click

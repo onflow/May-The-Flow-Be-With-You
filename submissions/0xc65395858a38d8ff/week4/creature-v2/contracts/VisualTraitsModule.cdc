@@ -248,6 +248,38 @@ access(all) contract VisualTraitsModule: TraitModule {
         )
     }
     
+    // NEW: Create trait with seed-based randomization
+    access(all) fun createTraitWithSeed(seed: UInt64): @{TraitModule.Trait} {
+        // Use seed to generate pseudo-random values within gene ranges
+        let r1 = (seed * 31) % 1000
+        let r2 = (seed * 37) % 1000  
+        let r3 = (seed * 41) % 1000
+        let r4 = (seed * 43) % 1000
+        let r5 = (seed * 47) % 1000
+        let r6 = (seed * 53) % 1000
+        let r7 = (seed * 59) % 1000
+        
+        // Generate values within ranges
+        let colorR = UFix64(r1) / 999.0  // 0.0-1.0
+        let colorG = UFix64(r2) / 999.0  // 0.0-1.0
+        let colorB = UFix64(r3) / 999.0  // 0.0-1.0
+        
+        let tamanoBase = 0.5 + (UFix64(r4) / 999.0) * 2.5  // 0.5-3.0
+        let formaPrincipal = 1.0 + (UFix64(r5) / 999.0) * 2.0  // 1.0-3.0
+        let numApendices = (UFix64(r6) / 999.0) * 8.0  // 0.0-8.0
+        let patronMovimiento = 1.0 + (UFix64(r7) / 999.0) * 3.0  // 1.0-4.0
+        
+        return <- create VisualTraits(
+            colorR: colorR,
+            colorG: colorG,
+            colorB: colorB,
+            tamanoBase: tamanoBase,
+            formaPrincipal: formaPrincipal,
+            numApendices: numApendices,
+            patronMovimiento: patronMovimiento
+        )
+    }
+    
     access(all) fun createTraitWithValue(value: String): @{TraitModule.Trait} {
         let trait <- self.createDefaultTrait() as! @VisualTraits
         trait.setValue(newValue: value)

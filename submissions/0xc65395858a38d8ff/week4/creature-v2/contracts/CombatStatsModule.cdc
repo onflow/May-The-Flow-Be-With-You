@@ -356,6 +356,28 @@ access(all) contract CombatStatsModule: TraitModule {
         )
     }
     
+    // NEW: Create trait with seed-based randomization
+    access(all) fun createTraitWithSeed(seed: UInt64): @{TraitModule.Trait} {
+        // Use seed to generate pseudo-random values within gene ranges
+        let r1 = (seed * 67) % 1000
+        let r2 = (seed * 71) % 1000  
+        let r3 = (seed * 73) % 1000
+        let r4 = (seed * 79) % 1000
+        
+        // Generate values within ranges (50-200, 5-25, 5-25, 0.5-2.0)
+        let puntosSaludMax = 50.0 + (UFix64(r1) / 999.0) * 150.0  // 50.0-200.0
+        let ataqueBase = 5.0 + (UFix64(r2) / 999.0) * 20.0  // 5.0-25.0
+        let defensaBase = 5.0 + (UFix64(r3) / 999.0) * 20.0  // 5.0-25.0
+        let agilidadCombate = 0.5 + (UFix64(r4) / 999.0) * 1.5  // 0.5-2.0
+        
+        return <- create CombatStats(
+            puntosSaludMax: puntosSaludMax,
+            ataqueBase: ataqueBase,
+            defensaBase: defensaBase,
+            agilidadCombate: agilidadCombate
+        )
+    }
+    
     access(all) fun createTraitWithValue(value: String): @{TraitModule.Trait} {
         let trait <- self.createDefaultTrait() as! @CombatStats
         trait.setValue(newValue: value)

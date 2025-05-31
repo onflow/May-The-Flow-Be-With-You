@@ -219,6 +219,47 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             return <- self.traits.remove(key: traitType)
         }
         
+        // NEW: Initialize traits with destiny-based seeds (10 seeds from day 0)
+        access(all) fun initializeTraitsWithDestiny() {
+            // Generate birth seeds (day 0) using the creature's destiny
+            let birthSeeds = self.generateDailySeeds(diaSimulado: 0)
+            
+            // Get registered modules
+            let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
+            
+            // Initialize each module with specific seeds from the 10 available
+            for i, moduleType in registeredModules {
+                if let factory = EvolvingCreatureNFT.getModuleFactory(moduleType: moduleType) {
+                    // Use different seeds for each module (cycling through the 10)
+                    let seedIndex = i % birthSeeds.length
+                    let moduleSeed = birthSeeds[seedIndex]
+                    
+                    // Try to create with seed if available, otherwise default
+                    var newTrait: @{TraitModule.Trait}? <- nil
+                    
+                    // Check if factory has createTraitWithSeed method
+                    switch moduleType {
+                        case "visual":
+                            newTrait <-! VisualTraitsModule.createTraitWithSeed(seed: moduleSeed)
+                        case "combat":
+                            newTrait <-! CombatStatsModule.createTraitWithSeed(seed: moduleSeed)
+                        case "evolution":
+                            newTrait <-! EvolutionPotentialModule.createTraitWithSeed(seed: moduleSeed)
+                        case "metabolism":
+                            newTrait <-! MetabolismModule.createTraitWithSeed(seed: moduleSeed)
+                        default:
+                            newTrait <-! factory.createDefaultTrait()
+                    }
+                    
+                    if newTrait != nil {
+                        self.addTrait(traitType: moduleType, trait: <-newTrait!)
+                    } else {
+                        destroy newTrait
+                    }
+                }
+            }
+        }
+        
         // Lazy initialization (from beta)
         access(all) fun ensureTraitExists(traitType: String): Bool {
             if self.traits.containsKey(traitType) {
@@ -232,16 +273,6 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             }
             
             return false
-        }
-        
-        // Get trait value with lazy initialization
-        access(all) fun getTraitValueWithInit(traitType: String): String? {
-            if self.ensureTraitExists(traitType: traitType) {
-                if let traitRef = &self.traits[traitType] as &{TraitModule.Trait}? {
-                    return traitRef.getValue()
-                }
-            }
-            return nil
         }
         
         // === HOMEOSTASIS MANAGEMENT ===

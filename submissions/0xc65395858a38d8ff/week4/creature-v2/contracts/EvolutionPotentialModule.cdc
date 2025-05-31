@@ -187,6 +187,22 @@ access(all) contract EvolutionPotentialModule: TraitModule {
         )
     }
     
+    // NEW: Create trait with seed-based randomization
+    access(all) fun createTraitWithSeed(seed: UInt64): @{TraitModule.Trait} {
+        // Use seed to generate pseudo-random values within gene ranges
+        let r1 = (seed * 83) % 1000
+        let r2 = (seed * 89) % 1000
+        
+        // Generate values within ranges (0.5-1.5, 3.0-7.0)
+        let potencialEvolutivo = 0.5 + (UFix64(r1) / 999.0) * 1.0  // 0.5-1.5
+        let max_lifespan_dias_base = 3.0 + (UFix64(r2) / 999.0) * 4.0  // 3.0-7.0
+        
+        return <- create EvolutionPotential(
+            potencialEvolutivo: potencialEvolutivo,
+            max_lifespan_dias_base: max_lifespan_dias_base
+        )
+    }
+    
     access(all) fun createTraitWithValue(value: String): @{TraitModule.Trait} {
         let trait <- self.createDefaultTrait() as! @EvolutionPotential
         trait.setValue(newValue: value)

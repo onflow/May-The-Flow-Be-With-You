@@ -19,17 +19,27 @@ access(all) fun main(owner: Address, nftID: UInt64): {String: AnyStruct} {
     
     let nftRef = nft!
     
-    // Get basic NFT info
+    // Get individual trait values first
+    let traitValues: {String: String?} = {}
+    let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
+    
+    for moduleType in registeredModules {
+        traitValues[moduleType] = nftRef.getTraitValue(traitType: moduleType)
+    }
+    
+    // Get basic NFT info using correct property names
     let result: {String: AnyStruct} = {
         "id": nftRef.id,
         "name": nftRef.name,
         "description": nftRef.description,
         "thumbnail": nftRef.thumbnail,
-        "isAlive": nftRef.isAlive,
-        "age": nftRef.age,
-        "evolutionPoints": nftRef.evolutionPoints,
-        "traits": nftRef.getTraitsDisplay(),
-        "registeredModules": nftRef.getRegisteredModuleTypes()
+        "estaViva": nftRef.estaViva,
+        "edadDiasCompletos": nftRef.edadDiasCompletos,
+        "puntosEvolucion": nftRef.puntosEvolucion,
+        "lifespanTotalSimulatedDays": nftRef.lifespanTotalSimulatedDays,
+        "initialSeed": nftRef.initialSeed,
+        "traitValues": traitValues,
+        "registeredModules": registeredModules
     }
     
     return result

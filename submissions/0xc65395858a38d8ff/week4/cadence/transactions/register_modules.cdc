@@ -8,19 +8,19 @@ transaction() {
         let contractAddress = acct.address
         
         // Register Visual Traits Module
-        EvolvingCreatureNFT.registerModule("visual", contractAddress, "VisualTraitsModule")
+        EvolvingCreatureNFT.registerModule(moduleType: "visual", contractAddress: contractAddress, contractName: "VisualTraitsModule")
         log("Visual traits module registered")
         
         // Register Combat Stats Module  
-        EvolvingCreatureNFT.registerModule("combat", contractAddress, "CombatStatsModule")
+        EvolvingCreatureNFT.registerModule(moduleType: "combat", contractAddress: contractAddress, contractName: "CombatStatsModule")
         log("Combat stats module registered")
         
         // Register Evolution Potential Module
-        EvolvingCreatureNFT.registerModule("evolution", contractAddress, "EvolutionPotentialModule")
+        EvolvingCreatureNFT.registerModule(moduleType: "evolution", contractAddress: contractAddress, contractName: "EvolutionPotentialModule")
         log("Evolution potential module registered")
         
         // Register Metabolism Module
-        EvolvingCreatureNFT.registerModule("metabolism", contractAddress, "MetabolismModule")
+        EvolvingCreatureNFT.registerModule(moduleType: "metabolism", contractAddress: contractAddress, contractName: "MetabolismModule")
         log("Metabolism module registered")
         
         log("All modules registered successfully!")

@@ -197,6 +197,22 @@ access(all) contract MetabolismModule: TraitModule {
         )
     }
     
+    // NEW: Create trait with seed-based randomization
+    access(all) fun createTraitWithSeed(seed: UInt64): @{TraitModule.Trait} {
+        // Use seed to generate pseudo-random values within gene ranges
+        let r1 = (seed * 97) % 1000
+        let r2 = (seed * 101) % 1000
+        
+        // Generate values within ranges (0.5-1.5, 0.1-0.9)
+        let tasaMetabolica = 0.5 + (UFix64(r1) / 999.0) * 1.0  // 0.5-1.5
+        let fertilidad = 0.1 + (UFix64(r2) / 999.0) * 0.8  // 0.1-0.9
+        
+        return <- create Metabolism(
+            tasaMetabolica: tasaMetabolica,
+            fertilidad: fertilidad
+        )
+    }
+    
     access(all) fun createTraitWithValue(value: String): @{TraitModule.Trait} {
         let trait <- self.createDefaultTrait() as! @Metabolism
         trait.setValue(newValue: value)

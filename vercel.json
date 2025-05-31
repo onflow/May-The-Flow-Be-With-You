@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "name": "memoreee-steddie",
+  "builds": [
+    {
+      "src": "submissions/0x4d17d1068f79c7d0/package.json",
+      "use": "@vercel/next",
+      "config": {
+        "distDir": ".next"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "submissions/0x4d17d1068f79c7d0/$1"
+    }
+  ],
+  "buildCommand": "cd submissions/0x4d17d1068f79c7d0 && npm install --legacy-peer-deps && npm run build",
+  "outputDirectory": "submissions/0x4d17d1068f79c7d0/.next",
+  "installCommand": "cd submissions/0x4d17d1068f79c7d0 && npm install --legacy-peer-deps",
+  "framework": "nextjs",
+  "functions": {
+    "submissions/0x4d17d1068f79c7d0/app/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "NEXT_PUBLIC_FLOW_NETWORK": "@NEXT_PUBLIC_FLOW_NETWORK",
+    "NEXT_PUBLIC_SUPABASE_URL": "@NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID": "@NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID",
+    "NEXT_PUBLIC_MEMORY_VRF_CONTRACT": "@NEXT_PUBLIC_MEMORY_VRF_CONTRACT"
+  },
+  "regions": ["iad1"],
+  "cleanUrls": true,
+  "trailingSlash": false
+}

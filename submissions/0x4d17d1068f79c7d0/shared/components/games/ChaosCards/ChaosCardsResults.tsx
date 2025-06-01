@@ -158,12 +158,12 @@ export function ChaosCardsResults({
       {/* Visual Answer Breakdown */}
       <div className="space-y-3">
         <h4
-          className="text-sm font-medium"
+          className="text-sm sm:text-base font-medium text-center"
           style={{ color: theme.colors.text }}
         >
           Your Sequence vs Correct Order
         </h4>
-        <div className="grid grid-cols-1 gap-2 max-w-md mx-auto">
+        <div className="grid grid-cols-1 gap-2 w-full">
           {cards.map((card, index) => {
             const userAnswer = userSequence[index];
             const isCorrect = userAnswer === card.id;
@@ -172,7 +172,7 @@ export function ChaosCardsResults({
             return (
               <div
                 key={index}
-                className="flex items-center justify-between p-2 rounded-lg border"
+                className="flex items-center justify-between p-3 sm:p-4 rounded-lg border"
                 style={{
                   backgroundColor: isCorrect
                     ? colors.successBg
@@ -180,9 +180,9 @@ export function ChaosCardsResults({
                   borderColor: isCorrect ? colors.success : colors.error,
                 }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                   <span
-                    className="text-xs font-medium px-2 py-1 rounded"
+                    className="text-xs sm:text-sm font-medium px-2 py-1 rounded flex-shrink-0"
                     style={{
                       backgroundColor: isCorrect
                         ? colors.success
@@ -192,22 +192,37 @@ export function ChaosCardsResults({
                   >
                     {index + 1}
                   </span>
-                  <span className="text-lg">{card.emoji}</span>
-                  <span className="text-sm font-medium">{card.name}</span>
+                  <span className="text-xl sm:text-2xl flex-shrink-0">
+                    {card.emoji}
+                  </span>
+                  <span className="text-sm sm:text-base font-medium truncate">
+                    {card.name}
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {isCorrect ? (
-                    <span style={{ color: colors.success }}>✓</span>
+                    <span
+                      className="text-lg sm:text-xl"
+                      style={{ color: colors.success }}
+                    >
+                      ✓
+                    </span>
                   ) : (
-                    <div className="flex items-center gap-1">
-                      <span style={{ color: colors.error }}>✗</span>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <span
+                        className="text-lg sm:text-xl"
+                        style={{ color: colors.error }}
+                      >
+                        ✗
+                      </span>
                       {userCard && (
                         <div
-                          className="text-xs"
+                          className="text-xs sm:text-sm flex items-center gap-1"
                           style={{ color: colors.error }}
                         >
-                          You: {userCard.emoji}
+                          <span className="hidden sm:inline">You:</span>
+                          <span>{userCard.emoji}</span>
                         </div>
                       )}
                     </div>
@@ -306,11 +321,11 @@ export function ChaosCardsResults({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3 justify-center mb-4">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center mb-4">
         <button
           onClick={onPlayAgain}
           disabled={localLoading}
-          className="px-6 py-2 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 hover:scale-105 shadow-lg"
+          className="px-4 sm:px-6 py-3 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 hover:scale-105 shadow-lg text-sm sm:text-base touch-target"
           style={{
             backgroundColor: isPerfect ? colors.success : colors.info,
             boxShadow: `0 4px 12px ${

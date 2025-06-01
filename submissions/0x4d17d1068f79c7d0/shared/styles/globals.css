@@ -120,4 +120,23 @@
       -webkit-overflow-scrolling: touch;
     }
   }
+
+  /* Mobile-optimized game result layouts */
+  .mobile-result-container {
+    @apply w-full max-w-none px-2 sm:px-4;
+  }
+
+  .mobile-result-card {
+    @apply bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-white/30 p-3 sm:p-4 lg:p-6;
+  }
+
+  /* Full-width mobile layouts */
+  .mobile-full-width {
+    @apply w-full max-w-none mx-0 px-2 sm:px-4;
+  }
+
+  /* Better mobile spacing */
+  .mobile-spacing {
+    @apply space-y-3 sm:space-y-4 lg:space-y-6;
+  }
 }

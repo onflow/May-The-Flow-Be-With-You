@@ -16,11 +16,11 @@ interface ProgressiveEnhancementProps {
   className?: string;
 }
 
-export function ProgressiveEnhancement({ 
-  gameResult, 
-  achievements = [], 
+export function ProgressiveEnhancement({
+  gameResult,
+  achievements = [],
   showInline = false,
-  className = "" 
+  className = "",
 }: ProgressiveEnhancementProps) {
   const { user } = useAuth();
   const { gameMode } = useGame();
@@ -31,10 +31,10 @@ export function ProgressiveEnhancement({
   if (user || dismissed) return null;
 
   // Don't show for on-chain mode (shouldn't happen without auth anyway)
-  if (gameMode === 'onchain') return null;
+  if (gameMode === "onchain") return null;
 
   const handleSignUp = () => {
-    router.push('/login?signup=true');
+    router.push("/login?signup=true");
   };
 
   const handleDismiss = () => {
@@ -70,70 +70,73 @@ export function ProgressiveEnhancement({
     <div className={`progressive-enhancement ${className}`}>
       {/* Anonymous User Post-Game Prompt */}
       {gameResult && (
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6 mb-4">
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 sm:p-6 mb-4">
           <div className="text-center">
-            <div className="text-4xl mb-3">🎯</div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            <div className="text-3xl sm:text-4xl mb-3">🎯</div>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
               Great Score! Don't Lose Your Progress
             </h3>
-            <div className="text-lg text-gray-700 dark:text-gray-300 mb-4">
-              Score: <span className="font-bold text-green-600">{gameResult.score}</span>
+            <div className="text-base sm:text-lg text-gray-700 dark:text-gray-300 mb-4">
+              Score:{" "}
+              <span className="font-bold text-green-600">
+                {gameResult.score}
+              </span>
               {gameResult.perfect && (
                 <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
                   🏆 Perfect!
                 </span>
               )}
             </div>
-            
-            <div className="grid md:grid-cols-2 gap-4 mb-6">
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-6">
               {/* Email Signup Benefits */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
                   <span className="mr-2">📧</span>
                   Save Your Progress
                 </h4>
-                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                <ul className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1 sm:space-y-2">
                   <li className="flex items-center">
-                    <span className="text-green-500 mr-2">✓</span>
-                    Progress saved across devices
+                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span>Progress saved across devices</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-green-500 mr-2">✓</span>
-                    Community leaderboards
+                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span>Community leaderboards</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-green-500 mr-2">✓</span>
-                    Achievement tracking
+                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span>Achievement tracking</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-green-500 mr-2">✓</span>
-                    Social features
+                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span>Social features</span>
                   </li>
                 </ul>
               </div>
 
               {/* Web3 Benefits Preview */}
-              <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-3 sm:p-4 border border-purple-200 dark:border-purple-800">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
                   <span className="mr-2">🏆</span>
                   Competitive Mode
                 </h4>
-                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                <ul className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1 sm:space-y-2">
                   <li className="flex items-center">
-                    <span className="text-purple-500 mr-2">⭐</span>
-                    Verifiable randomness
+                    <span className="text-purple-500 mr-2 text-sm">⭐</span>
+                    <span>Verifiable randomness</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-purple-500 mr-2">⭐</span>
-                    NFT achievements
+                    <span className="text-purple-500 mr-2 text-sm">⭐</span>
+                    <span>NFT achievements</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-purple-500 mr-2">⭐</span>
-                    Global tournaments
+                    <span className="text-purple-500 mr-2 text-sm">⭐</span>
+                    <span>Global tournaments</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-purple-500 mr-2">⭐</span>
-                    Blockchain verification
+                    <span className="text-purple-500 mr-2 text-sm">⭐</span>
+                    <span>Blockchain verification</span>
                   </li>
                 </ul>
                 <div className="mt-2 text-xs text-purple-600 dark:text-purple-400">
@@ -142,16 +145,16 @@ export function ProgressiveEnhancement({
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
               <button
                 onClick={handleSignUp}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="px-4 sm:px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base touch-target"
               >
                 📧 Sign Up to Save Progress
               </button>
               <button
                 onClick={handleDismiss}
-                className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="px-4 sm:px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base touch-target"
               >
                 Continue Playing
               </button>
@@ -170,7 +173,8 @@ export function ProgressiveEnhancement({
                 Achievement Unlocked!
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                You've earned achievements! Sign up to save them permanently and unlock NFT versions.
+                You've earned achievements! Sign up to save them permanently and
+                unlock NFT versions.
               </p>
               <div className="flex flex-wrap gap-2 mb-3">
                 {achievements.slice(0, 3).map((achievement, index) => (
@@ -212,15 +216,16 @@ export function ProgressiveEnhancement({
               🚀 Unlock More Features
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              You're playing anonymously. Sign up to unlock social features and save your progress!
+              You're playing anonymously. Sign up to unlock social features and
+              save your progress!
             </p>
-            
-            <div className="grid sm:grid-cols-2 gap-4 mb-6">
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-6">
               <div className="text-left">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                <h4 className="font-medium text-gray-900 dark:text-white mb-2 text-sm sm:text-base">
                   📧 With Email Account
                 </h4>
-                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                <ul className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1">
                   <li>✓ Save progress across devices</li>
                   <li>✓ Community leaderboards</li>
                   <li>✓ Achievement tracking</li>
@@ -228,10 +233,10 @@ export function ProgressiveEnhancement({
                 </ul>
               </div>
               <div className="text-left">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                <h4 className="font-medium text-gray-900 dark:text-white mb-2 text-sm sm:text-base">
                   🏆 With Flow Wallet
                 </h4>
-                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                <ul className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1">
                   <li>⭐ Everything above PLUS:</li>
                   <li>⭐ NFT achievements</li>
                   <li>⭐ Verifiable randomness</li>
@@ -240,16 +245,16 @@ export function ProgressiveEnhancement({
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
               <button
                 onClick={handleSignUp}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base touch-target"
               >
                 Get Started
               </button>
               <button
                 onClick={handleDismiss}
-                className="px-6 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                className="px-4 sm:px-6 py-2 sm:py-3 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors text-sm sm:text-base touch-target"
               >
                 Maybe Later
               </button>
@@ -276,7 +281,7 @@ export function AnonymousUserBanner() {
           🎮 Playing anonymously? Sign up to save progress and compete!
         </span>
         <button
-          onClick={() => router.push('/login?signup=true')}
+          onClick={() => router.push("/login?signup=true")}
           className="px-4 py-1 bg-white text-blue-600 text-sm rounded-full hover:bg-gray-100 transition-colors"
         >
           Sign Up

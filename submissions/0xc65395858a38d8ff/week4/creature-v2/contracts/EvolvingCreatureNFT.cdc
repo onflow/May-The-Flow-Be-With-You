@@ -39,6 +39,7 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
     access(all) event MitosisOccurred(parentID: UInt64, childID: UInt64, epCost: UFix64)
     access(all) event SexualReproductionOccurred(parent1ID: UInt64, parent2ID: UInt64, childID: UInt64)
     access(all) event ModuleRegistered(moduleType: String, contractAddress: Address, contractName: String)
+    access(all) event ReproductionOpportunityDetected(creature1ID: UInt64, creature2ID: UInt64, compatibilityScore: UFix64, windowExpires: UFix64)
     
     // === STORAGE PATHS ===
     access(all) let CollectionStoragePath: StoragePath
@@ -272,7 +273,7 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
         
         // === EVOLUTION COORDINATION ===
         
-        // Step-based evolution processing (like CreatureNFTV6 with 250 steps per day)
+        // OPTIMIZED: Accumulative evolution processing (days + partial steps)
         access(all) fun evolve(simulatedSecondsPerDay: UFix64) {
             if !self.estaViva {
                 return // Dead creatures don't evolve
@@ -286,9 +287,6 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             let secondsPerStep = simulatedSecondsPerDay / UFix64(STEPS_PER_DAY)
             let elapsedSteps = UInt64(elapsedSeconds / secondsPerStep)
             
-            log("Creature ".concat(self.id.toString()).concat(": elapsed seconds = ").concat(elapsedSeconds.toString())
-                .concat(", steps to process = ").concat(elapsedSteps.toString()))
-            
             if elapsedSteps == 0 {
                 // Not enough time has passed to process even one step
                 self.lastEvolutionProcessedBlockHeight = getCurrentBlock().height
@@ -296,61 +294,44 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                 return
             }
             
-            // Track current day for seed generation
+            // Calculate days and partial steps
             let initialDay = UInt64(self.edadDiasCompletos)
-            var currentDaySeeds: [UInt64] = []
-            var lastSeedDay: UInt64 = initialDay
+            let completeDays = elapsedSteps / STEPS_PER_DAY
+            let partialSteps = elapsedSteps % STEPS_PER_DAY
             
-            // Process each step individually
-            var processedSteps: UInt64 = 0
-            while processedSteps < elapsedSteps && self.estaViva {
-                let currentDay = UInt64(self.edadDiasCompletos)
+            var totalProcessedSteps: UInt64 = 0
+            let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
+            
+            // Process complete days efficiently
+            var dayIndex: UInt64 = 0
+            while dayIndex < completeDays && self.estaViva {
+                let currentDay = initialDay + dayIndex
+                let dailySeeds = self.generateDailySeeds(diaSimulado: currentDay)
                 
-                // Generate new daily seeds only when day changes
-                if currentDay != lastSeedDay || currentDaySeeds.length == 0 {
-                    currentDaySeeds = self.generateDailySeeds(diaSimulado: currentDay)
-                    lastSeedDay = currentDay
-                    log("New day ".concat(currentDay.toString()).concat(" - generated fresh seeds for creature ").concat(self.id.toString()))
-                }
-                
-                // Calculate step within current day (0-249)
-                let stepWithinDay = UInt64((self.edadDiasCompletos - UFix64(currentDay)) * UFix64(STEPS_PER_DAY))
-                
-                // Process evolution for all registered modules for this step
-                let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
-                
+                // Process each module for this complete day
                 for moduleType in registeredModules {
-                    // Lazy initialization if needed
                     if !self.traits.containsKey(moduleType) {
                         if !self.ensureTraitExists(traitType: moduleType) {
-                            continue // Skip if couldn't initialize
+                            continue
                         }
                     }
                     
-                    // Evolve the module for this single step using daily seeds
                     if let traitRef = &self.traits[moduleType] as &{TraitModule.Trait}? {
-                        // Create step-specific seeds: daily seeds + step variation
-                        var stepSeeds: [UInt64] = []
-                        var i = 0
-                        while i < currentDaySeeds.length {
-                            stepSeeds.append(currentDaySeeds[i] ^ (stepWithinDay * UInt64(i + 1)))
-                            i = i + 1
-                        }
-                        traitRef.evolve(seeds: stepSeeds)
+                        traitRef.evolveAccumulative(seeds: dailySeeds, steps: STEPS_PER_DAY)
                     }
                 }
                 
-                // === CROSS-MODULE COMMUNICATION (per step) ===
-                // Apply visual influences to combat stats (like CreatureNFTV6)
-                self.applyCrossModuleInfluences(currentDaySeeds)
+                // Apply cross-module influences once per day
+                self.applyCrossModuleInfluencesOptimized(dailySeeds)
                 
-                // Gain EP for this step (using CreatureNFTV6 logic)
-                self.gainEvolutionPointsForStep(currentDaySeeds[0], STEPS_PER_DAY)
+                // Gain EP for this day (accumulative)
+                self.gainEvolutionPointsForDay(dailySeeds[0], STEPS_PER_DAY)
                 
-                // Age the creature by one step (1/250 of a day)
-                self.edadDiasCompletos = self.edadDiasCompletos + (1.0 / UFix64(STEPS_PER_DAY))
+                // Age by one full day
+                self.edadDiasCompletos = self.edadDiasCompletos + 1.0
+                totalProcessedSteps = totalProcessedSteps + STEPS_PER_DAY
                 
-                // Check for death by old age after each step
+                // Check for death after each complete day
                 if self.edadDiasCompletos >= self.lifespanTotalSimulatedDays {
                     self.estaViva = false
                     let currentBlock = getCurrentBlock()
@@ -362,12 +343,36 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                         deathBlockHeight: currentBlock.height,
                         deathTimestamp: currentBlock.timestamp
                     )
-                    
-                    log("Creature ".concat(self.id.toString()).concat(" died of old age at ").concat(self.edadDiasCompletos.toString()).concat(" days"))
                     break
                 }
                 
-                processedSteps = processedSteps + 1
+                dayIndex = dayIndex + 1
+            }
+            
+            // Process remaining partial steps if alive
+            if partialSteps > 0 && self.estaViva {
+                let currentDay = initialDay + completeDays
+                let dailySeeds = self.generateDailySeeds(diaSimulado: currentDay)
+                
+                // Process each module for partial steps
+                for moduleType in registeredModules {
+                    if !self.traits.containsKey(moduleType) {
+                        if !self.ensureTraitExists(traitType: moduleType) {
+                            continue
+                        }
+                    }
+                    
+                    if let traitRef = &self.traits[moduleType] as &{TraitModule.Trait}? {
+                        traitRef.evolveAccumulative(seeds: dailySeeds, steps: partialSteps)
+                    }
+                }
+                
+                // Gain EP for partial steps
+                self.gainEvolutionPointsForSteps(dailySeeds[0], partialSteps, STEPS_PER_DAY)
+                
+                // Age by partial day
+                self.edadDiasCompletos = self.edadDiasCompletos + (UFix64(partialSteps) / UFix64(STEPS_PER_DAY))
+                totalProcessedSteps = totalProcessedSteps + partialSteps
             }
             
             // Update evolution tracking
@@ -376,12 +381,114 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             
             emit EvolutionProcessed(
                 creatureID: self.id,
-                processedSteps: processedSteps,
+                processedSteps: totalProcessedSteps,
                 newAge: self.edadDiasCompletos,
                 evolutionPoints: self.puntosEvolucion
             )
             
-            log("Evolution complete: processed ".concat(processedSteps.toString()).concat(" steps, new age: ").concat(self.edadDiasCompletos.toString()).concat(" days"))
+            // NOTE: Reproduction opportunities will be evaluated at the Collection level
+        }
+        
+        // NEW: Evaluate reproduction opportunities after evolution
+        access(all) fun evaluateReproductionOpportunities(otherCreatures: [&NFT]) {
+            // Only check if this creature is alive and has reproduction trait
+            if !self.estaViva || !self.traits.containsKey("reproduction") {
+                return
+            }
+            
+            // Get direct reference to this creature's reproduction trait
+            if let myReproTrait = &self.traits["reproduction"] as &{TraitModule.Trait}? {
+                // Check if this creature is ready for reproduction first - get display name directly from trait
+                let myReproDisplay = myReproTrait.getDisplayName()
+                
+                // Parse maturity from reproduction display (simplified check)
+                let isMaturitySufficient = myReproDisplay.contains("🐓Adult") || myReproDisplay.contains("🦅Mature")
+                if !isMaturitySufficient {
+                    return // Not mature enough
+                }
+                
+                // CRITICAL: Access the actual ReproductionStatus resource to update candidates
+                // This requires importing the contract and proper casting
+                if let reproModule = getAccount(0x2444e6b4d9327f09).contracts.borrow<&{TraitModule}>(name: "ReproductionModuleV2") {
+                    
+                    // Clear previous candidates first (daily reset)
+                    let clearSuccess = myReproTrait.clearReproductionCandidates(reason: "daily_evaluation")
+                    log("Cleared previous reproduction candidates for creature #".concat(self.id.toString()).concat(": ").concat(clearSuccess ? "SUCCESS" : "FAILED"))
+                    
+                    var candidatesFound: UInt64 = 0
+                    let currentTimestamp = getCurrentBlock().timestamp
+                    
+                    // Check each other creature for compatibility
+                    for otherCreature in otherCreatures {
+                        if otherCreature.id == self.id || !otherCreature.estaViva {
+                            continue // Skip self and dead creatures
+                        }
+                        
+                        if !otherCreature.traits.containsKey("reproduction") {
+                            continue // Skip creatures without reproduction
+                        }
+                        
+                        // Check if other creature is also mature
+                        if let otherReproTrait = otherCreature.traits["reproduction"] as &{TraitModule.Trait}? {
+                            let otherReproDisplay = otherReproTrait.getDisplayName()
+                            let otherIsMaturitySufficient = otherReproDisplay.contains("🐓Adult") || otherReproDisplay.contains("🦅Mature")
+                            
+                            if !otherIsMaturitySufficient {
+                                continue
+                            }
+                            
+                            // TODO: Use real compatibility calculation from module
+                            // For now, simplified compatibility calculation
+                            let baseCompatibility: UFix64 = 0.25 // BASE_REPRODUCTION_CHANCE
+                            let fertilitySimilarity: UFix64 = 0.3 // Simplified fertility factor
+                            let maturityBonus: UFix64 = 0.2 // Both are mature
+                            
+                            let compatibilityScore = baseCompatibility + fertilitySimilarity + maturityBonus
+                            
+                            if compatibilityScore >= 0.3 { // 30% minimum
+                                candidatesFound = candidatesFound + 1
+                                
+                                // Add candidate to the actual reproduction trait using new interface method
+                                let addSuccess = myReproTrait.addReproductionCandidate(partnerID: otherCreature.id, compatibilityScore: compatibilityScore)
+                                
+                                // Emit reproduction opportunity event
+                                emit ReproductionOpportunityDetected(
+                                    creature1ID: self.id,
+                                    creature2ID: otherCreature.id,
+                                    compatibilityScore: compatibilityScore,
+                                    windowExpires: currentTimestamp + 86400.0 // 24 hours
+                                )
+                                
+                                // Log for debugging
+                                log("Reproduction opportunity detected: Creature #".concat(self.id.toString())
+                                    .concat(" can mate with Creature #").concat(otherCreature.id.toString())
+                                    .concat(" (compatibility: ").concat(compatibilityScore.toString()).concat(")"))
+                                
+                                if addSuccess {
+                                    log("Candidate #".concat(otherCreature.id.toString()).concat(" added to reproduction list of creature #").concat(self.id.toString()))
+                                }
+                            }
+                        }
+                    }
+                    
+                    if candidatesFound > 0 {
+                        log("Creature #".concat(self.id.toString()).concat(" found ").concat(candidatesFound.toString()).concat(" potential mates"))
+                        log("Reproduction candidates successfully updated in trait module")
+                    }
+                }
+            }
+        }
+        
+        // OPTIMIZED: Simplified cross-module influences without string parsing
+        access(all) fun applyCrossModuleInfluencesOptimized(_ seeds: [UInt64]) {
+            // Skip cross-module influences to avoid computation limits
+            // Use seeds directly without parsing visual traits
+            if let combatRef = &self.traits["combat"] as &{TraitModule.Trait}? {
+                if seeds.length >= 3 {
+                    // Simple influence using seeds instead of parsing
+                    combatRef.evolve(seeds: [seeds[1], seeds[2], seeds[0]])
+                }
+            }
         }
         
         // Apply cross-module influences (visual -> combat, like CreatureNFTV6)
@@ -485,11 +592,7 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             }
             let appendicesInfluence = 1.0 - (distanceFromOptimal / 4.0) // 0.0-1.0, peak at 4.0
             
-            // Log the influences being applied
-            log("Applying visual influences: Size=".concat(tamanoBase.toString())
-                .concat(", Form=").concat(formaPrincipal.toString())
-                .concat(", Apps=").concat(numApendices.toString())
-                .concat(", Influence=").concat(influenceBase.toString()))
+            // Visual influences calculated (logging removed for performance)
             
             // Apply the influences by modifying the combat trait through evolution
             // This triggers the CombatStatsModule's own applyVisualInfluence logic
@@ -506,8 +609,13 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             return 1.0
         }
         
-        // Gain evolution points (from CreatureNFTV6)
-        access(all) fun gainEvolutionPointsForStep(_ r0: UInt64, _ stepsPerDay: UInt64) {
+        // Gain evolution points for a full day (accumulative)
+        access(all) fun gainEvolutionPointsForDay(_ r0: UInt64, _ stepsPerDay: UInt64) {
+            self.gainEvolutionPointsForSteps(r0, stepsPerDay, stepsPerDay)
+        }
+        
+        // Gain evolution points for specific number of steps (accumulative)
+        access(all) fun gainEvolutionPointsForSteps(_ baseSeed: UInt64, _ steps: UInt64, _ stepsPerDay: UInt64) {
             // Get potencialEvolutivo from traits (if exists)
             var potencialEvolutivo: UFix64 = 1.0
             if let evolutionValue = self.getTraitValue(traitType: "potencialEvolutivo") {
@@ -528,13 +636,24 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             let calculatedAgeMultiplier = MAX_AGE_MULTIPLIER - (self.edadDiasCompletos * decreasePerDay)
             let ageMultiplier = self.max(MIN_AGE_MULTIPLIER, calculatedAgeMultiplier)
             
-            // EP calculation
+            // Accumulative EP calculation - simulate each step's randomness
+            var totalEP: UFix64 = 0.0
+            var stepSeed = baseSeed
             let PYTHON_BASE_FACTOR = 0.01
-            let correctedRandomFactor = 0.5 + (UFix64(r0 % 101) / 100.0)
             
-            let baseEPPerStep = potencialEvolutivo * PYTHON_BASE_FACTOR * EvolvingCreatureNFT.PYTHON_MULTIPLIER * ageMultiplier * correctedRandomFactor
+            var i: UInt64 = 0
+            while i < steps {
+                // Generate step-specific random (maintaining granularity)
+                stepSeed = (stepSeed * 1664525 + 1013904223) % 4294967296
+                let correctedRandomFactor = 0.5 + (UFix64(stepSeed % 101) / 100.0)
+                
+                let baseEPPerStep = potencialEvolutivo * PYTHON_BASE_FACTOR * EvolvingCreatureNFT.PYTHON_MULTIPLIER * ageMultiplier * correctedRandomFactor
+                totalEP = totalEP + baseEPPerStep
+                
+                i = i + 1
+            }
             
-            self.puntosEvolucion = self.puntosEvolucion + baseEPPerStep
+            self.puntosEvolucion = self.puntosEvolucion + totalEP
         }
         
 
@@ -665,14 +784,118 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                 initialTraits: <- childTraits
             )
             
-            // Emitir evento
-            emit MitosisOccurred(
-                parentID: self.id,
-                childID: newID,
-                epCost: epCost
-            )
-            
-            return <-newCreature
+                    // Emitir evento
+        emit MitosisOccurred(
+            parentID: self.id,
+            childID: newID,
+            epCost: epCost
+        )
+        
+        return <-newCreature
+    }
+    
+    // Método para realizar reproducción sexual (como mitosis pero con dos padres)
+    access(all) fun performSexualReproduction(partner: &NFT): @NFT? {
+        // Verificar que ambas criaturas están vivas
+        if !self.estaViva || !partner.estaViva {
+            return nil
+        }
+        
+        // Verificar que ambas tienen trait de reproducción
+        if !self.traits.containsKey("reproduction") || !partner.traits.containsKey("reproduction") {
+            return nil
+        }
+        
+        // Acceder a traits usando if let para manejar opcionales
+        if let myReproTrait = &self.traits["reproduction"] as &{TraitModule.Trait}? {
+            if let partnerReproTrait = partner.traits["reproduction"] as &{TraitModule.Trait}? {
+                
+                // Verificar candidatos usando interfaz genérica
+                let myCandidates = myReproTrait.getReproductionCandidates()
+                let partnerCandidates = partnerReproTrait.getReproductionCandidates()
+                
+                if !myCandidates.contains(partner.id) || !partnerCandidates.contains(self.id) {
+                    return nil // No mutual candidates
+                }
+                
+                // Probabilidad simplificada (sin acceso a módulo específico)
+                let successChance: UFix64 = 0.6 // 60% base success rate
+                
+                // Generar número aleatorio para determinar éxito
+                let currentBlock = getCurrentBlock()
+                let randomSeed = UInt64(currentBlock.timestamp) ^ currentBlock.height ^ self.id ^ partner.id
+                let randomValue = UFix64(randomSeed % 1000) / 999.0
+                
+                if randomValue > successChance {
+                    // Reproducción falló, limpiar candidatos
+                    myReproTrait.clearReproductionCandidates(reason: "reproduction_failed")
+                    partnerReproTrait.clearReproductionCandidates(reason: "reproduction_failed")
+                    return nil
+                }
+                
+                // === CREAR DESCENDENCIA ===
+                
+                // Generar seed único para el hijo
+                let childSeed = randomSeed ^ UInt64(currentBlock.timestamp * 1000.0)
+                
+                // Crear traits del hijo usando reproducción sexual de cada módulo
+                let childTraits: @{String: {TraitModule.Trait}} <- {}
+                let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
+                
+                for i, moduleType in registeredModules {
+                    if let factory = EvolvingCreatureNFT.getModuleFactory(moduleType: moduleType) {
+                        if let myTrait = &self.traits[moduleType] as &{TraitModule.Trait}? {
+                            if let partnerTrait = partner.traits[moduleType] as &{TraitModule.Trait}? {
+                                // Usar semilla específica para cada módulo
+                                let moduleSeed = childSeed ^ UInt64(i * 1000)
+                                let childTrait <- factory.createChildTrait(
+                                    parent1: myTrait, 
+                                    parent2: partnerTrait, 
+                                    seed: moduleSeed
+                                )
+                                childTraits[moduleType] <-! childTrait
+                            }
+                        }
+                    }
+                }
+                
+                // Calcular esperanza de vida del hijo (promedio de padres)
+                let avgLifespan = (self.lifespanTotalSimulatedDays + partner.lifespanTotalSimulatedDays) / 2.0
+                let childLifespan = avgLifespan * 1.1 // 10% hybrid vigor bonus
+                
+                // Crear nueva criatura
+                EvolvingCreatureNFT.totalSupply = EvolvingCreatureNFT.totalSupply + 1
+                let newID = EvolvingCreatureNFT.totalSupply
+                
+                let newCreature <- create NFT(
+                    id: newID,
+                    name: "Hybrid of ".concat(self.name).concat(" & ").concat(partner.name),
+                    description: "Born from sexual reproduction between creatures #".concat(self.id.toString()).concat(" and #").concat(partner.id.toString()),
+                    thumbnail: self.thumbnail,
+                    birthBlockHeight: currentBlock.height,
+                    lifespanDays: childLifespan,
+                    initialTraits: <- childTraits
+                )
+                
+                // Solo limpiar candidatos (no hay método recordReproductionSuccess en interfaz)
+                myReproTrait.clearReproductionCandidates(reason: "reproduction_successful")
+                partnerReproTrait.clearReproductionCandidates(reason: "reproduction_successful")
+                
+                // Emitir evento
+                emit SexualReproductionOccurred(
+                    parent1ID: self.id,
+                    parent2ID: partner.id,
+                    childID: newID
+                )
+                
+                return <-newCreature
+                
+            } else {
+                return nil // Partner doesn't have reproduction trait
+            }
+        } else {
+            return nil // Self doesn't have reproduction trait
+        }
         }
     }
     
@@ -767,6 +990,18 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
         access(all) fun evolveCreature(id: UInt64, simulatedSecondsPerDay: UFix64) {
             if let creatureRef = self.borrowEvolvingCreatureNFTForUpdate(id: id) {
                 creatureRef.evolve(simulatedSecondsPerDay: simulatedSecondsPerDay)
+                
+                // After evolution, evaluate reproduction opportunities with other creatures
+                let otherCreatures: [&NFT] = []
+                for otherID in self.getIDs() {
+                    if otherID != id {
+                        if let otherCreature = self.borrowEvolvingCreatureNFT(id: otherID) {
+                            otherCreatures.append(otherCreature)
+                        }
+                    }
+                }
+                
+                creatureRef.evaluateReproductionOpportunities(otherCreatures: otherCreatures)
             }
         }
         
@@ -784,6 +1019,27 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                     // Depositar el nuevo NFT en la colección
                     self.deposit(token: <-childNFT)
                     return true
+                }
+            }
+            return false
+        }
+        
+        // Perform sexual reproduction between two creatures
+        access(all) fun performSexualReproduction(parent1ID: UInt64, parent2ID: UInt64): Bool {
+            // Verificar límite de criaturas activas
+            if UInt64(self.activeCreatureIDs.length) >= EvolvingCreatureNFT.MAX_ACTIVE_CREATURES {
+                return false // No space for new creature
+            }
+            
+            // Obtener referencias a ambos padres
+            if let parent1Ref = self.borrowEvolvingCreatureNFTForUpdate(id: parent1ID) {
+                if let parent2Ref = self.borrowEvolvingCreatureNFT(id: parent2ID) {
+                    // Realizar reproducción sexual
+                    if let childNFT <- parent1Ref.performSexualReproduction(partner: parent2Ref) {
+                        // Depositar el nuevo NFT en la colección
+                        self.deposit(token: <-childNFT)
+                        return true
+                    }
                 }
             }
             return false

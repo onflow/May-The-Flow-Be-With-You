@@ -96,6 +96,31 @@ access(all) contract VisualTraitsModule: TraitModule {
             return self.getDisplayName()
         }
         
+        // OPTIMIZED: Accumulative evolution for multiple steps
+        access(all) fun evolveAccumulative(seeds: [UInt64], steps: UInt64): String {
+            if seeds.length < 5 { return self.getDisplayName() }
+            
+            // Visual evolution (accumulative version)
+            let potencialEvolutivo: UFix64 = 1.0
+            let dailyVolatilityFactor = 0.5 + (UFix64(seeds[0] % 1000) / 999.0)
+            
+            // Evolve each visual gene accumulatively
+            self.evolveGeneAccumulative("colorR", seeds[1], steps, potencialEvolutivo, dailyVolatilityFactor)
+            self.evolveGeneAccumulative("colorG", seeds[2], steps, potencialEvolutivo, dailyVolatilityFactor)
+            self.evolveGeneAccumulative("colorB", seeds[3], steps, potencialEvolutivo, dailyVolatilityFactor)
+            self.evolveGeneAccumulative("tamanoBase", seeds[4], steps, potencialEvolutivo, dailyVolatilityFactor)
+            
+            if seeds.length >= 7 {
+                self.evolveGeneAccumulative("formaPrincipal", seeds[5], steps, potencialEvolutivo, dailyVolatilityFactor)
+                self.evolveGeneAccumulative("numApendices", seeds[6], steps, potencialEvolutivo, dailyVolatilityFactor)
+            }
+            if seeds.length >= 8 {
+                self.evolveGeneAccumulative("patronMovimiento", seeds[7], steps, potencialEvolutivo, dailyVolatilityFactor)
+            }
+            
+            return self.getDisplayName()
+        }
+        
         // === PARSING HELPERS ===
         
         access(all) fun parseAndSetValues(_ value: String) {
@@ -131,6 +156,67 @@ access(all) contract VisualTraitsModule: TraitModule {
             // Simple extraction - would need proper implementation
             // For now return a default to prevent parsing errors
             return "1.0"
+        }
+        
+        // === ACCUMULATIVE EVOLUTION HELPERS ===
+        
+        access(self) fun evolveGeneAccumulative(_ geneName: String, _ baseSeed: UInt64, _ steps: UInt64, _ potencial: UFix64, _ volatility: UFix64) {
+            // Get current value
+            var currentValue: UFix64 = 0.0
+            switch geneName {
+                case "colorR": currentValue = self.colorR
+                case "colorG": currentValue = self.colorG
+                case "colorB": currentValue = self.colorB
+                case "tamanoBase": currentValue = self.tamanoBase
+                case "formaPrincipal": currentValue = self.formaPrincipal
+                case "numApendices": currentValue = self.numApendices
+                case "patronMovimiento": currentValue = self.patronMovimiento
+                default: return
+            }
+            
+            // Accumulate evolution effects over all steps
+            var totalIncrease: UFix64 = 0.0
+            var totalDecrease: UFix64 = 0.0
+            var stepSeed = baseSeed
+            let magnitude = 0.001 * potencial * volatility
+            
+            var i: UInt64 = 0
+            while i < steps {
+                // Generate step-specific random (maintaining granularity)
+                stepSeed = (stepSeed * 1664525 + 1013904223) % 4294967296
+                let randomNormalized = UFix64(stepSeed % 10000) / 9999.0
+                
+                // Calculate step change
+                if randomNormalized < 0.5 {
+                    let decreaseAmount = (0.5 - randomNormalized) * 2.0 * magnitude
+                    totalDecrease = totalDecrease + decreaseAmount
+                } else {
+                    let increaseAmount = (randomNormalized - 0.5) * 2.0 * magnitude
+                    totalIncrease = totalIncrease + increaseAmount
+                }
+                i = i + 1
+            }
+            
+            // Apply total accumulated change
+            var newValue = currentValue + totalIncrease
+            if newValue > totalDecrease {
+                newValue = newValue - totalDecrease
+            } else {
+                newValue = VisualTraitsModule.GENE_RANGES[geneName]!["min"]!
+            }
+            
+            // Clamp and set final value
+            let finalValue = self.clampValue(newValue, geneName)
+            
+            switch geneName {
+                case "colorR": self.colorR = finalValue
+                case "colorG": self.colorG = finalValue
+                case "colorB": self.colorB = finalValue
+                case "tamanoBase": self.tamanoBase = finalValue
+                case "formaPrincipal": self.formaPrincipal = finalValue
+                case "numApendices": self.numApendices = finalValue
+                case "patronMovimiento": self.patronMovimiento = finalValue
+            }
         }
         
         // === EVOLUTION HELPERS ===
@@ -232,6 +318,28 @@ access(all) contract VisualTraitsModule: TraitModule {
                 default: return "❓Unknown"
             }
         }
+        
+        // === REPRODUCTION INTERFACE (NO-OP IMPLEMENTATIONS) ===
+        
+        access(all) fun addReproductionCandidate(partnerID: UInt64, compatibilityScore: UFix64): Bool {
+            return false // Visual traits don't handle reproduction
+        }
+        
+        access(all) fun clearReproductionCandidates(reason: String): Bool {
+            return false // Visual traits don't handle reproduction
+        }
+        
+        access(all) view fun isReproductionReady(): Bool {
+            return false // Visual traits don't handle reproduction
+        }
+        
+        access(all) view fun canReproduceWith(partnerID: UInt64): Bool {
+            return false // Visual traits don't handle reproduction
+        }
+        
+        access(all) view fun getReproductionCandidates(): [UInt64] {
+            return [] // Visual traits don't handle reproduction
+        }
     }
     
     // === FACTORY FUNCTIONS ===
@@ -297,22 +405,119 @@ access(all) contract VisualTraitsModule: TraitModule {
     }
     
     access(all) fun createChildTrait(parent1: &{TraitModule.Trait}, parent2: &{TraitModule.Trait}, seed: UInt64): @{TraitModule.Trait} {
-        // Simple inheritance - average of parents with mutation
-        let p1Value = parent1.getValue()
-        let p2Value = parent2.getValue()
+        let p1 = parent1 as! &VisualTraits
+        let p2 = parent2 as! &VisualTraits
         
-        // Apply mutation based on seed
-        let mutationFactor = 0.9 + (UFix64(seed % 200) / 1000.0) // 0.9-1.1
+        // === ADVANCED VISUAL GENETICS ===
+        var seedState = seed
         
-        // Create trait with mutated default values
+        // 1. Color inheritance with dominance and blending
+        var childColorR: UFix64 = 0.0
+        var childColorG: UFix64 = 0.0
+        var childColorB: UFix64 = 0.0
+        
+        // Color blending with some randomness (70% blend, 30% dominance)
+        seedState = (seedState * 1664525 + 1013904223) % 4294967296
+        let colorBlendFactor = UFix64(seedState % 100) / 100.0 // 0.0-1.0
+        
+        if colorBlendFactor < 0.7 {
+            // Blended inheritance (most common)
+            childColorR = (p1.colorR + p2.colorR) / 2.0
+            childColorG = (p1.colorG + p2.colorG) / 2.0
+            childColorB = (p1.colorB + p2.colorB) / 2.0
+        } else {
+            // Dominant inheritance (one parent's color dominates)
+            seedState = (seedState * 1664525 + 1013904223) % 4294967296
+            let dominantParent = seedState % 2 == 0
+            if dominantParent {
+                childColorR = p1.colorR
+                childColorG = p1.colorG
+                childColorB = p1.colorB
+            } else {
+                childColorR = p2.colorR
+                childColorG = p2.colorG
+                childColorB = p2.colorB
+            }
+        }
+        
+        // 2. Size inheritance with hybrid vigor potential
+        let avgSize = (p1.tamanoBase + p2.tamanoBase) / 2.0
+        seedState = (seedState * 1664525 + 1013904223) % 4294967296
+        let sizeVariation = (UFix64(seedState % 100) / 100.0 - 0.5) * 0.2 // ±10%
+        var childSize = VisualTraitsModule.clampValue(avgSize + sizeVariation, "tamanoBase")
+        
+        // 3. Form inheritance (discrete traits with Mendelian genetics)
+        seedState = (seedState * 1664525 + 1013904223) % 4294967296
+        let formInheritance = seedState % 4
+        var childForm: UFix64 = 0.0
+        
+        switch formInheritance {
+            case 0: childForm = p1.formaPrincipal // Parent 1 dominates
+            case 1: childForm = p2.formaPrincipal // Parent 2 dominates
+            case 2: childForm = (p1.formaPrincipal + p2.formaPrincipal) / 2.0 // Blended
+            default: // Rare mutation - new form
+                seedState = (seedState * 1664525 + 1013904223) % 4294967296
+                childForm = 1.0 + (UFix64(seedState % 200) / 100.0) // 1.0-3.0
+        }
+        childForm = VisualTraitsModule.clampValue(childForm, "formaPrincipal")
+        
+        // 4. Appendices inheritance (quantitative trait)
+        let avgApendices = (p1.numApendices + p2.numApendices) / 2.0
+        seedState = (seedState * 1664525 + 1013904223) % 4294967296
+        let appendicesVariation = (UFix64(seedState % 100) / 100.0 - 0.5) * 1.0 // ±0.5
+        var childApendices = VisualTraitsModule.clampValue(avgApendices + appendicesVariation, "numApendices")
+        
+        // 5. Movement inheritance with occasional novelty
+        seedState = (seedState * 1664525 + 1013904223) % 4294967296
+        var childMovement: UFix64 = 0.0
+        
+        if seedState % 10 == 0 { // 10% chance of novel movement
+            childMovement = 1.0 + (UFix64(seedState % 300) / 100.0) // 1.0-4.0
+        } else {
+            // Normal inheritance
+            let inheritFrom = seedState % 2 == 0
+            if inheritFrom {
+                childMovement = p1.patronMovimiento
+            } else {
+                childMovement = p2.patronMovimiento
+            }
+        }
+        childMovement = VisualTraitsModule.clampValue(childMovement, "patronMovimiento")
+        
+        // 6. Apply minor mutations (1% chance per trait)
+        seedState = (seedState * 1664525 + 1013904223) % 4294967296
+        if seedState % 100 == 0 {
+            let mutationStrength: UFix64 = 0.05
+            let traitToMutate = seedState % 7
+            
+            switch traitToMutate {
+                case 0: childColorR = VisualTraitsModule.clampValue(childColorR + (mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)), "colorR")
+                case 1: childColorG = VisualTraitsModule.clampValue(childColorG + (mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)), "colorG")
+                case 2: childColorB = VisualTraitsModule.clampValue(childColorB + (mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)), "colorB")
+                case 3: // Size mutation
+                    let sizeMutation = mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)
+                    childSize = VisualTraitsModule.clampValue(childSize + sizeMutation, "tamanoBase")
+                case 4: // Form mutation (rare)
+                    if seedState % 1000 == 0 { // Very rare
+                        childForm = VisualTraitsModule.clampValue(childForm + 0.5, "formaPrincipal")
+                    }
+                case 5: // Appendices mutation
+                    let appMutation = mutationStrength * 10.0 * (UFix64(seedState % 100) / 100.0 - 0.5)
+                    childApendices = VisualTraitsModule.clampValue(childApendices + appMutation, "numApendices")
+                case 6: // Movement mutation
+                    let movMutation = mutationStrength * 2.0 * (UFix64(seedState % 100) / 100.0 - 0.5)
+                    childMovement = VisualTraitsModule.clampValue(childMovement + movMutation, "patronMovimiento")
+            }
+        }
+        
         return <- create VisualTraits(
-            colorR: 0.5 * mutationFactor,
-            colorG: 0.5 * mutationFactor,
-            colorB: 0.5 * mutationFactor,
-            tamanoBase: 1.5,
-            formaPrincipal: 2.0,
-            numApendices: 4.0,
-            patronMovimiento: 2.0
+            colorR: childColorR,
+            colorG: childColorG,
+            colorB: childColorB,
+            tamanoBase: childSize,
+            formaPrincipal: childForm,
+            numApendices: childApendices,
+            patronMovimiento: childMovement
         )
     }
     
@@ -380,6 +585,23 @@ access(all) contract VisualTraitsModule: TraitModule {
     
     access(all) view fun getModuleDescription(): String {
         return "Manages visual genetics including color, size, form, appendices, and movement patterns"
+    }
+    
+    // === UTILITY FUNCTIONS ===
+    
+    access(all) fun clampValue(_ value: UFix64, _ geneName: String): UFix64 {
+        let ranges = VisualTraitsModule.GENE_RANGES[geneName]!
+        let minVal = ranges["min"]!
+        let maxVal = ranges["max"]!
+        return VisualTraitsModule.max(minVal, VisualTraitsModule.min(maxVal, value))
+    }
+    
+    access(all) fun max(_ a: UFix64, _ b: UFix64): UFix64 {
+        return a > b ? a : b
+    }
+    
+    access(all) fun min(_ a: UFix64, _ b: UFix64): UFix64 {
+        return a < b ? a : b
     }
     
     init() {

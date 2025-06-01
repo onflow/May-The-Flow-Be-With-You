@@ -1,5 +1,5 @@
 import EvolvingCreatureNFT from 0x2444e6b4d9327f09
-import ReproductionModule from 0x2444e6b4d9327f09
+import ReproductionModuleV2 from 0x2444e6b4d9327f09
 
 // Este script analiza la compatibilidad genética entre dos criaturas
 // y proporciona información detallada sobre su potencial reproductivo

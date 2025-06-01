@@ -55,6 +55,71 @@ access(all) contract MetabolismModule: TraitModule {
             return self.getDisplayName()
         }
         
+        // OPTIMIZED: Accumulative evolution for multiple steps
+        access(all) fun evolveAccumulative(seeds: [UInt64], steps: UInt64): String {
+            if seeds.length < 2 { return self.getDisplayName() }
+            
+            // Metabolism evolution (accumulative version)
+            let potencialEvolutivo: UFix64 = 1.0
+            let dailyVolatilityFactor = 0.5 + (UFix64(seeds[0] % 1000) / 999.0)
+            
+            self.evolveGeneAccumulative("tasaMetabolica", seeds[1], steps, potencialEvolutivo, dailyVolatilityFactor)
+            
+            if seeds.length >= 3 {
+                self.evolveGeneAccumulative("fertilidad", seeds[2], steps, potencialEvolutivo, dailyVolatilityFactor)
+            }
+            
+            return self.getDisplayName()
+        }
+        
+        // === ACCUMULATIVE EVOLUTION HELPERS ===
+        
+        access(self) fun evolveGeneAccumulative(_ geneName: String, _ baseSeed: UInt64, _ steps: UInt64, _ potencial: UFix64, _ volatility: UFix64) {
+            // Get current value
+            var currentValue: UFix64 = 0.0
+            switch geneName {
+                case "tasaMetabolica": currentValue = self.tasaMetabolica
+                case "fertilidad": currentValue = self.fertilidad
+                default: return
+            }
+            
+            // Accumulate moderate evolution effects
+            var totalIncrease: UFix64 = 0.0
+            var totalDecrease: UFix64 = 0.0
+            var stepSeed = baseSeed
+            let magnitude = 0.0008 * potencial * volatility // Moderate speed
+            
+            var i: UInt64 = 0
+            while i < steps {
+                stepSeed = (stepSeed * 1664525 + 1013904223) % 4294967296
+                let randomNormalized = UFix64(stepSeed % 10000) / 9999.0
+                
+                // Calculate step change
+                if randomNormalized < 0.5 {
+                    let decreaseAmount = (0.5 - randomNormalized) * 2.0 * magnitude
+                    totalDecrease = totalDecrease + decreaseAmount
+                } else {
+                    let increaseAmount = (randomNormalized - 0.5) * 2.0 * magnitude
+                    totalIncrease = totalIncrease + increaseAmount
+                }
+                i = i + 1
+            }
+            
+            // Apply total accumulated change
+            var newValue = currentValue + totalIncrease
+            if newValue > totalDecrease {
+                newValue = newValue - totalDecrease
+            } else {
+                newValue = MetabolismModule.GENE_RANGES[geneName]!["min"]!
+            }
+            let finalValue = self.clampValue(newValue, geneName)
+            
+            switch geneName {
+                case "tasaMetabolica": self.tasaMetabolica = finalValue
+                case "fertilidad": self.fertilidad = finalValue
+            }
+        }
+        
         // === EVOLUTION HELPERS ===
         
         access(all) fun evolveGene(_ geneName: String, _ seed: UInt64, _ potencial: UFix64, _ volatility: UFix64) {
@@ -144,7 +209,29 @@ access(all) contract MetabolismModule: TraitModule {
             let metabolismFactor = 1.0 - (metabolismDistance * 0.3) // Penalize extreme metabolism
             
             let baseChance = combinedFertility * energyFactor * metabolismFactor
-            return MetabolismModule.min(1.0, baseChance) // Cap at 100%
+            return baseChance < 1.0 ? baseChance : 1.0 // Cap at 100%
+        }
+        
+        // === REPRODUCTION INTERFACE (NO-OP IMPLEMENTATIONS) ===
+        
+        access(all) fun addReproductionCandidate(partnerID: UInt64, compatibilityScore: UFix64): Bool {
+            return false // Metabolism doesn't handle reproduction
+        }
+        
+        access(all) fun clearReproductionCandidates(reason: String): Bool {
+            return false // Metabolism doesn't handle reproduction
+        }
+        
+        access(all) view fun isReproductionReady(): Bool {
+            return false // Metabolism doesn't handle reproduction
+        }
+        
+        access(all) view fun canReproduceWith(partnerID: UInt64): Bool {
+            return false // Metabolism doesn't handle reproduction
+        }
+        
+        access(all) view fun getReproductionCandidates(): [UInt64] {
+            return [] // Metabolism doesn't handle reproduction
         }
     }
     
@@ -184,9 +271,7 @@ access(all) contract MetabolismModule: TraitModule {
         return value // UFix64 is always positive
     }
     
-    access(all) view fun min(_ a: UFix64, _ b: UFix64): UFix64 {
-        return a < b ? a : b
-    }
+
     
     // === FACTORY FUNCTIONS ===
     
@@ -220,26 +305,45 @@ access(all) contract MetabolismModule: TraitModule {
     }
     
     access(all) fun createChildTrait(parent1: &{TraitModule.Trait}, parent2: &{TraitModule.Trait}, seed: UInt64): @{TraitModule.Trait} {
-        // Get parent values
-        let p1Met = self.parseMetabolism(parent1.getValue())
-        let p2Met = self.parseMetabolism(parent2.getValue())
-        let p1Fert = self.parseFertilidad(parent1.getValue())
-        let p2Fert = self.parseFertilidad(parent2.getValue())
+        let p1 = parent1 as! &Metabolism
+        let p2 = parent2 as! &Metabolism
         
-        // Average parents with mutation
-        let avgMet = (p1Met + p2Met) / 2.0
-        let avgFert = (p1Fert + p2Fert) / 2.0
+        // === ADVANCED METABOLISM GENETICS ===
+        var seedState = seed
         
-        let mutationFactor = 0.9 + (UFix64(seed % 200) / 1000.0) // ±10%
-        let finalMet = avgMet * mutationFactor
+        // 1. Metabolism speed with efficiency trade-off genetics
+        seedState = (seedState * 1664525 + 1013904223) % 4294967296
+        let metabolismChoice = seedState % 3
+        var childMetabolismSpeed: UFix64 = 0.0
         
-        let fertMutation = 0.9 + (UFix64((seed >> 8) % 200) / 1000.0) // ±10%
-        let finalFert = avgFert * fertMutation
+        if metabolismChoice == 0 { // Fast metabolism inheritance
+            childMetabolismSpeed = MetabolismModule.max(p1.tasaMetabolica, p2.tasaMetabolica)
+        } else if metabolismChoice == 1 { // Slow metabolism inheritance
+            childMetabolismSpeed = MetabolismModule.min(p1.tasaMetabolica, p2.tasaMetabolica)
+        } else { // Balanced inheritance
+            childMetabolismSpeed = (p1.tasaMetabolica + p2.tasaMetabolica) / 2.0
+        }
         
-        // Create trait with final values from the start
+        // 2. Fertility with reproductive fitness genes
+        let avgFertility = (p1.fertilidad + p2.fertilidad) / 2.0
+        seedState = (seedState * 1664525 + 1013904223) % 4294967296
+        var childFertility: UFix64 = 0.0
+        
+        // Fertility gene check (10% chance for boost)
+        if seedState % 10 == 0 {
+            childFertility = self.min(0.9, avgFertility * 1.15) // 15% boost, max 0.9
+        } else {
+            let fertilityVariation = (UFix64(seedState % 100) / 100.0 - 0.5) * 0.1 // ±5%
+            childFertility = avgFertility * (1.0 + fertilityVariation)
+        }
+        
+        // Clamp values to valid ranges
+        childMetabolismSpeed = MetabolismModule.clampValue(childMetabolismSpeed, "tasaMetabolica")
+        childFertility = MetabolismModule.clampValue(childFertility, "fertilidad")
+        
         return <- create Metabolism(
-            tasaMetabolica: finalMet,
-            fertilidad: finalFert
+            tasaMetabolica: childMetabolismSpeed,
+            fertilidad: childFertility
         )
     }
     
@@ -277,6 +381,23 @@ access(all) contract MetabolismModule: TraitModule {
     
     access(all) view fun getModuleDescription(): String {
         return "Manages metabolic rate and fertility characteristics"
+    }
+    
+    // === UTILITY FUNCTIONS ===
+    
+    access(all) fun clampValue(_ value: UFix64, _ geneName: String): UFix64 {
+        let ranges = MetabolismModule.GENE_RANGES[geneName]!
+        let minVal = ranges["min"]!
+        let maxVal = ranges["max"]!
+        return MetabolismModule.max(minVal, MetabolismModule.min(maxVal, value))
+    }
+    
+    access(all) fun max(_ a: UFix64, _ b: UFix64): UFix64 {
+        return a > b ? a : b
+    }
+    
+    access(all) fun min(_ a: UFix64, _ b: UFix64): UFix64 {
+        return a < b ? a : b
     }
     
     init() {

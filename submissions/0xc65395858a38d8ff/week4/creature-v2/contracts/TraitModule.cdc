@@ -17,6 +17,28 @@ access(all) contract interface TraitModule {
         
         // Evolve the trait based on random seeds
         access(all) fun evolve(seeds: [UInt64]): String
+        
+        // OPTIMIZED: Evolve the trait accumulatively for multiple steps
+        access(all) fun evolveAccumulative(seeds: [UInt64], steps: UInt64): String
+        
+        // === OPTIONAL REPRODUCTION METHODS ===
+        // These methods are optional - only reproduction traits need to implement them
+        // Other traits can provide default no-op implementations
+        
+        // Add a potential reproductive partner
+        access(all) fun addReproductionCandidate(partnerID: UInt64, compatibilityScore: UFix64): Bool
+        
+        // Clear all reproductive candidates
+        access(all) fun clearReproductionCandidates(reason: String): Bool
+        
+        // Check if ready for reproduction
+        access(all) view fun isReproductionReady(): Bool
+        
+        // Check if can reproduce with specific partner
+        access(all) view fun canReproduceWith(partnerID: UInt64): Bool
+        
+        // Get current reproductive candidates
+        access(all) view fun getReproductionCandidates(): [UInt64]
     }
     
     // === FACTORY FUNCTIONS ===

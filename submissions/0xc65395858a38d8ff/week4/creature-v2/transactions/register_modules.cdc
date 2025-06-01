@@ -23,6 +23,10 @@ transaction() {
         EvolvingCreatureNFT.registerModule(moduleType: "metabolism", contractAddress: contractAddress, contractName: "MetabolismModule")
         log("Metabolism module registered")
         
+        // Register Reproduction Module
+        EvolvingCreatureNFT.registerModule(moduleType: "reproduction", contractAddress: contractAddress, contractName: "ReproductionModuleV2")
+        log("Reproduction module registered")
+        
         log("All modules registered successfully!")
     }
 } 

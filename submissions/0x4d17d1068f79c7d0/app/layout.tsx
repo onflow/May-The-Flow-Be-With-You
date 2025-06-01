@@ -31,6 +31,12 @@ export const metadata = {
     index: true,
     follow: true,
   },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
   openGraph: {
     title: "Memoreee - Memory Training Platform",
     description:

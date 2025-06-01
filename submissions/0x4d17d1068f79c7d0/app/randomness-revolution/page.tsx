@@ -140,24 +140,29 @@ export default function RandomnessRevolutionPage() {
         <Steddie />
 
         {/* Cultural Games Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 w-full max-w-4xl">
+        <div className="mobile-grid mt-6 sm:mt-8 w-full max-w-4xl">
           {games.map((game) => (
             <div
               key={game.id}
-              className={`p-6 bg-white rounded-xl shadow-lg border-2 transition-all duration-300 ${
+              className={`p-4 sm:p-6 bg-white rounded-lg sm:rounded-xl shadow-lg border-2 transition-all duration-300 touch-target ${
                 game.status === "available"
-                  ? "border-yellow-200 hover:border-yellow-400 hover:shadow-xl cursor-pointer"
+                  ? "border-yellow-200 hover:border-yellow-400 hover:shadow-xl cursor-pointer active:scale-95"
                   : "border-gray-200 opacity-60"
               }`}
+              style={{ minHeight: "160px" }}
               onClick={() =>
                 game.status === "available" && setSelectedGame(game.id)
               }
             >
-              <div className="text-4xl mb-4 text-center">{game.icon}</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
+              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 text-center">
+                {game.icon}
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">
                 {game.name}
               </h3>
-              <p className="text-gray-600 text-sm mb-4">{game.description}</p>
+              <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-3">
+                {game.description}
+              </p>
               <div className="flex justify-center">
                 {game.status === "available" ? (
                   <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">

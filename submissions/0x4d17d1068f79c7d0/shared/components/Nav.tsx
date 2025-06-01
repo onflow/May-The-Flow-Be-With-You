@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
-import { Wallet, User, LogOut, ChevronDown } from "lucide-react";
+import { Wallet, User, LogOut, ChevronDown, Menu, X } from "lucide-react";
 import { NavigationButton } from "./NavigationLoader";
 
 const culturalCategories = [
@@ -61,20 +61,22 @@ const WalletButton = () => {
 
   if (!user) {
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <button
           onClick={signInWithFlow}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200"
+          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 text-sm sm:text-base min-h-[44px]"
         >
           <Wallet size={16} />
-          Connect Wallet
+          <span className="hidden sm:inline">Connect Wallet</span>
+          <span className="sm:hidden">Wallet</span>
         </button>
         <button
           onClick={signInWithSupabase}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-gray-700 font-medium transition-all duration-200"
+          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-gray-700 font-medium transition-all duration-200 text-sm sm:text-base min-h-[44px]"
         >
           <User size={16} />
-          Sign In
+          <span className="hidden sm:inline">Sign In</span>
+          <span className="sm:hidden">Sign In</span>
         </button>
       </div>
     );
@@ -146,39 +148,101 @@ const WalletButton = () => {
 
 export const Nav = () => {
   const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="flex items-center justify-between p-4">
-      <div
-        className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent cursor-pointer"
-        onClick={() => router.push("/")}
-      >
-        🧠 Memoreee
-      </div>
-
-      <div className="flex items-center gap-4">
-        {/* Cultural Navigation */}
-        <div className="flex gap-2">
-          {culturalCategories.map((category) => (
-            <NavigationButton
-              key={category.path}
-              href={category.path}
-              className="px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-gray-700 font-medium transition-all duration-200 text-sm group relative"
-            >
-              <span className="text-lg">{category.icon}</span>
-
-              {/* Tooltip */}
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                <div className="font-semibold">{category.culture}</div>
-                <div className="text-gray-300">{category.description}</div>
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-              </div>
-            </NavigationButton>
-          ))}
+    <nav className="safe-area-padding">
+      {/* Desktop Navigation */}
+      <div className="hidden md:flex items-center justify-between p-4">
+        <div
+          className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent cursor-pointer"
+          onClick={() => router.push("/")}
+        >
+          🧠 Memoreee
         </div>
 
-        {/* Wallet/Auth Section */}
-        <WalletButton />
+        <div className="flex items-center gap-4">
+          {/* Cultural Navigation */}
+          <div className="flex gap-2">
+            {culturalCategories.map((category) => (
+              <NavigationButton
+                key={category.path}
+                href={category.path}
+                className="px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-gray-700 font-medium transition-all duration-200 text-sm group relative touch-target"
+              >
+                <span className="text-lg">{category.icon}</span>
+
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  <div className="font-semibold">{category.culture}</div>
+                  <div className="text-gray-300">{category.description}</div>
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                </div>
+              </NavigationButton>
+            ))}
+          </div>
+
+          {/* Wallet/Auth Section */}
+          <WalletButton />
+        </div>
+      </div>
+
+      {/* Mobile Navigation */}
+      <div className="md:hidden">
+        <div className="flex items-center justify-between p-4">
+          <div
+            className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent cursor-pointer"
+            onClick={() => router.push("/")}
+          >
+            🧠 Memoreee
+          </div>
+
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="touch-target p-2 rounded-lg bg-white/20 hover:bg-white/30 text-gray-700 transition-all duration-200"
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="border-t border-white/20 bg-white/90 backdrop-blur-md">
+            <div className="p-4 space-y-4">
+              {/* Cultural Navigation */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-gray-600 mb-2">
+                  Cultural Traditions
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {culturalCategories.map((category) => (
+                    <NavigationButton
+                      key={category.path}
+                      href={category.path}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-white/40 hover:bg-white/60 text-gray-700 font-medium transition-all duration-200 text-sm touch-target"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <span className="text-xl">{category.icon}</span>
+                      <div className="text-left">
+                        <div className="font-semibold text-xs">
+                          {category.culture}
+                        </div>
+                        <div className="text-xs opacity-70">
+                          {category.name}
+                        </div>
+                      </div>
+                    </NavigationButton>
+                  ))}
+                </div>
+              </div>
+
+              {/* Wallet/Auth Section */}
+              <div className="pt-2 border-t border-white/20">
+                <WalletButton />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );

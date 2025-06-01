@@ -7,7 +7,7 @@ This repository documents my progress in the **May the Flow Be With You** coding
 
 ---
 
-## 📅 Week 1 — WheelOfFortune🎲
+## 📅 Week 1 — WheelOfFortune 🎲
 
 **Theme:** The Randomness Revolution
 
@@ -55,9 +55,19 @@ Blending AI creativity with smart contract logic to create composable, interpret
 
 ---
 
-## 📅 Week 4 — TBD
+## 📅 Week 4 — MemoMint 🧠📝
 
-Upcoming.
+**Theme:** AI and LLMs
+
+For Week 4, I built **MemoMint**, a reflective journaling dApp where users chat with an AI agent about their thoughts or week. At the end of the conversation, the AI summarizes it and mints the reflection as a Flow NFT diary entry.
+
+- ✅ LLM-powered bot
+- ✅ Backend powered by FastAPI, with endpoints for chat and summary
+- ✅ Flow integration: summary is minted as an NFT using Cadence and Flow CLI
+- ✅ Frontend lets users chat, view summary, and mint with one click
+
+🧠 **Key learning from Week 4:**  
+Creating a personal, emotionally resonant use case for LLMs and NFTs. MemoMint bridges meaningful conversations and blockchain permanence in a way that feels both useful and poetic.
 
 ---
 
@@ -66,6 +76,8 @@ Upcoming.
 - **Smart Contracts:** Cadence (Flow blockchain)
 - **Frontend:** React + TypeScript + Styled Components
 - **Wallet Integration:** Flow Client Library (FCL)
+- **Backend:** Python (FastAPI)
+- **AI Integration:** OpenRouter API (Mistral 7B)
 - **Deployment Target:** Flow Testnet
 
 ---

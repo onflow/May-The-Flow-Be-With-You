@@ -7,8 +7,11 @@ import {
   progressService,
   UserStats,
   Achievement,
-  LeaderboardEntry,
 } from "../services/progressService";
+import {
+  leaderboardService,
+  LeaderboardEntry,
+} from "../services/LeaderboardService";
 import { Trophy, Target, Clock, Zap, Star, Medal } from "lucide-react";
 
 interface UserStatsProps {
@@ -46,7 +49,7 @@ export function UserStatsComponent({
         progressService.getUserStats(user.id),
         progressService.getUserAchievements(user.id),
         showLeaderboard
-          ? progressService.getLeaderboard(gameType, "all_time", 10)
+          ? leaderboardService.getOffChainLeaderboard(gameType, undefined, 10)
           : Promise.resolve([]),
       ]);
 
@@ -71,9 +74,13 @@ export function UserStatsComponent({
 
   const getGameTypeDisplay = (type: string): string => {
     const gameNames: Record<string, string> = {
-      random_palace: "Random Palace",
+      memory_palace: "Memory Palace",
       chaos_cards: "Chaos Cards",
+      speed_challenge: "Speed Challenge",
       entropy_storytelling: "Entropy Stories",
+      // Legacy support for old names
+      random_palace: "Memory Palace",
+      memory_speed: "Speed Challenge",
       memory_race: "Memory Race",
       digit_duel: "Digit Duel",
       story_chain: "Story Chain",
@@ -439,9 +446,9 @@ export function UserStatsComponent({
               <div className="space-y-2">
                 {leaderboard.map((entry, index) => (
                   <div
-                    key={entry.user_id}
+                    key={entry.userId}
                     className={`flex items-center justify-between p-3 rounded-lg ${
-                      entry.user_id === user?.id
+                      entry.userId === user?.id
                         ? "bg-blue-50 border border-blue-200"
                         : "bg-gray-50"
                     }`}
@@ -458,23 +465,29 @@ export function UserStatsComponent({
                             : "bg-gray-200 text-gray-600"
                         }`}
                       >
-                        {entry.rank}
+                        {entry.rank || index + 1}
                       </div>
                       <div>
                         <div className="font-medium text-sm">
-                          {entry.display_name || entry.username}
-                          {entry.user_id === user?.id && (
+                          {entry.username}
+                          {entry.userId === user?.id && (
                             <span className="text-blue-600 ml-1">(You)</span>
                           )}
                         </div>
                         <div className="text-xs text-gray-600">
-                          {entry.total_sessions} games •{" "}
-                          {entry.average_accuracy.toFixed(1)}% avg
+                          {entry.userTier === "supabase"
+                            ? "📧"
+                            : entry.userTier === "flow"
+                            ? "⛓️"
+                            : "👤"}{" "}
+                          {entry.userTier}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-lg">{entry.score}</div>
+                      <div className="font-bold text-lg">
+                        {entry.adjustedScore}
+                      </div>
                       <div className="text-xs text-gray-600">best score</div>
                     </div>
                   </div>

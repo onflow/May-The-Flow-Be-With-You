@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { flowAuth, getWalletType } from "../config/flow";
+import { getUserId } from "../services/UserIdService";
 
 // Enhanced User Profile with clear tier system
 export type UserTier = "anonymous" | "supabase" | "flow";
@@ -73,8 +74,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Helper functions to create user profiles based on auth method
 function createSupabaseUserProfile(session: any): UserProfile {
+  // Get consistent UUID for this Supabase user
+  const consistentId = getUserId("supabase", session.user.id);
+
   return {
-    id: session.user.id,
+    id: consistentId,
     email: session.user.email,
     authMethod: "supabase",
     tier: "supabase",
@@ -115,8 +119,11 @@ function createFlowUserProfile(flowUser: any): UserProfile {
     fullFlowUser: flowUser,
   });
 
+  // Get consistent UUID for this Flow user
+  const consistentId = getUserId("flow", flowUser.addr);
+
   return {
-    id: flowUser.addr,
+    id: consistentId,
     flowAddress: flowUser.addr,
     authMethod: "flow",
     tier: "flow",

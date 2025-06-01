@@ -1,28 +1,34 @@
 # Scripts Directory
 
-This directory contains all development and deployment scripts for the Steddie Memory Training Platform.
+This directory contains essential development and deployment scripts for the Steddie Memory Training Platform.
 
 ## Directory Structure
 
 ```
 scripts/
-├── deploy/          # Deployment scripts for Flow blockchain contracts
-├── dev/             # Development and testing scripts
-├── keys/            # Private keys and sensitive files
+├── deploy/          # Flow blockchain contract deployment
+├── dev/             # Development environment launchers
+├── demo/            # Demo and testing scripts
+├── keys/            # Flow private keys (gitignored)
 └── README.md        # This file
 ```
 
 ## Deploy Scripts (`deploy/`)
 
+- `deploy-testnet.sh` - Deploy contracts to Flow testnet (used by `bun run flow:deploy:testnet`)
 - `deploy-contracts.sh` - Main contract deployment script
 - `deploy-memory-vrf.cdc` - Memory VRF contract deployment
 - `deploy-vrf-simple.cdc` - Simple VRF deployment script
 
 ## Development Scripts (`dev/`)
 
-- `dev-flow.js` - Flow development utilities
-- `dev.js` - General development scripts
-- `dev.sh` - Development shell scripts
+- `dev-flow.js` - Full Flow development environment (used by `bun run dev:flow`)
+- `dev.js` - Local development launcher (used by `bun run dev:local`)
+- `dev.sh` - Development shell utilities
+
+## Demo Scripts (`demo/`)
+
+- `test-chaos-cards-vrf.js` - VRF integration testing for Chaos Cards
 
 ## Keys (`keys/`)
 

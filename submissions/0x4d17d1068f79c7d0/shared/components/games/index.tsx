@@ -1,5 +1,8 @@
 // Organized game components with clean imports
 
+// Shared game architecture
+export * from "./shared";
+
 // Speed Challenge Games
 export * from "./speed-challenge";
 

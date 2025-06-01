@@ -185,36 +185,35 @@ class ProgressService {
     };
   }
 
-  // Get leaderboard for a specific game type
+  // Get leaderboard for a specific game type - SIMPLIFIED (unified with LeaderboardService)
   async getLeaderboard(gameType: string, period: 'daily' | 'weekly' | 'monthly' | 'all_time' = 'all_time', limit: number = 10): Promise<LeaderboardEntry[]> {
     try {
-      // Query the unified leaderboard entries table
+      // Use only the existing leaderboards table (no more dual table complexity)
       const { data, error } = await this.supabase
-        .from('leaderboard_entries')
+        .from('leaderboards')
         .select(`
           user_id,
-          username,
-          raw_score,
-          adjusted_score,
-          user_tier,
-          verified
+          score,
+          rank,
+          total_sessions,
+          average_accuracy
         `)
         .eq('game_type', gameType)
         .eq('period', period)
-        .order('adjusted_score', { ascending: false })
+        .order('score', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
 
-      return data?.map((entry: any) => ({
+      return data?.map((entry: any, index: number) => ({
         user_id: entry.user_id,
-        username: entry.user_id.substring(0, 8) + '...', // Fallback username
-        display_name: `Player ${entry.rank}`, // Fallback display name
+        username: entry.user_id.substring(0, 8) + '...', // Simple username
+        display_name: `Player ${index + 1}`, // Simple display name
         avatar_url: undefined,
         score: entry.score,
-        rank: entry.rank,
-        total_sessions: entry.total_sessions,
-        average_accuracy: entry.average_accuracy,
+        rank: entry.rank || index + 1, // Use stored rank or calculate
+        total_sessions: entry.total_sessions || 0,
+        average_accuracy: entry.average_accuracy || 0,
       })) || [];
     } catch (error) {
       console.error('Error getting leaderboard:', error);
@@ -235,6 +234,23 @@ class ProgressService {
       return data || [];
     } catch (error) {
       console.error('Error getting user achievements:', error);
+      return [];
+    }
+  }
+
+  // Get recent game sessions for a user
+  async getRecentSessions(userId: string, limit: number = 10): Promise<GameSession[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching recent sessions:', error);
       return [];
     }
   }
@@ -374,73 +390,8 @@ class ProgressService {
     return streak;
   }
 
-  // Update leaderboards (should be called periodically)
-  async updateLeaderboards(): Promise<void> {
-    try {
-      // This would typically be run as a scheduled function
-      // For now, we'll update all-time leaderboards when called
-
-      const gameTypes = ['random_palace', 'chaos_cards', 'entropy_storytelling', 'memory_speed'];
-
-      for (const gameType of gameTypes) {
-        // Get top performers for this game type from game_sessions table
-        const { data: topPerformers, error } = await this.supabase
-          .from('game_sessions')
-          .select('user_id, score, accuracy')
-          .eq('game_type', gameType)
-          .order('score', { ascending: false });
-
-        if (error) throw error;
-
-        // Calculate user rankings
-        const userStats = topPerformers?.reduce((acc, session) => {
-          if (!acc[session.user_id]) {
-            acc[session.user_id] = {
-              total_score: 0,
-              total_sessions: 0,
-              total_accuracy: 0,
-              best_score: 0,
-            };
-          }
-
-          acc[session.user_id].total_score += session.score;
-          acc[session.user_id].total_sessions += 1;
-          acc[session.user_id].total_accuracy += session.accuracy;
-          acc[session.user_id].best_score = Math.max(acc[session.user_id].best_score, session.score);
-
-          return acc;
-        }, {} as Record<string, any>) || {};
-
-        // Create leaderboard entries
-        const leaderboardEntries = Object.entries(userStats)
-          .map(([userId, stats]) => ({
-            user_id: userId,
-            game_type: gameType,
-            period: 'all_time' as const,
-            score: stats.best_score,
-            total_sessions: stats.total_sessions,
-            average_accuracy: stats.total_accuracy / stats.total_sessions,
-            period_start: new Date('2024-01-01'),
-            period_end: new Date('2099-12-31'),
-          }))
-          .sort((a, b) => b.score - a.score)
-          .map((entry, index) => ({ ...entry, rank: index + 1 }));
-
-        // Upsert leaderboard entries
-        if (leaderboardEntries.length > 0) {
-          const { error: upsertError } = await this.supabase
-            .from('leaderboard_entries')
-            .upsert(leaderboardEntries, {
-              onConflict: 'user_id,game_type,period,period_start',
-            });
-
-          if (upsertError) throw upsertError;
-        }
-      }
-    } catch (error) {
-      console.error('Error updating leaderboards:', error);
-    }
-  }
+  // REMOVED: updateLeaderboards() method - now handled by unified LeaderboardService
+  // This eliminates ~90 lines of duplicate ranking logic
 }
 
 export const progressService = new ProgressService();

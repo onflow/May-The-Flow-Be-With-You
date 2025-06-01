@@ -5,7 +5,8 @@ import { GameAdapter } from "../adapters/GameAdapter";
 import { OffChainAdapter } from "../adapters/OffChainAdapter";
 import { OnChainAdapter } from "../adapters/OnChainAdapter";
 import { RandomnessProvider, createSeededRandomFromProvider } from "../providers/RandomnessProvider";
-import { GameSession, GameResult, GameType, DifficultyLevel } from "../types/game";
+import { GameSession, GameType, DifficultyLevel } from "../types/game";
+import { GameResult } from "../components/games/shared/types"; // Use the correct GameResult interface
 import { getThemeByCategory, getThemeItems } from "../config/culturalThemes";
 import { getCulturalEmoji, getCulturalContext } from "../utils/culturalMapping";
 import { createGameError, withErrorHandling } from "../utils/errorHandling";
@@ -155,8 +156,11 @@ export class GameService {
     userId: string,
     sessionId: string,
     result: GameResult,
-    config: GameConfig
+    config: GameConfig,
+    userTier?: 'anonymous' | 'supabase' | 'flow'
   ): Promise<EnhancedGameResult> {
+
+
     try {
       // Load current progress
       const currentProgress = await this.adapter.loadProgress(userId);
@@ -168,27 +172,45 @@ export class GameService {
       const updatedProgress = this.updateProgress(currentProgress, result, config);
       await this.adapter.saveProgress(userId, updatedProgress);
 
-      // Submit score with hybrid approach
-      const submissionResult = await this.adapter.submitScore(userId, config.gameType, result.score, {
+      // UNIFIED: Submit score directly through LeaderboardService (cleaner architecture)
+      const { leaderboardService } = await import('./LeaderboardService');
+
+      // Determine user tier - use passed tier or fallback to anonymous
+      const effectiveUserTier = userTier || 'anonymous';
+      console.log('🔍 GameService.submitGameResult using userTier:', effectiveUserTier);
+
+      const submissionResult = await leaderboardService.submitScore(
+        userId,
+        userId.substring(0, 8) + '...', // Simple username
+        result.score,
+        config.gameType,
+        result.culturalCategory || 'general',
+        effectiveUserTier, // Use actual user tier instead of hardcoded
+        result.vrfSeed
+      );
+
+      // Also save to game_sessions for detailed tracking
+      await this.adapter.submitScore(userId, config.gameType, result.score, {
         accuracy: result.accuracy,
-        duration: result.duration,
-        difficultyLevel: this.getDifficultyLevel(config.difficulty),
-        culture: config.culture,
+        duration: result.timeSpent,
+        difficultyLevel: result.difficulty,
+        culture: result.culturalCategory,
         maxPossibleScore: this.calculateMaxScore(config),
-        itemsCount: config.itemCount
+        itemsCount: this.getItemsCount(config.gameType, result.difficulty) || config.itemCount,
+        technique: result.technique,
+        vrfSeed: result.vrfSeed,
+        gameType: config.gameType
       });
 
       // Provide clear user feedback based on result
-      if (submissionResult.success) {
-        if (submissionResult.isVerified) {
-          console.log('🔗 Score verified on blockchain!');
-        } else if (submissionResult.isEligible) {
-          console.log('⭐ High score saved! Eligible for blockchain verification.');
-        } else {
-          console.log('✅ Score saved successfully');
+      if (submissionResult.offChain || submissionResult.onChain) {
+        if (submissionResult.onChain && submissionResult.transactionId) {
+          console.log('🔗 Score verified on blockchain!', submissionResult.transactionId);
+        } else if (submissionResult.offChain) {
+          console.log('✅ Score saved to off-chain leaderboard');
         }
       } else {
-        console.warn('⚠️ Score submission failed:', submissionResult.error);
+        console.warn('⚠️ Score submission failed - neither off-chain nor on-chain submission succeeded');
         // Continue with the rest of the process even if score submission fails
       }
 
@@ -276,11 +298,25 @@ export class GameService {
     }
   }
 
+  private getItemsCount(gameType: string, difficulty: number): number {
+    // Calculate items count based on game type and difficulty
+    switch (gameType) {
+      case 'chaos_cards':
+        return difficulty; // Chaos Cards: difficulty = number of cards
+      case 'memory_palace':
+        return difficulty; // Memory Palace: difficulty = number of items
+      case 'speed_challenge':
+        return Math.min(difficulty, 10); // Speed Challenge: max 10 items
+      default:
+        return Math.max(4, Math.min(difficulty, 12)); // Default: 4-12 items
+    }
+  }
+
   private checkAchievements(currentProgress: any, result: GameResult, config: GameConfig): any[] {
     const achievements: any[] = [];
 
-    // Perfect game achievement
-    if (result.perfect && result.accuracy === 1.0) {
+    // Perfect game achievement (accuracy is now 0-100 percentage)
+    if (result.accuracy >= 100) {
       achievements.push({
         id: `perfect_${config.culture}_${config.gameType}`,
         name: `Perfect ${config.culture} Memory`,
@@ -305,8 +341,8 @@ export class GameService {
       });
     }
 
-    // Speed achievement
-    if (result.duration < 30 && result.accuracy > 0.8) {
+    // Speed achievement (timeSpent is in seconds, accuracy is 0-100)
+    if (result.timeSpent < 30 && result.accuracy > 80) {
       achievements.push({
         id: `speed_demon_${config.culture}`,
         name: `${config.culture} Speed Demon`,

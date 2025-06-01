@@ -2,7 +2,8 @@
 // Enables seamless switching between off-chain and on-chain game modes
 
 import { RandomnessProvider } from "../providers/RandomnessProvider";
-import { GameSession, GameResult } from "../types/game";
+import { GameSession } from "../types/game";
+import { GameResult } from "../components/games/shared/types";
 
 export interface GameProgress {
   userId: string;
@@ -197,14 +198,18 @@ export abstract class BaseGameAdapter implements GameAdapter {
 
   async updateStatistics(userId: string, gameResult: GameResult): Promise<void> {
     const currentStats = await this.getStatistics(userId);
-    
+
+    // Convert accuracy from 0-100 percentage to 0-1 for averaging
+    const normalizedAccuracy = gameResult.accuracy / 100;
+    const isPerfect = gameResult.accuracy >= 100;
+
     const updatedStats: GameStatistics = {
       totalGamesPlayed: currentStats.totalGamesPlayed + 1,
-      totalTimeSpent: currentStats.totalTimeSpent + gameResult.duration,
-      averageAccuracy: (currentStats.averageAccuracy * currentStats.totalGamesPlayed + gameResult.accuracy) / (currentStats.totalGamesPlayed + 1),
-      favoriteGame: currentStats.favoriteGame, // Would need more logic to determine
-      favoriteCulture: currentStats.favoriteCulture, // Would need more logic to determine
-      perfectGames: currentStats.perfectGames + (gameResult.perfect ? 1 : 0),
+      totalTimeSpent: currentStats.totalTimeSpent + gameResult.timeSpent,
+      averageAccuracy: (currentStats.averageAccuracy * currentStats.totalGamesPlayed + normalizedAccuracy) / (currentStats.totalGamesPlayed + 1),
+      favoriteGame: gameResult.gameType, // Update with current game type
+      favoriteCulture: gameResult.culturalCategory || currentStats.favoriteCulture,
+      perfectGames: currentStats.perfectGames + (isPerfect ? 1 : 0),
       longestStreak: Math.max(currentStats.longestStreak, gameResult.score)
     };
 

@@ -10,6 +10,7 @@ import React, {
 import { useAuth } from "./AuthProvider";
 import { GameService, createGameService } from "../services/GameService";
 import { RandomnessVerification } from "./RandomnessProvider";
+import { getUserId } from "../services/UserIdService";
 
 interface GameContextType {
   // Mode Management
@@ -175,25 +176,9 @@ export function GameProvider({
     return !!(user?.authMethod === "flow" && user?.flowAddress);
   };
 
-  // Generate consistent anonymous user ID
+  // Generate consistent anonymous user ID using UserIdService
   const generateAnonymousUserId = (): string => {
-    // Check if we already have an anonymous ID stored
-    if (typeof window !== "undefined") {
-      const existingId = localStorage.getItem("memoreee_anonymous_id");
-      if (existingId) {
-        return existingId;
-      }
-
-      // Generate new anonymous ID
-      const anonymousId = `anonymous_${Date.now()}_${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
-      localStorage.setItem("memoreee_anonymous_id", anonymousId);
-      return anonymousId;
-    }
-
-    // Fallback for server-side rendering
-    return `anonymous_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return getUserId("anonymous");
   };
 
   const startGame = async (config: any) => {
@@ -229,6 +214,7 @@ export function GameProvider({
         sequence,
         config,
         startTime: Date.now(),
+        originalUserId: userId, // Track the original user ID when session started
       };
 
       setCurrentGame(gameState);
@@ -255,15 +241,45 @@ export function GameProvider({
     setError(null);
 
     try {
-      // Use the same user ID that was used to start the game
-      const userId = user?.id || generateAnonymousUserId();
+      // Use current authenticated user's ID if available, otherwise fall back to session's original ID
+      // This handles the case where user authenticates mid-session
+      const sessionUserId =
+        currentGame.session.userId ||
+        currentGame.originalUserId ||
+        generateAnonymousUserId();
+      const userId = user?.id || sessionUserId;
 
-      // Submit game result
+      // Determine user tier for proper leaderboard submission
+      const userTier = user?.tier || "anonymous";
+
+      console.log("🔍 GameProvider.endGame session continuity:", {
+        sessionUserId,
+        currentAuthUserId: user?.id,
+        finalUserId: userId,
+        userTier,
+        authMethod: user?.authMethod,
+      });
+
+      // Handle mid-session authentication: migrate anonymous session to authenticated user
+      if (
+        user?.id &&
+        sessionUserId !== user.id &&
+        sessionUserId.startsWith("anonymous_")
+      ) {
+        console.log(
+          "🔄 Mid-session authentication detected - migrating session to authenticated user"
+        );
+        // The score will be submitted under the authenticated user's ID
+        // This ensures proper attribution when users authenticate during gameplay
+      }
+
+      // Submit game result with user tier information
       const enhancedResult = await gameService.submitGameResult(
         userId,
         currentGame.session.id,
         result,
-        currentGame.config
+        currentGame.config,
+        userTier // Pass user tier to GameService
       );
 
       // Update verification data if available

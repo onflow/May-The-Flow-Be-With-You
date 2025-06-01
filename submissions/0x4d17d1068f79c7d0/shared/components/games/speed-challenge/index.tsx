@@ -1,5 +1,5 @@
-// Re-export for clean imports
-export { default as CulturalSpeedChallenge } from "./CulturalSpeedChallenge";
+// Main Speed Challenge export using shared architecture
 export { default as MemorySpeedChallenge } from "./MemorySpeedChallenge";
 
-// Legacy exports for backward compatibility (already exported above, removing duplicates)
+// Backward compatibility alias - now points to the unified implementation
+export { default as CulturalSpeedChallenge } from "./MemorySpeedChallenge";

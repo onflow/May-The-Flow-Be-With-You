@@ -455,6 +455,9 @@ export class OnChainAdapter extends BaseGameAdapter {
   }
 
   private async mintAchievementNFT(userId: string, achievement: Achievement): Promise<{ nftId: string; transactionId: string }> {
+    // Import memoryNFT dynamically to ensure client-side execution
+    const { memoryNFT } = await import('../config/flow');
+
     // Ensure we're on client side and user is authenticated
     if (typeof window === 'undefined') {
       throw new Error('Flow transactions can only be executed on client side');
@@ -466,61 +469,52 @@ export class OnChainAdapter extends BaseGameAdapter {
       throw new Error('Flow wallet not connected. Please connect your wallet to mint achievement NFTs.');
     }
 
-    // Diagnostic: Check if fcl.authz is properly initialized
-    console.log('🔍 FCL Authorization Diagnostic:', {
-      userLoggedIn: currentUser.loggedIn,
-      userAddress: currentUser.addr,
-      authzExists: !!fcl.authz,
-      authzType: typeof fcl.authz,
-      fclVersion: fcl.VERSION || 'unknown'
-    });
-
     console.log(`🎨 Minting achievement NFT for user: ${currentUser.addr}`);
 
-    const transactionId = await fcl.mutate({
-      cadence: `
-        import MemoryAchievements from ${this.contractAddress}
+    // Use the new memoryNFT service
+    const result = await memoryNFT.mintAchievement(
+      achievement.id,
+      achievement.name,
+      achievement.description,
+      achievement.category,
+      achievement.culture,
+      achievement.icon || "🏆",
+      this.determineRarity(achievement),
+      {
+        unlockedAt: achievement.unlockedAt,
+        userId: userId,
+        platform: "memoreee"
+      }
+    );
 
-        transaction(
-          achievementId: String,
-          name: String,
-          description: String,
-          category: String,
-          culture: String?
-        ) {
-          prepare(signer: auth(Storage, Capabilities) &Account) {
-            let collection = signer.storage.borrow<&MemoryAchievements.Collection>(from: /storage/achievementCollection)
-              ?? panic("No achievement collection found")
+    // Extract NFT ID from transaction events
+    const nftId = this.extractNFTIdFromTransaction(result.result);
 
-            let nft <- MemoryAchievements.mintAchievement(
-              achievementId: achievementId,
-              name: name,
-              description: description,
-              category: category,
-              culture: culture
-            )
+    return {
+      nftId: nftId || `nft_${Date.now()}`,
+      transactionId: result.transactionId
+    };
+  }
 
-            collection.deposit(token: <-nft)
-          }
-        }
-      `,
-      args: (arg: any, t: any) => [
-        arg(achievement.id, t.String),
-        arg(achievement.name, t.String),
-        arg(achievement.description, t.String),
-        arg(achievement.category, t.String),
-        arg(achievement.culture || null, t.Optional(t.String))
-      ],
-      proposer: fcl.authz,
-      payer: fcl.authz,
-      authorizations: [fcl.authz],
-      limit: 1000
-    });
+  // Determine NFT rarity based on achievement
+  private determineRarity(achievement: Achievement): string {
+    if (achievement.category === 'mastery') return 'legendary';
+    if (achievement.category === 'cultural') return 'epic';
+    if (achievement.category === 'performance') return 'rare';
+    return 'common';
+  }
 
-    // In a real implementation, we'd extract the NFT ID from the transaction result
-    const nftId = `nft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    return { nftId, transactionId };
+  // Extract NFT ID from transaction events
+  private extractNFTIdFromTransaction(transactionResult: any): string | null {
+    try {
+      const depositEvent = transactionResult.events?.find((event: any) =>
+        event.type.includes('Deposit') || event.type.includes('AchievementMinted')
+      );
+      return depositEvent?.data?.id?.toString() || null;
+    } catch (error) {
+      console.error('Failed to extract NFT ID:', error);
+      return null;
+    }
   }
 
   private async getAchievementsFromChain(userId: string): Promise<Achievement[]> {

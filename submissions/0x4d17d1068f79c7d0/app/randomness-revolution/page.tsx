@@ -27,6 +27,7 @@ export default function RandomnessRevolutionPage() {
         "Channel the orator's skill in rapidly accessing vast stores of memorized information",
       icon: "🏛️",
       status: "available",
+      gameType: "speed_challenge", // Add separate gameType for leaderboard
       component: () => (
         <DynamicGameLoader
           gameType="speed-challenge"
@@ -41,6 +42,7 @@ export default function RandomnessRevolutionPage() {
         "Master randomized sequences through the discipline of classical order",
       icon: "🎲",
       status: "available",
+      gameType: "chaos_cards", // Add separate gameType for leaderboard
       component: () => (
         <DynamicGameLoader
           gameType="chaos-cards"
@@ -55,6 +57,7 @@ export default function RandomnessRevolutionPage() {
         "Walk through a magnificent Greco-Roman palace, placing memories in architectural splendor",
       icon: "🏺",
       status: "available",
+      gameType: "memory_palace", // Add separate gameType for leaderboard
       component: () => (
         <DynamicGameLoader
           gameType="memory-palace"
@@ -90,11 +93,17 @@ export default function RandomnessRevolutionPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <DynamicGameLoader
               gameType="stats"
-              gameId={game.id}
+              gameId={game.gameType || game.id} // Use gameType for leaderboard consistency
               showLeaderboard={false}
             />
-            <DynamicGameLoader gameType="achievements" gameId={game.id} />
-            <DynamicGameLoader gameType="leaderboard" gameId={game.id} />
+            <DynamicGameLoader
+              gameType="achievements"
+              gameId={game.gameType || game.id}
+            />
+            <DynamicGameLoader
+              gameType="leaderboard"
+              gameId={game.gameType || game.id}
+            />
           </div>
         </div>
       );

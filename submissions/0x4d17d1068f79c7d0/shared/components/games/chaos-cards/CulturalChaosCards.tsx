@@ -1,8 +1,8 @@
-// Legacy wrapper for CulturalChaosCards - now uses the refactored ChaosCardsGame
+// Unified wrapper for Chaos Cards games - now uses the refactored shared architecture
 "use client";
 
 import React from "react";
-import { ChaosCardsGame } from "../ChaosCards/ChaosCardsGame";
+import { ChaosCardsGameRefactored } from "../ChaosCards/ChaosCardsGameRefactored";
 
 interface CulturalChaosCardsProps {
   culturalCategory?: string;
@@ -11,5 +11,5 @@ interface CulturalChaosCardsProps {
 export default function CulturalChaosCards({
   culturalCategory = "randomness-revolution",
 }: CulturalChaosCardsProps) {
-  return <ChaosCardsGame culturalCategory={culturalCategory} />;
+  return <ChaosCardsGameRefactored culturalCategory={culturalCategory} />;
 }

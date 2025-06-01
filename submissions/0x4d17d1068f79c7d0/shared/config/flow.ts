@@ -90,6 +90,20 @@ if (typeof window !== 'undefined') {
   fcl.config(fclConfig);
 }
 
+// Contract addresses based on network
+const CONTRACTS = {
+  MemoryAchievements: network === 'testnet'
+    ? '0xb8404e09b36b6623'
+    : network === 'mainnet'
+    ? '0x1234567890abcdef' // Replace with actual mainnet address when deployed
+    : '0xf8d6e0586b0a20c7', // Emulator address
+  NonFungibleToken: network === 'testnet'
+    ? '0x631e88ae7f1d7c20'
+    : network === 'mainnet'
+    ? '0x1d7e57aa55817448'
+    : '0xf8d6e0586b0a20c7' // Emulator address
+};
+
 // Network and wallet type detection
 export const getWalletType = (user: any) => {
   if (!user?.addr) return null;
@@ -234,19 +248,141 @@ export const flowAuth = {
   onAuthChange: (callback: (user: any) => void) => fcl.currentUser.subscribe(callback)
 };
 
-// Memory NFT contract interactions (for future implementation)
+// Memory NFT contract interactions
 export const memoryNFT = {
   // Mint achievement NFT
-  mintAchievement: async (achievementType: string, score: number) => {
-    // TODO: Implement NFT minting for memory achievements
-    console.log("Minting achievement NFT:", { achievementType, score });
+  mintAchievement: async (
+    achievementId: string,
+    name: string,
+    description: string,
+    category: string,
+    culture?: string,
+    icon: string = "🏆",
+    rarity: string = "common",
+    gameData: Record<string, any> = {}
+  ) => {
+    try {
+      const transactionId = await fcl.mutate({
+        cadence: `
+          import MemoryAchievements from ${CONTRACTS.MemoryAchievements}
+          import NonFungibleToken from ${CONTRACTS.NonFungibleToken}
+
+          transaction(
+            achievementId: String,
+            name: String,
+            description: String,
+            category: String,
+            culture: String?,
+            icon: String,
+            rarity: String,
+            gameData: {String: AnyStruct}
+          ) {
+            prepare(signer: auth(Storage, Capabilities) &Account) {
+              // Get or create collection
+              if signer.storage.borrow<&MemoryAchievements.Collection>(from: MemoryAchievements.CollectionStoragePath) == nil {
+                let collection <- MemoryAchievements.createEmptyCollection(nftType: Type<@MemoryAchievements.NFT>())
+                signer.storage.save(<-collection, to: MemoryAchievements.CollectionStoragePath)
+
+                let collectionCap = signer.capabilities.storage.issue<&MemoryAchievements.Collection>(MemoryAchievements.CollectionStoragePath)
+                signer.capabilities.publish(collectionCap, at: MemoryAchievements.CollectionPublicPath)
+              }
+
+              let collection = signer.storage.borrow<&MemoryAchievements.Collection>(from: MemoryAchievements.CollectionStoragePath)!
+              let minter = signer.storage.borrow<&MemoryAchievements.NFTMinter>(from: MemoryAchievements.MinterStoragePath)!
+
+              let nftId = minter.mintNFT(
+                recipient: collection,
+                achievementId: achievementId,
+                name: name,
+                description: description,
+                category: category,
+                culture: culture,
+                icon: icon,
+                rarity: rarity,
+                gameData: gameData
+              )
+            }
+          }
+        `,
+        args: (arg: any, t: any) => [
+          arg(achievementId, t.String),
+          arg(name, t.String),
+          arg(description, t.String),
+          arg(category, t.String),
+          arg(culture, t.Optional(t.String)),
+          arg(icon, t.String),
+          arg(rarity, t.String),
+          arg(gameData, t.Dictionary({ key: t.String, value: t.AnyStruct }))
+        ],
+        authorizations: [fcl.authz],
+        payer: fcl.authz,
+        proposer: fcl.authz
+      });
+
+      const result = await fcl.tx(transactionId).onceSealed();
+      return { transactionId, success: true, result };
+    } catch (error) {
+      console.error("Failed to mint achievement NFT:", error);
+      throw error;
+    }
   },
 
   // Get user's memory NFTs
   getUserNFTs: async (address: string) => {
-    // TODO: Implement NFT fetching
-    console.log("Fetching NFTs for:", address);
-    return [];
+    try {
+      const nfts = await fcl.query({
+        cadence: `
+          import MemoryAchievements from ${CONTRACTS.MemoryAchievements}
+          import NonFungibleToken from ${CONTRACTS.NonFungibleToken}
+
+          access(all) fun main(address: Address): [MemoryAchievements.AchievementMetadata] {
+            let account = getAccount(address)
+            let collectionRef = account.capabilities.borrow<&MemoryAchievements.Collection>(MemoryAchievements.CollectionPublicPath)
+              ?? return []
+
+            let nfts: [MemoryAchievements.AchievementMetadata] = []
+            let ids = collectionRef.getIDs()
+
+            for id in ids {
+              if let nft = collectionRef.borrowNFT(id) {
+                let memoryNFT = nft as! &MemoryAchievements.NFT
+                nfts.append(memoryNFT.metadata)
+              }
+            }
+
+            return nfts
+          }
+        `,
+        args: (arg: any, t: any) => [arg(address, t.Address)]
+      });
+
+      return nfts || [];
+    } catch (error) {
+      console.error("Failed to fetch user NFTs:", error);
+      return [];
+    }
+  },
+
+  // Check if user has collection set up
+  hasCollection: async (address: string): Promise<boolean> => {
+    try {
+      const hasCollection = await fcl.query({
+        cadence: `
+          import MemoryAchievements from ${CONTRACTS.MemoryAchievements}
+
+          access(all) fun main(address: Address): Bool {
+            let account = getAccount(address)
+            return account.capabilities.borrow<&MemoryAchievements.Collection>(MemoryAchievements.CollectionPublicPath) != nil
+          }
+        `,
+        args: (arg: any, t: any) => [arg(address, t.Address)]
+      });
+
+      return hasCollection || false;
+    } catch (error) {
+      console.error("Failed to check collection:", error);
+      return false;
+    }
   }
 };
 

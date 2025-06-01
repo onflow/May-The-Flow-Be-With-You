@@ -2,58 +2,55 @@
 
 import React from "react";
 import { CulturalTheme } from "../../../config/culturalThemes";
-
-interface Card {
-  id: string;
-  symbol: string;
-  name: string;
-  color: string;
-  culturalContext?: string;
-}
+import { Card } from "../shared";
 
 interface ChaosCardsRecallProps {
   theme: CulturalTheme;
   cards: Card[];
-  currentGuess: number;
+  shuffledCards: Card[];
+  userSequence: string[];
+  onCardSelect: (cardId: string) => void;
+  timeLeft: number;
+  formatTime?: () => string;
 }
 
 export function ChaosCardsRecall({
   theme,
   cards,
-  currentGuess,
+  shuffledCards,
+  userSequence,
+  onCardSelect,
+  timeLeft,
+  formatTime,
 }: ChaosCardsRecallProps) {
   return (
-    <div className="text-center">
-      <p
-        className="text-lg font-medium mb-2"
-        style={{ color: theme.colors.text }}
-      >
-        Select the symbols in the correct order
-      </p>
+    <div className="p-8 space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold mb-4">Recall the Sequence</h2>
+        <div className="text-3xl font-bold text-green-600 mb-4">
+          {formatTime ? formatTime() : `${timeLeft}s`}
+        </div>
+        <p>Click the cards in the correct order</p>
+      </div>
 
-      <p className="text-xs mb-3" style={{ color: theme.colors.text + "60" }}>
-        🔀 Cards have been shuffled - remember the original sequence!
-      </p>
-
-      <p className="text-sm" style={{ color: theme.colors.text + "80" }}>
-        Next: {cards[currentGuess]?.name} ({currentGuess + 1}/{cards.length})
-      </p>
-
-      {/* Progress indicator */}
-      <div className="mt-2 flex justify-center gap-1">
-        {cards.map((_, index) => (
-          <div
-            key={index}
-            className="w-3 h-3 rounded-full"
+      {/* Shuffled cards for selection */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {shuffledCards.map((card) => (
+          <button
+            key={card.id}
+            onClick={() => onCardSelect(card.id)}
+            disabled={userSequence.includes(card.id)}
+            className="p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              backgroundColor:
-                index < currentGuess
-                  ? theme.colors.primary
-                  : index === currentGuess
-                  ? theme.colors.secondary
-                  : theme.colors.primary + "30",
+              backgroundColor: theme.colors.background,
+              borderColor: card.color,
             }}
-          />
+          >
+            <div className="text-center">
+              <div className="text-4xl mb-2">{card.emoji}</div>
+              <div className="text-sm font-medium">{card.name}</div>
+            </div>
+          </button>
         ))}
       </div>
     </div>

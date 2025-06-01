@@ -28,12 +28,17 @@ function initializePool() {
     vrfPool = [];
     poolIndex = 0;
 
-    // Generate test VRF entries
+    // Generate test VRF entries with truly random seeds
     // In production, these would be pre-generated from actual VRF transactions
     for (let i = 0; i < 100; i++) {
       const baseTime = now + i * 1000;
+      // Generate truly random seed using crypto.getRandomValues for better entropy
+      const randomArray = new Uint32Array(1);
+      crypto.getRandomValues(randomArray);
+      const randomSeed = randomArray[0];
+
       vrfPool.push({
-        seed: Math.floor(Math.random() * 1000000) + baseTime,
+        seed: randomSeed,
         transactionId: `vrf_pool_${baseTime}_${i}`,
         blockHeight: 1000000 + i,
         timestamp: baseTime,
@@ -78,8 +83,13 @@ export async function GET(request: NextRequest) {
     // If no unused entry found, generate fallback
     if (!vrfEntry) {
       console.warn('⚠️ VRF pool exhausted, generating fallback');
+      // Generate truly random fallback seed
+      const randomArray = new Uint32Array(1);
+      crypto.getRandomValues(randomArray);
+      const fallbackSeed = randomArray[0];
+
       vrfEntry = {
-        seed: Math.floor(Math.random() * 1000000) + Date.now(),
+        seed: fallbackSeed,
         transactionId: `fallback_${Date.now()}`,
         blockHeight: 0,
         timestamp: Date.now(),
@@ -87,11 +97,21 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Reset pool usage periodically (every 50 requests)
+    // Reset pool usage periodically (every 50 requests) and regenerate seeds for better randomness
     if (poolIndex % 50 === 0) {
       const resetCount = vrfPool.filter(entry => entry.used).length;
-      vrfPool.forEach(entry => entry.used = false);
-      console.log(`🔄 VRF pool reset: ${resetCount} entries refreshed`);
+
+      // Regenerate seeds for used entries to ensure fresh randomness
+      vrfPool.forEach(entry => {
+        if (entry.used) {
+          const randomArray = new Uint32Array(1);
+          crypto.getRandomValues(randomArray);
+          entry.seed = randomArray[0];
+        }
+        entry.used = false;
+      });
+
+      console.log(`🔄 VRF pool reset: ${resetCount} entries refreshed with new seeds`);
     }
 
     // Return successful response
@@ -118,8 +138,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ VRF pool error:', error);
 
-    // Generate emergency fallback
-    const fallbackSeed = Math.floor(Math.random() * 1000000) + Date.now();
+    // Generate emergency fallback with crypto randomness
+    const randomArray = new Uint32Array(1);
+    crypto.getRandomValues(randomArray);
+    const fallbackSeed = randomArray[0];
 
     return NextResponse.json({
       success: false,
@@ -144,11 +166,16 @@ export async function GET(request: NextRequest) {
 // NOTE: This is NOT exported to avoid Next.js route validation errors
 async function replenishVRFPool() {
   // This would connect to Flow and generate real VRF seeds
-  // For now, just add more test entries
+  // For now, just add more test entries with crypto randomness
   const newEntries = [];
   for (let i = 0; i < 20; i++) {
+    // Generate truly random seed for replenishment
+    const randomArray = new Uint32Array(1);
+    crypto.getRandomValues(randomArray);
+    const randomSeed = randomArray[0];
+
     newEntries.push({
-      seed: Math.floor(Math.random() * 1000000) + Date.now() + i,
+      seed: randomSeed,
       transactionId: `replenish_${Date.now()}_${i}`,
       blockHeight: 1000000 + vrfPool.length + i,
       timestamp: Date.now() + i * 1000,

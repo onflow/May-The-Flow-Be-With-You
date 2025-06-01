@@ -8,9 +8,9 @@
 - **Runtime**: React 19 (cutting-edge features)
 - **UI Components**:
   - Supabase UI Library (authentication, real-time features)
-  - shadcn/ui base components
-  - Radix UI primitives (dialogs, dropdowns, tabs)
+  - Radix UI primitives (dialogs, dropdowns, tabs) - primary UI foundation
   - Custom component library (memory-focused interactions)
+  - Tailwind CSS for styling (replaced Silk for better compatibility)
 - **Styling**: Tailwind CSS v4 with custom memory-themed design system
 - **3D Rendering**: Three.js + React Three Fiber + Drei for immersive memory palace environments
 - **State Management**: React Server Components + Zustand for client state

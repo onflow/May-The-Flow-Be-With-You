@@ -2,7 +2,6 @@
 
 import React from "react";
 import { CulturalTheme } from "../../../config/culturalThemes";
-import VRFModeSelector from "../../ui/VRFModeSelector";
 
 interface ChaosCardsSetupProps {
   theme: CulturalTheme;
@@ -30,7 +29,7 @@ export function ChaosCardsSetup({
   // Check if difficulty has progressed beyond baseline
   const hasProgressed = difficulty > baselineDifficulty;
   return (
-    <>
+    <div className="p-8 space-y-6">
       {/* Progress Info */}
       {totalRounds > 0 && (
         <div
@@ -67,12 +66,11 @@ export function ChaosCardsSetup({
         </div>
       )}
 
-      {/* VRF Mode Selector */}
-      <VRFModeSelector className="mb-4" />
+      <div className="text-center space-y-4">
+        <h3 className="text-xl font-semibold mb-4">Setup Your Game</h3>
 
-      {/* Difficulty Selection */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
+        {/* Difficulty Selection */}
+        <div className="flex items-center justify-center gap-4">
           <label className="text-sm font-medium">
             Starting Difficulty:
             {hasProgressed && (
@@ -87,35 +85,24 @@ export function ChaosCardsSetup({
           <select
             value={baselineDifficulty}
             onChange={(e) => onDifficultyChange(parseInt(e.target.value))}
-            className="px-2 py-1 border rounded"
+            className="px-3 py-1 border rounded"
           >
-            <option value={5}>5 (Easy)</option>
+            <option value={5}>5 (Easy - Miller's Rule)</option>
             <option value={6}>6 (Medium)</option>
-            <option value={7}>7 (Hard)</option>
+            <option value={7}>7 (Hard - Miller's Rule)</option>
             <option value={8}>8 (Expert)</option>
+            <option value={9}>9 (Master)</option>
+            <option value={10}>10 (Elite)</option>
           </select>
         </div>
 
         <button
           onClick={onStartGame}
           disabled={isLoading}
-          className="px-6 py-2 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+          className="px-6 py-3 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
           style={{ backgroundColor: theme.colors.primary }}
         >
-          {isLoading ? (
-            "Starting..."
-          ) : (
-            <>
-              {theme.id === "griot"
-                ? "🥁"
-                : theme.id === "sage"
-                ? "🧘"
-                : theme.id === "dreamtime"
-                ? "🎨"
-                : "🏛️"}{" "}
-              Start {gameInfo.name}
-            </>
-          )}
+          {isLoading ? "Starting..." : `🎴 Start ${gameInfo.name}`}
         </button>
       </div>
 
@@ -135,18 +122,18 @@ export function ChaosCardsSetup({
           style={{ color: theme.colors.text + "80" }}
         >
           <li>
-            1. Choose your starting difficulty: 5-8 cards. Difficulty
-            automatically increases with perfect rounds!
+            1. Choose your starting difficulty: 5-10 cards. Difficulty
+            automatically increases with perfect rounds up to 12!
           </li>
           <li>
             2. Study the {theme.culture} symbols and their sequence (time
             decreases with difficulty)
           </li>
-          <li>3. Use the suggested memory technique for better recall</li>
+          <li>3. Use memory techniques for better recall</li>
           <li>4. Recall the symbols in the correct order</li>
-          <li>5. Earn 10 points for each correct selection!</li>
+          <li>5. Earn bonus points for higher difficulty and progression!</li>
         </ol>
       </div>
-    </>
+    </div>
   );
 }

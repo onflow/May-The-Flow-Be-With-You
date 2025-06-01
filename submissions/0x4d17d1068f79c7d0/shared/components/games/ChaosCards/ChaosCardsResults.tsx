@@ -3,16 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { CulturalTheme } from "../../../config/culturalThemes";
 import { GameScoreShare } from "../../SocialShare";
-import { VRFVerification } from "../../VRFVerification";
+import { VRFBadge } from "../../VRFVerification";
 import { ProgressiveEnhancement } from "../../ProgressiveEnhancement";
-
-interface Card {
-  id: string;
-  symbol: string;
-  name: string;
-  color: string;
-  culturalContext?: string;
-}
+import { Card } from "../shared";
+import { getProgressionContext } from "../shared/utils/gameProgressionUtils";
 
 interface ChaosCardsResultsProps {
   theme: CulturalTheme;
@@ -68,11 +62,16 @@ export function ChaosCardsResults({
     }
   }, [isLoading]);
 
-  // Calculate max score using the actual scoring system
-  const basePointsPerCard = 5 + Math.max(0, (difficulty - 5) * 2); // Same as in gameRules.ts
+  // Calculate accuracy based on correct answers, not score comparison
+  const correctAnswers = userSequence.filter(
+    (answer, index) => answer === cards[index]?.id
+  ).length;
+  const accuracy = Math.round((correctAnswers / cards.length) * 100);
+  const isPerfect = correctAnswers === cards.length;
+
+  // Calculate max score for other purposes
+  const basePointsPerCard = 5 + Math.max(0, (difficulty - 5) * 2);
   const maxScore = cards.length * basePointsPerCard;
-  const accuracy = Math.round((score / maxScore) * 100);
-  const isPerfect = score === maxScore;
 
   // Memory science insights
   const getMemoryInsight = (cardCount: number, isPerfect: boolean) => {
@@ -111,7 +110,7 @@ export function ChaosCardsResults({
   };
 
   return (
-    <div className="text-center space-y-4">
+    <div className="p-8 text-center space-y-4">
       <h3
         className="text-2xl font-bold mb-2"
         style={{ color: theme.colors.text }}
@@ -193,7 +192,7 @@ export function ChaosCardsResults({
                   >
                     {index + 1}
                   </span>
-                  <span className="text-lg">{card.symbol}</span>
+                  <span className="text-lg">{card.emoji}</span>
                   <span className="text-sm font-medium">{card.name}</span>
                 </div>
 
@@ -208,7 +207,7 @@ export function ChaosCardsResults({
                           className="text-xs"
                           style={{ color: colors.error }}
                         >
-                          You: {userCard.symbol}
+                          You: {userCard.emoji}
                         </div>
                       )}
                     </div>
@@ -255,6 +254,13 @@ export function ChaosCardsResults({
             Total Games: {totalRounds}
           </div>
 
+          {/* Always show progression context using shared utility */}
+          <div className="text-xs font-medium" style={{ color: colors.info }}>
+            {getProgressionContext(
+              isPerfect ? perfectRounds + 1 : perfectRounds
+            )}
+          </div>
+
           {hasProgressed && (
             <div
               className="text-sm font-medium flex items-center gap-1"
@@ -270,11 +276,6 @@ export function ChaosCardsResults({
               className="font-medium flex items-center gap-1"
             >
               🎯 Perfect round!
-              {(perfectRounds + 1) % 2 === 0
-                ? " Difficulty increased!"
-                : ` ${2 - ((perfectRounds + 1) % 2)} more perfect round${
-                    2 - ((perfectRounds + 1) % 2) === 1 ? "" : "s"
-                  } to advance!`}
             </div>
           )}
 
@@ -319,9 +320,16 @@ export function ChaosCardsResults({
         >
           {localLoading
             ? "Saving..."
-            : isPerfect
-            ? "🚀 Continue Journey"
-            : "🔄 Try Again"}
+            : (() => {
+                const hasProgressed = difficulty > baselineDifficulty;
+                if (isPerfect && hasProgressed) {
+                  return `🚀 Continue at ${difficulty} Cards`;
+                } else if (isPerfect) {
+                  return "🎯 Continue Journey";
+                } else {
+                  return "🔄 Try Again";
+                }
+              })()}
         </button>
 
         {score >= 30 && (
@@ -336,10 +344,7 @@ export function ChaosCardsResults({
       {/* VRF Verification Details */}
       {lastVerification && (
         <div className="mt-4">
-          <VRFVerification
-            verificationData={lastVerification}
-            gameMode={gameMode}
-          />
+          <VRFBadge verificationData={lastVerification} gameMode={gameMode} />
         </div>
       )}
 

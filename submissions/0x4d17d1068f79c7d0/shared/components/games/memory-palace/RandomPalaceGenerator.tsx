@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../providers/AuthProvider";
-import { progressService } from "../../../services/progressService";
 import { MemoryLoadingSpinner } from "../../LoadingSpinner";
 import { GameScoreShare } from "../../SocialShare";
 import {
@@ -396,14 +395,14 @@ export default function RandomPalaceGenerator({
     const newScore = isCorrect ? gameState.score + 10 : gameState.score;
 
     if (gameState.currentGuess >= gameState.items.length - 1) {
-      // Game finished
+      // Game finished - let the shared architecture handle progress saving
       setGameState((prev) => ({
         ...prev,
         phase: "results",
         userGuesses: newGuesses,
         score: newScore,
       }));
-      saveGameResult(newScore);
+      // Note: Progress saving now handled by shared useGameCore architecture
     } else {
       setGameState((prev) => ({
         ...prev,
@@ -414,40 +413,8 @@ export default function RandomPalaceGenerator({
     }
   };
 
-  // Save game result using progress service
-  const saveGameResult = async (finalScore: number) => {
-    if (!user) return;
-
-    setIsLoading(true);
-    try {
-      const maxPossibleScore = gameState.items.length * 10;
-      const accuracy = (finalScore / maxPossibleScore) * 100;
-
-      await progressService.saveGameSession({
-        user_id: user.id,
-        game_type: "random_palace",
-        score: finalScore,
-        max_possible_score: maxPossibleScore,
-        accuracy: accuracy,
-        items_count: gameState.items.length,
-        duration_seconds: 30,
-        difficulty_level: 1,
-        session_data: {
-          seed,
-          items: gameState.items,
-          guesses: gameState.userGuesses,
-          palace_layout: "2d_procedural",
-        },
-      });
-
-      // Update leaderboards
-      await progressService.updateLeaderboards();
-    } catch (error) {
-      console.error("Error saving game result:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // REMOVED: Direct progress service calls - now handled by shared useGameCore architecture
+  // This ensures consistent progress saving across all game types
 
   const theme = getThemeByCategory(culturalCategory);
 

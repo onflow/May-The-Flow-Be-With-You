@@ -3,7 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../providers/AuthProvider";
 import { UserTierStatus } from "./UserTierStatus";
-import { progressService, LeaderboardEntry } from "../services/progressService";
+import {
+  leaderboardService,
+  LeaderboardEntry,
+} from "../services/LeaderboardService";
 import { Trophy, Medal, Award, Crown } from "lucide-react";
 
 interface LeaderboardProps {
@@ -36,16 +39,16 @@ export function Leaderboard({
   const loadLeaderboard = async () => {
     setLoading(true);
     try {
-      const data = await progressService.getLeaderboard(
+      const data = await leaderboardService.getOffChainLeaderboard(
         gameType,
-        selectedPeriod,
+        undefined, // culture parameter
         limit
       );
       setLeaderboard(data);
 
       // Find user's rank if they're not in top results
       if (showUserRank && user) {
-        const userEntry = data.find((entry) => entry.user_id === user.id);
+        const userEntry = data.find((entry) => entry.userId === user.id);
         if (!userEntry) {
           // User is not in top results, fetch their rank separately
           // For now, we'll just show they're not ranked
@@ -89,9 +92,13 @@ export function Leaderboard({
 
   const getGameTypeDisplay = (type: string): string => {
     const gameNames: Record<string, string> = {
-      random_palace: "Random Palace",
+      memory_palace: "Memory Palace",
       chaos_cards: "Chaos Cards",
+      speed_challenge: "Speed Challenge",
       entropy_storytelling: "Entropy Stories",
+      // Legacy support for old names
+      random_palace: "Memory Palace",
+      memory_speed: "Speed Challenge",
       memory_race: "Memory Race",
       digit_duel: "Digit Duel",
       story_chain: "Story Chain",
@@ -205,9 +212,12 @@ export function Leaderboard({
       {/* Header */}
       <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            🏅 Rankings
-          </h3>
+          <div>
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              🏅 Rankings
+            </h3>
+            <p className="text-xs text-gray-500">Best scores only</p>
+          </div>
         </div>
 
         {/* Period Selector */}
@@ -242,9 +252,9 @@ export function Leaderboard({
           <div className="space-y-2">
             {leaderboard.slice(0, 5).map((entry, index) => (
               <div
-                key={entry.user_id}
+                key={entry.userId}
                 className={`flex items-center justify-between p-3 rounded-lg transition-all ${
-                  entry.user_id === user?.id
+                  entry.userId === user?.id
                     ? "bg-blue-50 border border-blue-200"
                     : "bg-gray-50"
                 }`}
@@ -253,23 +263,29 @@ export function Leaderboard({
                   {/* Rank Badge */}
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${getRankBadgeColor(
-                      entry.rank
+                      entry.rank || index + 1
                     )}`}
                   >
-                    {entry.rank <= 3 ? getRankIcon(entry.rank) : entry.rank}
+                    {(entry.rank || index + 1) <= 3
+                      ? getRankIcon(entry.rank || index + 1)
+                      : entry.rank || index + 1}
                   </div>
 
                   {/* User Info */}
                   <div>
                     <div className="font-medium text-sm text-gray-800 flex items-center gap-1">
-                      {(entry.display_name || entry.username).slice(0, 12)}
-                      {entry.user_id === user?.id && (
+                      {entry.username.slice(0, 12)}
+                      {entry.userId === user?.id && (
                         <span className="text-blue-600 text-xs">(You)</span>
                       )}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {entry.total_sessions} games •{" "}
-                      {entry.average_accuracy.toFixed(0)}%
+                      {entry.userTier === "supabase"
+                        ? "📧"
+                        : entry.userTier === "flow"
+                        ? "⛓️"
+                        : "👤"}{" "}
+                      {entry.userTier}
                     </div>
                   </div>
                 </div>
@@ -277,9 +293,9 @@ export function Leaderboard({
                 {/* Score */}
                 <div className="text-right">
                   <div className="text-lg font-bold text-gray-800">
-                    {entry.score}
+                    {entry.adjustedScore}
                   </div>
-                  <div className="text-xs text-gray-500">pts</div>
+                  <div className="text-xs text-gray-500">best score</div>
                 </div>
               </div>
             ))}
@@ -289,7 +305,7 @@ export function Leaderboard({
         {/* User's Rank (if not in top results) */}
         {showUserRank &&
           user &&
-          !leaderboard.find((e) => e.user_id === user.id) && (
+          !leaderboard.find((e) => e.userId === user.id) && (
             <div className="mt-4 pt-3 border-t border-gray-200">
               <div className="text-center text-gray-600">
                 <p className="text-xs">Not ranked yet. Play more to climb!</p>

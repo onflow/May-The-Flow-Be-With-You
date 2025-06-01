@@ -245,27 +245,40 @@ export class OffChainAdapter extends BaseGameAdapter {
         // Generate a unique session ID
         const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // For authenticated users, save to Supabase
+        // For authenticated users, save to Supabase with enhanced session data
+        const sessionData = {
+          user_id: userId,
+          game_type: gameType,
+          session_id: sessionId,
+          score: score,
+          max_possible_score: metadata?.maxPossibleScore || 1000,
+          accuracy: metadata?.accuracy || 0,
+          items_count: metadata?.itemsCount || 8,
+          duration_seconds: metadata?.duration || 0,
+          difficulty_level: metadata?.difficultyLevel || 2,
+          perfect_game: (metadata?.accuracy || 0) >= 100,
+          session_data: {
+            ...metadata,
+            technique: metadata?.technique || 'unknown',
+            vrfSeed: metadata?.vrfSeed,
+            culturalCategory: metadata?.culture || 'general'
+          },
+          created_at: new Date().toISOString()
+        };
+
         const { error } = await this.supabase
           .from('game_sessions')
-          .insert({
-            user_id: userId,
-            game_type: gameType,
-            session_id: sessionId,
-            score: score,
-            max_possible_score: metadata?.maxPossibleScore || 1000,
-            accuracy: metadata?.accuracy || 0,
-            items_count: metadata?.itemsCount || 8,
-            duration_seconds: metadata?.duration || 0,
-            difficulty_level: metadata?.difficultyLevel || 2,
-            session_data: metadata || {},
-            created_at: new Date().toISOString()
-          });
+          .insert(sessionData);
 
         if (error) {
           console.error('Failed to submit score to Supabase:', error);
           return { success: false, error: 'Failed to save score to database' };
         }
+
+        console.log('Score submitted successfully to Supabase');
+
+        // Note: Leaderboard updates now handled by unified LeaderboardService
+        // No need for manual updates here - cleaner separation of concerns
       }
 
       // Update local leaderboard cache (for both anonymous and authenticated users)

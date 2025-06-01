@@ -3,9 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Silk Components - for premium UI/UX */
-/* Temporarily commented out to debug styling issues */
-/* @import "@silk-hq/components/unlayered-styles"; */
+/* Silk Components removed - replaced with Radix UI + Tailwind for better compatibility */
 
 /* Custom base styles */
 @layer base {
@@ -48,8 +46,8 @@
     focus-ring-color: var(--memory-primary);
   }
 
-  /* Silk integration styles */
-  .silk-sheet {
+  /* Dialog and modal styles */
+  .dialog-overlay {
     @apply backdrop-blur-sm;
   }
 }

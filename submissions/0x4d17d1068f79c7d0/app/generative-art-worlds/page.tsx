@@ -5,7 +5,7 @@ import { useAuth } from "../../shared/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import { CulturalSpeedChallenge } from "../../shared/components/games/speed-challenge";
 import { CulturalChaosCards } from "../../shared/components/games/chaos-cards";
-import { RandomPalaceGenerator } from "../../shared/components/games/memory-palace";
+import CulturalMemoryPalace from "../../shared/components/games/memory-palace/CulturalMemoryPalace";
 import { UserStatsComponent } from "../../shared/components/UserStats";
 import { Leaderboard } from "../../shared/components/Leaderboard";
 import { Achievements } from "../../shared/components/Achievements";
@@ -30,6 +30,7 @@ export default function GenerativeArtWorldsPage() {
         "Follow the songlines at speed, connecting memory points across vast mental territories",
       icon: "🛤️",
       status: "available",
+      gameType: "speed_challenge", // Add separate gameType for leaderboard
       component: () => (
         <CulturalSpeedChallenge culturalCategory={culturalCategory} />
       ),
@@ -41,6 +42,7 @@ export default function GenerativeArtWorldsPage() {
         "Create memory patterns using traditional Aboriginal dot painting techniques",
       icon: "🎨",
       status: "available",
+      gameType: "chaos_cards", // Add separate gameType for leaderboard
       component: () => (
         <CulturalChaosCards culturalCategory={culturalCategory} />
       ),
@@ -52,8 +54,9 @@ export default function GenerativeArtWorldsPage() {
         "Journey across the vast landscape of memory, following songlines that connect sacred sites",
       icon: "🌙",
       status: "available",
+      gameType: "memory_palace", // Add separate gameType for leaderboard
       component: () => (
-        <RandomPalaceGenerator culturalCategory={culturalCategory} />
+        <CulturalMemoryPalace culturalCategory={culturalCategory} />
       ),
     },
   ];
@@ -81,9 +84,12 @@ export default function GenerativeArtWorldsPage() {
 
           {/* Stats, Achievements, and Leaderboard */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <UserStatsComponent gameType={game.id} showLeaderboard={false} />
-            <Achievements gameType={game.id} />
-            <Leaderboard gameType={game.id} />
+            <UserStatsComponent
+              gameType={game.gameType || game.id}
+              showLeaderboard={false}
+            />
+            <Achievements gameType={game.gameType || game.id} />
+            <Leaderboard gameType={game.gameType || game.id} />
           </div>
         </div>
       );

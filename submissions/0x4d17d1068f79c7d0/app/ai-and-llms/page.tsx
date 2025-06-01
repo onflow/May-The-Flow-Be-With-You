@@ -5,7 +5,7 @@ import { useAuth } from "../../shared/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import { CulturalSpeedChallenge } from "../../shared/components/games/speed-challenge";
 import { CulturalChaosCards } from "../../shared/components/games/chaos-cards";
-import { RandomPalaceGenerator } from "../../shared/components/games/memory-palace";
+import CulturalMemoryPalace from "../../shared/components/games/memory-palace/CulturalMemoryPalace";
 import { UserStatsComponent } from "../../shared/components/UserStats";
 import { Leaderboard } from "../../shared/components/Leaderboard";
 import { Achievements } from "../../shared/components/Achievements";
@@ -53,7 +53,7 @@ export default function AIAndLLMsPage() {
       icon: "🏯",
       status: "available",
       component: () => (
-        <RandomPalaceGenerator culturalCategory={culturalCategory} />
+        <CulturalMemoryPalace culturalCategory={culturalCategory} />
       ),
     },
   ];

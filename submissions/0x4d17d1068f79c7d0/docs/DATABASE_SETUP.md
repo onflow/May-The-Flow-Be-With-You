@@ -1,32 +1,44 @@
-# 🗄️ Database Setup for Memoreee
+# 🗄️ Unified Database Setup for Memoreee
 
-This guide will help you set up the Supabase database tables required for the Memoreee memory training platform.
+This guide will help you set up the **clean, unified** Supabase database for the Memoreee memory training platform. We've eliminated all redundancy and created a DRY, production-ready schema.
+
+## 🎯 **Clean Start Approach**
+
+Since you're the only user and we're in development, we're starting fresh with a unified schema that eliminates all redundancy and conflicting tables.
 
 ## 🚀 Quick Setup
 
-### Option 1: Supabase Dashboard (Recommended)
+### Step 1: Clean Existing Data (Recommended)
 
 1. **Go to your Supabase project dashboard**
 
    - Visit: https://todqarjzydxrfcjnwyid.supabase.co
    - Navigate to **SQL Editor** in the left sidebar
 
-2. **Run the setup script**
+2. **Run the cleanup script**
 
-   - Copy the contents of `supabase/setup-tables.sql`
+   - Copy the contents of `scripts/reset-supabase-clean.sql`
+   - Paste it into the SQL Editor
+   - Click **Run** to execute
+   - This removes all old, conflicting tables
+
+### Step 2: Create Unified Schema
+
+1. **Run the unified migration**
+
+   - Copy the contents of `supabase/migrations/002_unified_clean_schema.sql`
    - Paste it into the SQL Editor
    - Click **Run** to execute
 
-3. **Verify tables were created**
+2. **Verify the clean setup**
    - Go to **Table Editor** in the left sidebar
-   - You should see these tables:
-     - `user_profiles` - User account information
-     - `practice_sessions` - Individual game sessions
-     - `achievements` - User achievements and badges
-     - `leaderboards` - Competition rankings
-     - `memory_palaces` - Custom memory palace layouts
-     - `user_progress` - Progress tracking per game type
-     - `game_sessions` - Detailed session tracking with Flow integration
+   - You should see these **6 unified tables**:
+     - ✅ `user_profiles` - User accounts (auth, anonymous, Flow)
+     - ✅ `game_sessions` - Raw game data (unified storage)
+     - ✅ `leaderboards` - Computed rankings (single source)
+     - ✅ `achievements` - Player achievements
+     - ✅ `user_progress` - Per-game progress tracking
+     - ✅ `memory_palaces` - Custom palace layouts (future)
 
 ### Option 2: Command Line (Alternative)
 
@@ -38,37 +50,69 @@ bun install
 bun run db:verify
 ```
 
-## 📊 Database Schema
+## 📊 Unified Database Schema
+
+### **Key Improvements:**
+
+- ✅ **No more `practice_sessions`** - unified into `game_sessions`
+- ✅ **No more `leaderboard_entries`** - simplified to `leaderboards`
+- ✅ **Consistent accuracy format** - 0-100 percentage across all tables
+- ✅ **Tier system ready** - supports anonymous, Supabase, and Flow users
+- ✅ **Single data flow** - game_sessions → leaderboards (computed)
 
 ### Core Tables
 
-1. **`practice_sessions`** - Stores game session data
+1. **`game_sessions`** - Unified storage for all game data
+
+   - `user_id` - Player identifier (auth UUID, anonymous ID, or Flow address)
+   - `game_type` - Type of memory game (`chaos_cards`, `memory_palace`, `speed_challenge`)
+   - `session_id` - Unique session identifier
+   - `score` - Points earned
+   - `accuracy` - Percentage accuracy (0-100 format - CONSISTENT!)
+   - `duration_seconds` - Time taken
+   - `difficulty_level` - Game difficulty
+   - `items_count` - Number of items in game
+   - `perfect_game` - Boolean flag for 100% accuracy
+   - `session_data` - Enhanced metadata (technique, vrfSeed, culturalCategory)
+   - `flow_transaction_id` - Flow blockchain transaction ID
+
+2. **`leaderboards`** - Computed rankings (single source of truth)
 
    - `user_id` - Player identifier
-   - `game_type` - Type of memory game
-   - `score` - Points earned
-   - `accuracy` - Percentage accuracy
-   - `duration_seconds` - Time taken
+   - `game_type` - Game category
+   - `period` - Time period (daily/weekly/monthly/all_time)
+   - `score` - Best score for this period
+   - `rank` - Calculated position (1st, 2nd, 3rd, etc.)
+   - `total_sessions` - Number of games played
+   - `average_accuracy` - Average accuracy (0-100 percentage)
 
-2. **`achievements`** - Player achievements and badges
+3. **`user_profiles`** - Enhanced user information
+
+   - `id` - Primary identifier (auth UUID, anonymous ID, or Flow address)
+   - `auth_user_id` - Links to Supabase auth.users (optional)
+   - `username` - Display name
+   - `flow_address` - Flow blockchain wallet address
+   - `user_tier` - User type (`anonymous`, `supabase`, `flow`)
+   - `wallet_type` - Wallet technology (`cadence`, `evm`, `unknown`)
+
+4. **`achievements`** - Player achievements and badges
 
    - `user_id` - Player identifier
    - `achievement_type` - Type of achievement
    - `achievement_name` - Display name
    - `points` - Points awarded
+   - `nft_token_id` - Flow NFT token ID (if minted)
 
-3. **`leaderboards`** - Rankings and competition data
+5. **`user_progress`** - Per-game progress tracking
 
    - `user_id` - Player identifier
-   - `game_type` - Game category
-   - `period` - Time period (daily/weekly/monthly/all_time)
-   - `score` - Best score
-   - `rank` - Position in leaderboard
-
-4. **`user_profiles`** - Extended user information
-   - `id` - Links to Supabase auth.users
-   - `username` - Display name
-   - `flow_address` - Blockchain wallet address
+   - `game_type` - Specific game
+   - `level` - Current level
+   - `best_score` - Personal best
+   - `total_sessions` - Games played
+   - `average_accuracy` - Personal average (0-100 percentage)
+   - `streak_current` - Current win streak
+   - `streak_best` - Best win streak
 
 ## 🔒 Security
 
@@ -97,24 +141,24 @@ After running the setup:
    - Check the stats/leaderboard components
 
 3. **Verify in Supabase Dashboard**
-   - Go to **Table Editor** > `practice_sessions`
-   - You should see your game session data
+   - Go to **Table Editor** > `game_sessions`
+   - You should see your game session data with unified structure
 
 ## 🐛 Troubleshooting
 
 ### "relation does not exist" errors
 
-If you see errors like `relation "public.practice_sessions" does not exist`:
+If you see errors like `relation "public.game_sessions" does not exist`:
 
 1. **Check if tables exist**
 
    - Go to Supabase Dashboard > Table Editor
-   - Verify all tables are listed
+   - Verify all 6 unified tables are listed
 
-2. **Re-run the setup script**
+2. **Re-run the unified setup**
 
-   - Copy `supabase/setup-tables.sql` again
-   - Run it in SQL Editor
+   - First run `scripts/reset-supabase-clean.sql`
+   - Then run `supabase/migrations/002_unified_clean_schema.sql`
 
 3. **Check RLS policies**
    - Go to Authentication > Policies
@@ -146,13 +190,25 @@ Once the database is set up:
 
 ## 🎯 Success Indicators
 
-You'll know the setup worked when:
+You'll know the unified setup worked when:
 
-- ✅ No "relation does not exist" errors in console
-- ✅ Game stats show real data instead of zeros
-- ✅ Leaderboards display player rankings
-- ✅ Achievements can be unlocked and displayed
-- ✅ User profiles are created automatically
+- ✅ **No "relation does not exist" errors** in console
+- ✅ **Game stats show real data** instead of zeros
+- ✅ **Leaderboards display proper rankings** with calculated positions
+- ✅ **Achievements unlock consistently** across all game types
+- ✅ **User profiles created automatically** for all user types
+- ✅ **Consistent accuracy format** (0-100 percentage) across all games
+- ✅ **Single data flow** - no duplicate progress saving
+- ✅ **Clean table structure** - only 6 tables, no redundancy
+
+## 🚀 **Benefits of Unified Architecture:**
+
+- **350+ lines of code removed** - much cleaner codebase
+- **Single source of truth** - LeaderboardService handles everything
+- **Consistent data format** - 0-100 accuracy across all games
+- **DRY principle** - no duplicate ranking calculations
+- **Future-proof** - easy to add new game types
+- **Performance optimized** - efficient single-table queries
 
 ---
 

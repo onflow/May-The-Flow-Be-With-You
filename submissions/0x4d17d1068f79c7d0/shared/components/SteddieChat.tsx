@@ -3,6 +3,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../providers/AuthProvider";
 import { SteddieAIService } from "../services/SteddieAIService";
+import {
+  learningJourneyService,
+  LearningRecommendation,
+} from "../services/LearningJourneyService";
 
 interface ChatMessage {
   id: string;
@@ -14,6 +18,7 @@ interface ChatMessage {
 interface SteddieChatProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMessage?: string; // Optional initial message to send when chat opens
 }
 
 // Steddie's knowledge base for memory techniques
@@ -69,6 +74,19 @@ const steddieKnowledge = {
     history:
       "Allows infinite expansion beyond familiar spaces. Master 100 pegs, then multiply by adding modifiers like fire, ice, or gold.",
   },
+  "spatial memory": {
+    description:
+      "Use the physical layout and spatial relationships to enhance memory retention.",
+    tips: [
+      "Focus on relative positions - what's next to what",
+      "Notice distances and spatial arrangements",
+      "Use landmarks and reference points",
+      "Create mental maps of the space",
+      "Practice visualizing from different angles",
+    ],
+    history:
+      "Spatial memory leverages our natural navigation abilities. Ancient hunters used spatial cues to remember territory, and modern memory champions use spatial relationships to organize vast amounts of information.",
+  },
 };
 
 const steddiePersonality = {
@@ -89,12 +107,21 @@ const steddiePersonality = {
   ],
 };
 
-export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
+export function SteddieChat({
+  isOpen,
+  onClose,
+  initialMessage,
+}: SteddieChatProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [aiMode, setAiMode] = useState(false); // Toggle between rule-based and AI
+  const [recommendations, setRecommendations] = useState<
+    LearningRecommendation[]
+  >([]);
+  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false); // Prevent duplicate initialization
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize Venice AI service
@@ -104,20 +131,88 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
     fallbackToRules: true,
   });
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // No auto-scroll to prevent annoyance - users can scroll manually
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (isOpen && !hasInitialized) {
+      setHasInitialized(true);
 
-  useEffect(() => {
-    if (isOpen && messages.length === 0) {
       // Add greeting message when chat opens
       addSteddieMessage(steddiePersonality.greeting);
+
+      // If there's an initial message, send it automatically
+      if (initialMessage) {
+        setTimeout(() => {
+          addUserMessage(initialMessage);
+          setIsTyping(true);
+
+          // Generate response to initial message
+          setTimeout(async () => {
+            try {
+              let response: string;
+
+              if (aiMode) {
+                const userProgress = user?.id
+                  ? await learningJourneyService.getUserProgress(user.id)
+                  : undefined;
+
+                response = await steddieAI.generateResponse(initialMessage, {
+                  conversationHistory: [],
+                  userProgress,
+                  currentGame: undefined,
+                  culturalPreference: undefined,
+                });
+              } else {
+                response = generateSteddieResponse(initialMessage);
+              }
+
+              addSteddieMessage(response);
+            } catch (error) {
+              console.error("Error generating initial response:", error);
+              const fallbackResponse = generateSteddieResponse(initialMessage);
+              addSteddieMessage(fallbackResponse);
+            } finally {
+              setIsTyping(false);
+            }
+          }, 1000);
+        }, 500);
+      }
+
+      // Load learning recommendations if user is logged in
+      if (user?.id) {
+        loadRecommendations();
+      }
+    }
+  }, [isOpen, hasInitialized]);
+
+  // Reset initialization when chat is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setHasInitialized(false);
+      setMessages([]);
+      setInputValue("");
+      setIsTyping(false);
+      setShowRecommendations(false);
     }
   }, [isOpen]);
+
+  // Load personalized learning recommendations
+  const loadRecommendations = async () => {
+    if (!user?.id) return;
+
+    try {
+      const recs = await learningJourneyService.getRecommendations(user.id);
+      setRecommendations(recs);
+
+      if (recs.length > 0) {
+        const recMessage =
+          "I've analyzed your progress and have some personalized recommendations! Click the 📚 button to see them.";
+        addSteddieMessage(recMessage);
+      }
+    } catch (error) {
+      console.error("Failed to load recommendations:", error);
+    }
+  };
 
   const addSteddieMessage = (content: string) => {
     const message: ChatMessage = {
@@ -190,11 +285,35 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
 
     // Check for technique-specific questions first
     for (const [technique, knowledge] of Object.entries(steddieKnowledge)) {
+      // More precise matching to avoid false positives
+      const techniqueWords = technique.toLowerCase().split(" ");
+      const inputWords = input.toLowerCase().split(" ");
+
+      // Check for exact technique name match
+      if (input.includes(technique.toLowerCase())) {
+        const transition =
+          steddiePersonality.transitions[
+            Math.floor(Math.random() * steddiePersonality.transitions.length)
+          ];
+        return `${transition}\n\n**${technique.toUpperCase()}**\n\n${
+          knowledge.description
+        }\n\n**Tips from my shell:**\n${knowledge.tips
+          .map((tip) => `• ${tip}`)
+          .join("\n")}\n\n**Historical wisdom:** ${
+          knowledge.history
+        }\n\n*Would you like me to suggest a specific exercise to practice this technique?*`;
+      }
+
+      // Check for partial matches only if multiple words match
+      const matchingWords = techniqueWords.filter((word) =>
+        inputWords.some(
+          (inputWord) => inputWord.includes(word) || word.includes(inputWord)
+        )
+      );
+
       if (
-        input.includes(technique.replace(" ", "").toLowerCase()) ||
-        input.includes(technique.toLowerCase()) ||
-        (patterns.techniqueRequest.test(input) &&
-          input.includes(technique.split(" ")[0].toLowerCase()))
+        matchingWords.length >= Math.min(2, techniqueWords.length) &&
+        patterns.techniqueRequest.test(input)
       ) {
         const transition =
           steddiePersonality.transitions[
@@ -288,10 +407,15 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
       let response: string;
 
       if (aiMode) {
+        // Get full user progress for AI
+        const userProgress = user?.id
+          ? await learningJourneyService.getUserProgress(user.id)
+          : undefined;
+
         // Use Venice AI for enhanced responses
         response = await steddieAI.generateResponse(userMessage, {
           conversationHistory: messages.map((m) => m.content),
-          userProgress: user ? { level: 1, gamesPlayed: 0 } : undefined,
+          userProgress,
           currentGame: undefined,
           culturalPreference: undefined,
         });
@@ -311,7 +435,7 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -337,6 +461,17 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Learning Recommendations Button */}
+            {recommendations.length > 0 && (
+              <button
+                onClick={() => setShowRecommendations(!showRecommendations)}
+                className="px-2 py-1 bg-blue-500 hover:bg-blue-600 rounded text-xs transition-colors"
+                title="View Learning Recommendations"
+              >
+                📚 {recommendations.length}
+              </button>
+            )}
+
             {/* AI Mode Toggle */}
             <div className="flex items-center gap-2">
               <span className="text-xs opacity-75">AI</span>
@@ -362,6 +497,59 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
             </button>
           </div>
         </div>
+
+        {/* Learning Recommendations Panel */}
+        {showRecommendations && recommendations.length > 0 && (
+          <div className="border-b border-gray-200 p-4 bg-blue-50">
+            <h4 className="font-semibold text-blue-800 mb-3">
+              🎯 Personalized Learning Path
+            </h4>
+            <div className="space-y-2">
+              {recommendations.slice(0, 3).map((rec, index) => (
+                <div
+                  key={index}
+                  className="bg-white p-3 rounded border border-blue-200"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h5 className="font-medium text-sm text-blue-900">
+                        {rec.title}
+                      </h5>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {rec.description}
+                      </p>
+                      <div className="flex gap-2 mt-2 text-xs">
+                        {rec.technique && (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                            {rec.technique}
+                          </span>
+                        )}
+                        {rec.gameType && (
+                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+                            {rec.gameType}
+                          </span>
+                        )}
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                          {rec.estimatedTime}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const message = `Tell me more about: ${rec.title}`;
+                        setInputValue(message);
+                        setShowRecommendations(false);
+                      }}
+                      className="ml-2 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                    >
+                      Ask
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -425,7 +613,7 @@ export function SteddieChat({ isOpen, onClose }: SteddieChatProps) {
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
               placeholder="Ask Steddie about memory techniques..."
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
               disabled={isTyping}

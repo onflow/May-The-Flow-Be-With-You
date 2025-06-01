@@ -44,13 +44,13 @@ export function VRFVerification({
           <div>
             <div className="font-medium text-gray-900 dark:text-white">
               {gameMode === "onchain"
-                ? "Flow VRF Randomness"
-                : "Local Randomness"}
+                ? "🔗 Flow Blockchain VRF"
+                : "⚡ Instant Randomness"}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
               {verificationData.isVerified
-                ? "Cryptographically verified on Flow blockchain"
-                : "Generated locally for instant gameplay"}
+                ? "Provably fair • Blockchain verified • Tournament ready"
+                : "Cryptographically secure • Instant gameplay • Practice mode"}
             </div>
           </div>
         </div>
@@ -249,7 +249,7 @@ export function VRFBadge({
         }`}
       ></div>
       <span className="text-gray-700 dark:text-gray-300">
-        {gameMode === "onchain" ? "Flow VRF" : "Local RNG"}
+        {gameMode === "onchain" ? "🔗 Flow VRF" : "⚡ Instant"}
       </span>
       {verificationData.isVerified && (
         <svg

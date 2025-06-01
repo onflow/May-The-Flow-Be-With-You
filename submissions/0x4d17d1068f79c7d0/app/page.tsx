@@ -1,7 +1,21 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { NavigationButton } from "../shared/components/NavigationLoader";
+import { SteddieChat } from "../shared/components/SteddieChat";
 
 export default function LandingPage() {
+  const searchParams = useSearchParams();
+  const [showSteddieChat, setShowSteddieChat] = useState(false);
+
+  // Check if we should open Steddie chat (from struggle detector)
+  useEffect(() => {
+    const shouldOpenChat = searchParams?.get("chat") === "true";
+    if (shouldOpenChat) {
+      setShowSteddieChat(true);
+    }
+  }, [searchParams]);
   return (
     <div className="flex flex-col items-center justify-center text-center space-y-12">
       {/* Hero Section */}
@@ -145,6 +159,23 @@ export default function LandingPage() {
           — Cicero, Ancient Roman Orator
         </div>
       </div>
+
+      {/* Steddie Chat Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          onClick={() => setShowSteddieChat(true)}
+          className="w-16 h-16 bg-green-500 hover:bg-green-600 rounded-full shadow-xl flex items-center justify-center text-2xl transition-all duration-300 hover:scale-110 border-4 border-white"
+          title="Chat with Steddie - Your Memory Mentor"
+        >
+          🐢
+        </button>
+      </div>
+
+      {/* Steddie Chat Modal */}
+      <SteddieChat
+        isOpen={showSteddieChat}
+        onClose={() => setShowSteddieChat(false)}
+      />
     </div>
   );
 }

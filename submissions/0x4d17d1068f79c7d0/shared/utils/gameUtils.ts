@@ -139,3 +139,38 @@ export function checkAccuracyAchievement(accuracy: number, threshold: number): b
 export function checkStreakAchievement(streak: number, threshold: number): boolean {
   return streak >= threshold;
 }
+
+// Generate colors for game items
+export function generateColors(count: number, baseColor?: string): string[] {
+  const colors = [
+    "#EF4444", "#F97316", "#F59E0B", "#EAB308", "#84CC16",
+    "#22C55E", "#10B981", "#14B8A6", "#06B6D4", "#0EA5E9",
+    "#3B82F6", "#6366F1", "#8B5CF6", "#A855F7", "#D946EF",
+    "#EC4899", "#F43F5E"
+  ];
+
+  if (baseColor) {
+    // Generate variations of the base color
+    return Array.from({ length: count }, (_, i) => {
+      const hue = (i * 360 / count) % 360;
+      return `hsl(${hue}, 70%, 60%)`;
+    });
+  }
+
+  return colors.slice(0, count);
+}
+
+// Create cultural story for memory techniques
+export function createCulturalStory(technique: string, culturalContext: string): string {
+  const storyTemplates = {
+    observation: `Focus on the visual details within ${culturalContext}. Notice colors, shapes, and patterns.`,
+    loci: `Create a memory palace within ${culturalContext}. Place each item in a specific location.`,
+    linking: `Connect items through ${culturalContext} stories and associations.`,
+    story: `Weave all items into a narrative inspired by ${culturalContext}.`,
+    cultural: `Use the rich traditions and meanings of ${culturalContext} to enhance your memory.`,
+    journey: `Follow a path through ${culturalContext}, connecting items along the way.`,
+    spatial: `Use the spatial layout and architecture of ${culturalContext} to organize your memory.`,
+  };
+
+  return storyTemplates[technique as keyof typeof storyTemplates] || storyTemplates.observation;
+}

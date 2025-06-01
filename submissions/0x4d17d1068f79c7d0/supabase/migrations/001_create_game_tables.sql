@@ -1,18 +1,20 @@
--- Simplified Database Setup for Memoreee
--- Run this in your Supabase SQL Editor to create the required tables
+-- UNIFIED MEMOREEE DATABASE SCHEMA
+-- Clean, DRY architecture matching our unified LeaderboardService
+-- Run this in Supabase SQL Editor to create fresh tables
 
--- Enable UUID extension
+-- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. User profiles table (supports both auth users and anonymous users)
+-- 1. User profiles table (supports auth users, anonymous users, and Flow wallets)
 CREATE TABLE IF NOT EXISTS user_profiles (
-    id TEXT PRIMARY KEY, -- Can be UUID from auth.users or anonymous ID
+    id TEXT PRIMARY KEY, -- UUID from auth.users, anonymous ID, or Flow address
     auth_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE, -- Optional link to auth
     username TEXT UNIQUE,
     display_name TEXT,
     avatar_url TEXT,
-    flow_address TEXT,
+    flow_address TEXT, -- Flow wallet address for blockchain users
     wallet_type TEXT CHECK (wallet_type IN ('cadence', 'evm', 'unknown')),
+    user_tier TEXT DEFAULT 'supabase' CHECK (user_tier IN ('anonymous', 'supabase', 'flow')),
     skill_levels JSONB DEFAULT '{}',
     preferences JSONB DEFAULT '{}',
     total_practice_time INTERVAL DEFAULT '0 seconds',

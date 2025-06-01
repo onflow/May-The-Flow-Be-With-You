@@ -2,14 +2,7 @@
 
 import React from "react";
 import { CulturalTheme } from "../../../config/culturalThemes";
-
-interface Card {
-  id: string;
-  symbol: string;
-  name: string;
-  color: string;
-  culturalContext?: string;
-}
+import { Card } from "../shared";
 
 interface ChaosCardsDisplayProps {
   theme: CulturalTheme;
@@ -67,7 +60,7 @@ export function ChaosCardsDisplay({
 
           {/* Card content */}
           <div className="text-center">
-            <div className="text-4xl mb-2">{card.symbol}</div>
+            <div className="text-4xl mb-2">{card.emoji}</div>
             <div className="font-semibold text-sm mb-1">{card.name}</div>
             {card.culturalContext &&
               (phase === "setup" || phase === "results") && (

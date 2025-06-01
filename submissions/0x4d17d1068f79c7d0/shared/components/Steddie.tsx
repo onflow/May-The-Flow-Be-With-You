@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Sheet } from "@silk-hq/components";
+import * as Dialog from "@radix-ui/react-dialog";
 import steddieProfile from "../steddie/steddie";
 import { useAuth } from "../providers/AuthProvider";
 import { progressService, UserStats } from "../services/progressService";
@@ -138,47 +138,45 @@ export const Steddie = () => {
           💬 Chat with Steddie
         </button>
 
-        {/* Silk Sheet for Wisdom */}
-        <Sheet.Root license="non-commercial">
-          <Sheet.Trigger asChild>
+        {/* Wisdom Dialog */}
+        <Dialog.Root>
+          <Dialog.Trigger asChild>
             <button className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium">
               💡 Get Wisdom
             </button>
-          </Sheet.Trigger>
-          <Sheet.Portal>
-            <Sheet.View>
-              <Sheet.Backdrop themeColorDimming="auto" />
-              <Sheet.Content className="bg-white rounded-t-3xl p-6 max-w-md mx-auto">
-                <Sheet.BleedingBackground />
-                <div className="text-center">
-                  <div className="text-4xl mb-4">🐢</div>
-                  <h2 className="text-2xl font-bold text-green-800 mb-4">
-                    Steddie's Wisdom
-                  </h2>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                      <p className="italic text-green-700">"{tagline}"</p>
-                    </div>
-                    <button
-                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                      onClick={() => setTagline(randomTagline())}
-                    >
-                      🔄 New Wisdom
-                    </button>
-                    <div className="text-sm text-gray-500 mt-4">
-                      <p>
-                        Steddie has been sharing memory wisdom for centuries.
-                      </p>
-                      <p className="mt-2">
-                        Ready to start your memory journey?
-                      </p>
-                    </div>
+          </Dialog.Trigger>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl z-50 max-h-[90vh] overflow-y-auto">
+              <div className="text-center">
+                <div className="text-4xl mb-4">🐢</div>
+                <Dialog.Title className="text-2xl font-bold text-green-800 mb-4">
+                  Steddie's Wisdom
+                </Dialog.Title>
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                    <p className="italic text-green-700">"{tagline}"</p>
+                  </div>
+                  <button
+                    className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    onClick={() => setTagline(randomTagline())}
+                  >
+                    🔄 New Wisdom
+                  </button>
+                  <div className="text-sm text-gray-500 mt-4">
+                    <p>Steddie has been sharing memory wisdom for centuries.</p>
+                    <p className="mt-2">Ready to start your memory journey?</p>
                   </div>
                 </div>
-              </Sheet.Content>
-            </Sheet.View>
-          </Sheet.Portal>
-        </Sheet.Root>
+                <Dialog.Close asChild>
+                  <button className="mt-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200">
+                    Close
+                  </button>
+                </Dialog.Close>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       </div>
 
       {/* Chat Interface */}

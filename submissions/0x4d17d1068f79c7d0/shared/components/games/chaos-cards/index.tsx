@@ -1,11 +1,13 @@
 // Re-export for clean imports
-export { default as CulturalChaosCards } from './CulturalChaosCards';
+export { default as CulturalChaosCards } from "./CulturalChaosCards";
 
-// Re-export existing ChaosCards components
-export * from '../ChaosCards/ChaosCardsGame';
-export * from '../ChaosCards/ChaosCardsDisplay';
-export * from '../ChaosCards/ChaosCardsMemorize';
-export * from '../ChaosCards/ChaosCardsRecall';
-export * from '../ChaosCards/ChaosCardsResults';
-export * from '../ChaosCards/ChaosCardsSetup';
-export * from '../ChaosCards/hooks/useChaosCardsGame';
+// Modern Chaos Cards Games (using shared architecture)
+export { ChaosCardsGameRefactored } from "../ChaosCards/ChaosCardsGameRefactored";
+
+// Modular components (used by ChaosCardsGameRefactored)
+export * from "../ChaosCards/ChaosCardsDisplay";
+export * from "../ChaosCards/ChaosCardsLearn";
+export * from "../ChaosCards/ChaosCardsMemorize";
+export * from "../ChaosCards/ChaosCardsRecall";
+export * from "../ChaosCards/ChaosCardsResults";
+export * from "../ChaosCards/ChaosCardsSetup";

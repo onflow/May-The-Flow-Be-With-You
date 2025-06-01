@@ -75,6 +75,13 @@ npm run dev:node
 
 **[Flow Hackathon Story](docs/FLOW_HACKATHON.md)** - Complete journey: Four weeks, four days, one vision
 
+### **Weekly Submissions**
+
+- **[Week 1: Randomness Revolution](docs/week1-randomness-revolution.md)** - Flow VRF integration and chaos-based memory games
+- **[Week 2: Actually Fun Games](docs/week2-actually-fun-games.md)** - Competitive memory games with global leaderboards
+- **[Week 3: Generative Art & Worlds](docs/week3-generative-art-worlds.md)** - Four cultural traditions with procedural generation
+- **[Week 4: AI and LLMs](docs/week4-ai-and-llms.md)** - Steddie AI coach with cultural adaptation
+
 ## 📚 **Documentation**
 
 Detailed guides available in `/docs/`:

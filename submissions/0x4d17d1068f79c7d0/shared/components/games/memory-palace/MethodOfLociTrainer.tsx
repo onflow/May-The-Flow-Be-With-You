@@ -296,7 +296,7 @@ export default function MethodOfLociTrainer() {
           </div>
 
           {/* Memory Palace Visualization */}
-          <div className="relative w-full h-96 bg-gradient-to-br from-amber-100 to-orange-200 rounded-lg border-2 border-amber-300 overflow-hidden">
+          <div className="relative w-full h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-amber-100 to-orange-200 rounded-lg border-2 border-amber-300 overflow-hidden">
             <div className="absolute inset-0 opacity-30 bg-amber-200 bg-opacity-20"></div>
 
             {locations.map((location) => (

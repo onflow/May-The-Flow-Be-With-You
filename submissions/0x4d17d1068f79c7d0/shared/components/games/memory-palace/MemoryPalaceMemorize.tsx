@@ -121,8 +121,8 @@ export function MemoryPalaceMemorize({
       </div>
 
       {/* Palace Visualization */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-lg border-2 border-amber-200 p-6">
-        <div className="relative w-full h-96 bg-white rounded-lg shadow-inner overflow-hidden">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-lg border-2 border-amber-200 p-3 sm:p-4 lg:p-6">
+        <div className="palace-container">
           {/* Palace background pattern */}
           <div className="absolute inset-0 opacity-10">
             <div
@@ -137,7 +137,7 @@ export function MemoryPalaceMemorize({
           {rooms.map((room, roomIndex) => (
             <div
               key={room.id}
-              className="absolute border-2 border-gray-300 bg-white/80 rounded-lg shadow-md"
+              className="palace-room"
               style={{
                 left: `${room.position.x}%`,
                 top: `${room.position.y}%`,
@@ -147,8 +147,8 @@ export function MemoryPalaceMemorize({
               }}
             >
               {/* Room label */}
-              <div className="absolute -top-5 left-0 right-0 text-center z-10">
-                <span className="text-xs font-medium px-2 py-1 bg-white rounded shadow-sm border whitespace-nowrap">
+              <div className="palace-room-label">
+                <span>
                   {roomIndex + 1}. {room.name}
                 </span>
               </div>
@@ -159,21 +159,19 @@ export function MemoryPalaceMemorize({
                 .map((item, itemIndex) => (
                   <div
                     key={item.id}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 animate-pulse"
+                    className="palace-item animate-pulse"
                     style={{
                       left: `${item.coordinates.x}%`,
                       top: `${item.coordinates.y}%`,
                     }}
                   >
                     <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shadow-lg border-2 border-white"
+                      className="palace-item-icon"
                       style={{ backgroundColor: item.color }}
                     >
                       {item.emoji}
                     </div>
-                    <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs font-medium text-center bg-white/90 rounded px-2 py-1 shadow-sm border whitespace-nowrap">
-                      {item.name}
-                    </div>
+                    <div className="palace-item-name">{item.name}</div>
                   </div>
                 ))}
             </div>

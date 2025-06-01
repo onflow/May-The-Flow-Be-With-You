@@ -95,21 +95,21 @@ export function ProgressiveEnhancement({
                   <span className="mr-2">📧</span>
                   Save Your Progress
                 </h4>
-                <ul className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1 sm:space-y-2">
+                <ul className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 space-y-1 sm:space-y-2">
                   <li className="flex items-center">
-                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span className="text-green-600 mr-2 text-sm">✓</span>
                     <span>Progress saved across devices</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span className="text-green-600 mr-2 text-sm">✓</span>
                     <span>Community leaderboards</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span className="text-green-600 mr-2 text-sm">✓</span>
                     <span>Achievement tracking</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span className="text-green-600 mr-2 text-sm">✓</span>
                     <span>Social features</span>
                   </li>
                 </ul>
@@ -121,25 +121,25 @@ export function ProgressiveEnhancement({
                   <span className="mr-2">🏆</span>
                   Competitive Mode
                 </h4>
-                <ul className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1 sm:space-y-2">
+                <ul className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 space-y-1 sm:space-y-2">
                   <li className="flex items-center">
-                    <span className="text-purple-500 mr-2 text-sm">⭐</span>
+                    <span className="text-purple-600 mr-2 text-sm">⭐</span>
                     <span>Verifiable randomness</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-purple-500 mr-2 text-sm">⭐</span>
+                    <span className="text-purple-600 mr-2 text-sm">⭐</span>
                     <span>NFT achievements</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-purple-500 mr-2 text-sm">⭐</span>
+                    <span className="text-purple-600 mr-2 text-sm">⭐</span>
                     <span>Global tournaments</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="text-purple-500 mr-2 text-sm">⭐</span>
+                    <span className="text-purple-600 mr-2 text-sm">⭐</span>
                     <span>Blockchain verification</span>
                   </li>
                 </ul>
-                <div className="mt-2 text-xs text-purple-600 dark:text-purple-400">
+                <div className="mt-2 text-xs text-purple-700 dark:text-purple-300">
                   Requires Flow wallet
                 </div>
               </div>
@@ -154,7 +154,7 @@ export function ProgressiveEnhancement({
               </button>
               <button
                 onClick={handleDismiss}
-                className="px-4 sm:px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base touch-target"
+                className="px-4 sm:px-6 py-3 border border-gray-400 dark:border-gray-500 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base touch-target"
               >
                 Continue Playing
               </button>
@@ -254,7 +254,7 @@ export function ProgressiveEnhancement({
               </button>
               <button
                 onClick={handleDismiss}
-                className="px-4 sm:px-6 py-2 sm:py-3 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors text-sm sm:text-base touch-target"
+                className="px-4 sm:px-6 py-2 sm:py-3 border border-gray-400 dark:border-gray-500 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base touch-target"
               >
                 Maybe Later
               </button>

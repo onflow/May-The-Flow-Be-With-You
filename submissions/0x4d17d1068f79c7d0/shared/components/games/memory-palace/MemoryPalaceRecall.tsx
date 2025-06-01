@@ -256,15 +256,15 @@ export function MemoryPalaceRecall({
       </div>
 
       {/* Palace Visualization */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-lg border-2 border-amber-200 p-6">
-        <h3 className="text-lg font-semibold text-amber-800 mb-4 text-center">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-lg border-2 border-amber-200 p-3 sm:p-4 lg:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-amber-800 mb-3 sm:mb-4 text-center">
           🏛️{" "}
           {selectedItem
             ? "Click on a room to place the item"
             : "Your Memory Palace"}
         </h3>
 
-        <div className="relative w-full h-96 bg-white rounded-lg shadow-inner overflow-hidden">
+        <div className="palace-container">
           {/* Palace background pattern */}
           <div className="absolute inset-0 opacity-10">
             <div
@@ -279,7 +279,7 @@ export function MemoryPalaceRecall({
           {rooms.map((room, roomIndex) => (
             <div
               key={room.id}
-              className={`absolute border-2 rounded-lg shadow-md transition-all duration-300 ${
+              className={`palace-room ${
                 selectedItem
                   ? "cursor-pointer hover:bg-blue-50 hover:border-blue-400 bg-white/90"
                   : "bg-white/80 border-gray-300"
@@ -294,8 +294,8 @@ export function MemoryPalaceRecall({
               onClick={(e) => selectedItem && handleRoomClick(room.id, e)}
             >
               {/* Room label */}
-              <div className="absolute -top-5 left-0 right-0 text-center z-10">
-                <span className="text-xs font-medium px-2 py-1 bg-white rounded shadow-sm border whitespace-nowrap">
+              <div className="palace-room-label">
+                <span>
                   {roomIndex + 1}. {room.name}
                 </span>
               </div>
@@ -310,21 +310,19 @@ export function MemoryPalaceRecall({
                   return (
                     <div
                       key={itemId}
-                      className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300"
+                      className="palace-item"
                       style={{
                         left: `${placement.position.x}%`,
                         top: `${placement.position.y}%`,
                       }}
                     >
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-lg border-2 border-white"
+                        className="palace-item-icon"
                         style={{ backgroundColor: item.color }}
                       >
                         {item.emoji}
                       </div>
-                      <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs font-medium text-center bg-white/90 rounded px-1 py-0.5 shadow-sm border whitespace-nowrap">
-                        {item.name}
-                      </div>
+                      <div className="palace-item-name">{item.name}</div>
                     </div>
                   );
                 })}
@@ -335,11 +333,11 @@ export function MemoryPalaceRecall({
 
       {/* Placed Items Summary */}
       {Object.keys(placedItems).length > 0 && (
-        <div className="bg-white rounded-lg border p-4">
-          <h3 className="font-semibold text-gray-800 mb-3 text-center">
+        <div className="bg-white rounded-lg border p-3 sm:p-4">
+          <h3 className="font-semibold text-gray-800 mb-3 text-center text-sm sm:text-base">
             📝 Items You've Placed
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {Object.entries(placedItems).map(([itemId, placement]) => {
               const item = items.find((i) => i.id === itemId);
               const room = rooms.find((r) => r.id === placement.roomId);

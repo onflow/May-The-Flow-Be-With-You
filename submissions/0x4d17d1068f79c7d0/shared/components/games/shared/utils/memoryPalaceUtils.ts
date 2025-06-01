@@ -31,23 +31,24 @@ export function generatePalaceLayout(seed: number, culturalCategory: string, dif
 
   const rooms: Room[] = [];
 
-  // Dynamic grid layout based on number of rooms
+  // Mobile-first grid layout based on number of rooms
+  // Prioritize vertical stacking on mobile, horizontal on larger screens
   let gridCols: number, gridRows: number;
   if (numRooms <= 2) {
-    gridCols = 2;
-    gridRows = 1;
+    gridCols = 1; // Stack vertically on mobile
+    gridRows = 2;
   } else if (numRooms <= 4) {
     gridCols = 2;
     gridRows = 2;
   } else {
-    gridCols = 3;
-    gridRows = 2;
+    gridCols = 2; // Keep 2 columns max for mobile readability
+    gridRows = 3;
   }
 
   // Container dimensions for proper scaling
   const containerWidth = 100; // Use percentage-based positioning
   const containerHeight = 100;
-  const padding = 8; // Padding percentage
+  const padding = 6; // Reduced padding for mobile (was 8)
 
   const roomWidth = (containerWidth - padding * (gridCols + 1)) / gridCols;
   const roomHeight = (containerHeight - padding * (gridRows + 1)) / gridRows;

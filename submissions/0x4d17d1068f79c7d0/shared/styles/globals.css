@@ -139,4 +139,85 @@
   .mobile-spacing {
     @apply space-y-3 sm:space-y-4 lg:space-y-6;
   }
+
+  /* Memory Palace mobile optimizations */
+  .palace-container {
+    @apply relative w-full bg-white rounded-lg shadow-inner overflow-hidden;
+    height: 16rem; /* 64 on mobile */
+  }
+
+  @media (min-width: 640px) {
+    .palace-container {
+      height: 20rem; /* 80 on sm+ */
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .palace-container {
+      height: 24rem; /* 96 on lg+ */
+    }
+  }
+
+  /* Mobile-first room layouts */
+  .palace-room {
+    @apply absolute border-2 rounded-lg shadow-md transition-all duration-300;
+    border-color: rgba(156, 163, 175, 0.5); /* gray-400/50 */
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+
+  .palace-room:hover {
+    @apply shadow-lg;
+  }
+
+  .palace-room-label {
+    @apply absolute text-center z-10;
+    top: -1.25rem; /* -top-5 */
+    left: 0;
+    right: 0;
+  }
+
+  .palace-room-label span {
+    @apply text-xs font-medium px-2 py-1 bg-white rounded shadow-sm border whitespace-nowrap;
+  }
+
+  @media (min-width: 640px) {
+    .palace-room-label span {
+      @apply text-sm;
+    }
+  }
+
+  /* Palace item styling */
+  .palace-item {
+    @apply absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500;
+  }
+
+  .palace-item-icon {
+    @apply rounded-full flex items-center justify-center font-bold shadow-lg border-2 border-white;
+    width: 2.5rem; /* w-10 */
+    height: 2.5rem; /* h-10 */
+    font-size: 0.875rem; /* text-sm */
+  }
+
+  @media (min-width: 640px) {
+    .palace-item-icon {
+      width: 3rem; /* w-12 */
+      height: 3rem; /* h-12 */
+      font-size: 1.125rem; /* text-lg */
+    }
+  }
+
+  .palace-item-name {
+    @apply absolute text-center bg-white/90 rounded px-1 shadow-sm border whitespace-nowrap;
+    bottom: -2rem; /* -bottom-8 */
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.625rem; /* text-xs */
+  }
+
+  @media (min-width: 640px) {
+    .palace-item-name {
+      font-size: 0.75rem; /* text-xs */
+      padding: 0.25rem 0.5rem; /* py-1 px-2 */
+    }
+  }
 }

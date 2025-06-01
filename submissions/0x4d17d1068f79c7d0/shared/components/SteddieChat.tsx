@@ -178,10 +178,7 @@ export function SteddieChat({
         }, 500);
       }
 
-      // Load learning recommendations if user is logged in
-      if (user?.id) {
-        loadRecommendations();
-      }
+      // Don't auto-load recommendations - make it a manual feature
     }
   }, [isOpen, hasInitialized]);
 
@@ -196,21 +193,38 @@ export function SteddieChat({
     }
   }, [isOpen]);
 
-  // Load personalized learning recommendations
+  // Load personalized learning recommendations (manual trigger only)
   const loadRecommendations = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      addSteddieMessage(
+        "🔐 Progress analysis is a premium feature for logged-in users! Sign in to unlock personalized recommendations based on your memory training journey."
+      );
+      return;
+    }
 
     try {
+      setIsTyping(true);
+      addSteddieMessage("🔍 Analyzing your memory training progress...");
+
       const recs = await learningJourneyService.getRecommendations(user.id);
       setRecommendations(recs);
 
       if (recs.length > 0) {
         const recMessage =
-          "I've analyzed your progress and have some personalized recommendations! Click the 📚 button to see them.";
+          "📊 Analysis complete! I've found some personalized recommendations based on your progress. Click the 📚 button to see them, or ask me about specific techniques you'd like to improve!";
         addSteddieMessage(recMessage);
+      } else {
+        addSteddieMessage(
+          "🌱 You're just getting started! Play a few games first, then I can provide personalized recommendations based on your performance."
+        );
       }
     } catch (error) {
       console.error("Failed to load recommendations:", error);
+      addSteddieMessage(
+        "🐢 My shell patterns are a bit cloudy right now. Try asking for analysis again in a moment!"
+      );
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -281,6 +295,10 @@ export function SteddieChat({
 
       // Motivation and encouragement
       motivation: /\b(motivation|encourage|inspire|give\s+up|quit|tired)\b/,
+
+      // Analysis and progress requests
+      analysis:
+        /\b(analyz|progress|recommend|suggestion|what\s+should\s+i|help\s+me\s+improve|personalized|custom)\b/,
     };
 
     // Check for technique-specific questions first
@@ -370,6 +388,12 @@ export function SteddieChat({
       return "Excellent! Games make practice joyful and effective. I recommend:\n\n🎮 **Chaos Cards**: Perfect for building visual memory\n🏃 **Speed Challenges**: Develop quick recall under pressure\n🏰 **Memory Palaces**: Create lasting spatial memories\n\nEach game targets different memory skills. Which type of challenge excites you most?";
     }
 
+    if (patterns.analysis.test(input)) {
+      // Trigger the analysis function
+      setTimeout(() => loadRecommendations(), 500);
+      return "🔍 Let me analyze your progress and provide personalized recommendations...";
+    }
+
     if (patterns.performance.test(input) && hasDiscussedTechnique) {
       return "To enhance your technique mastery:\n\n**Progressive Training:**\n• Start with 3-5 items, master completely\n• Add one item only when achieving 100% accuracy\n• Practice daily for 10-15 minutes\n• Use spaced repetition (review after 1 day, 3 days, 1 week)\n\n**Advanced Tips:**\n• Combine techniques (palace + linking)\n• Add emotional connections\n• Use all five senses\n• Create personal meaning\n\nWhich aspect would you like to focus on first?";
     }
@@ -407,12 +431,12 @@ export function SteddieChat({
       let response: string;
 
       if (aiMode) {
-        // Get full user progress for AI
+        // Get user progress for AI if available (works for both logged-in and anonymous users)
         const userProgress = user?.id
           ? await learningJourneyService.getUserProgress(user.id)
           : undefined;
 
-        // Use Venice AI for enhanced responses
+        // Use Venice AI for enhanced responses (works for all users)
         response = await steddieAI.generateResponse(userMessage, {
           conversationHistory: messages.map((m) => m.content),
           userProgress,
@@ -461,6 +485,17 @@ export function SteddieChat({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Progress Analysis Button */}
+            <button
+              onClick={loadRecommendations}
+              className="px-2 py-1 bg-purple-500 hover:bg-purple-600 rounded text-xs transition-colors"
+              title={
+                user?.id ? "Analyze My Progress" : "Analysis (Login Required)"
+              }
+            >
+              🔍 Analyze
+            </button>
+
             {/* Learning Recommendations Button */}
             {recommendations.length > 0 && (
               <button

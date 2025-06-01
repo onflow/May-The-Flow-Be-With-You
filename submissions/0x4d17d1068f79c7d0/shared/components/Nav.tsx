@@ -75,8 +75,8 @@ const WalletButton = () => {
           className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-gray-700 font-medium transition-all duration-200 text-sm sm:text-base min-h-[44px]"
         >
           <User size={16} />
-          <span className="hidden sm:inline">Sign In</span>
-          <span className="sm:hidden">Sign In</span>
+          <span className="hidden sm:inline">Email Sign In</span>
+          <span className="sm:hidden">Email</span>
         </button>
       </div>
     );

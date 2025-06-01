@@ -28,6 +28,14 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
+  // Check URL parameters to auto-show email form
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("method") === "email") {
+      setShowEmailForm(true);
+    }
+  }, []);
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
@@ -91,26 +99,23 @@ export default function LoginPage() {
         <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-100">
           <div className="text-center space-y-4">
             <div className="text-4xl">📧</div>
-            <h3 className="text-xl font-bold text-gray-800">Email / Google</h3>
+            <h3 className="text-xl font-bold text-gray-800">Email Account</h3>
             <p className="text-sm text-gray-600">
-              Sign in with email or Google for quick access to all memory
-              training features
+              Sign in with your email for a traditional account with progress
+              tracking and leaderboards
             </p>
 
             {!showEmailForm ? (
               <div className="space-y-3">
                 <button
-                  onClick={signInWithSupabase}
+                  onClick={() => setShowEmailForm(true)}
                   className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium"
                 >
-                  Continue with Google
+                  Continue with Email
                 </button>
-                <button
-                  onClick={() => setShowEmailForm(true)}
-                  className="w-full py-2 text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition-all duration-200 font-medium"
-                >
-                  Use Email Instead
-                </button>
+                <div className="text-xs text-gray-500">
+                  Create an account or sign in with your email address
+                </div>
               </div>
             ) : (
               <form onSubmit={handleEmailAuth} className="space-y-3">
@@ -153,7 +158,7 @@ export default function LoginPage() {
                   onClick={() => setShowEmailForm(false)}
                   className="w-full py-2 text-gray-500 text-sm hover:underline"
                 >
-                  Back to Google
+                  Back to Options
                 </button>
               </form>
             )}

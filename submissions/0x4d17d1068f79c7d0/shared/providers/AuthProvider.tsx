@@ -336,16 +336,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       setError(null);
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      // User state will be updated by the auth change listener
+
+      // For now, we'll redirect to the login page to use email auth
+      // This maintains the existing button behavior but uses email instead of Google
+      window.location.href = "/login?method=email";
     } catch (error) {
       console.error("Supabase sign in error:", error);
-      setError("Failed to sign in with Google");
+      setError("Failed to sign in with email");
       setLoading(false);
     }
   };

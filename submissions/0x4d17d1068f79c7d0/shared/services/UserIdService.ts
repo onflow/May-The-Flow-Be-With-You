@@ -33,8 +33,17 @@ export class UserIdService {
       return existingMapping.uuid;
     }
 
-    // Create new mapping
-    const uuid = this.isValidUUID(identifier) ? identifier : uuidv4();
+    // Create new mapping with deterministic UUID for Flow addresses
+    let uuid: string;
+    if (this.isValidUUID(identifier)) {
+      uuid = identifier;
+    } else if (authMethod === 'flow') {
+      // Generate deterministic UUID based on Flow address for consistency across environments
+      uuid = this.generateDeterministicUUID(identifier);
+    } else {
+      uuid = uuidv4();
+    }
+
     const mapping: UserIdMapping = {
       uuid,
       [authMethod === 'flow' ? 'flowAddress' : 'supabaseId']: identifier,
@@ -117,6 +126,33 @@ export class UserIdService {
   }
 
   /**
+   * Generate deterministic UUID based on Flow address for consistency across environments
+   */
+  private static generateDeterministicUUID(flowAddress: string): string {
+    // Create a deterministic UUID based on the Flow address
+    // This ensures the same Flow address always gets the same UUID across environments
+
+    // Remove 0x prefix if present and normalize to lowercase
+    const normalizedAddress = flowAddress.toLowerCase().replace(/^0x/, '');
+
+    // Pad to ensure consistent length (Flow addresses are 16 chars without 0x)
+    const paddedAddress = normalizedAddress.padStart(16, '0');
+
+    // Create a deterministic UUID v4 format using the address
+    // Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+    const uuid = [
+      paddedAddress.slice(0, 8),
+      paddedAddress.slice(8, 12),
+      '4' + paddedAddress.slice(12, 15), // Version 4 UUID
+      '8' + paddedAddress.slice(15, 16) + paddedAddress.slice(0, 2), // Variant bits + padding
+      paddedAddress.slice(2, 14)
+    ].join('-');
+
+    console.log('🔗 Generated deterministic UUID for Flow address:', { flowAddress, uuid });
+    return uuid;
+  }
+
+  /**
    * Check if a string is a valid UUID
    */
   private static isValidUUID(str: string): boolean {
@@ -148,6 +184,36 @@ export class UserIdService {
     localStorage.removeItem(this.STORAGE_KEY);
     localStorage.removeItem(this.ANONYMOUS_KEY);
     console.log('🗑️ All user ID mappings cleared');
+  }
+
+  /**
+   * Migrate Flow users to deterministic UUIDs for consistency across environments
+   */
+  static migrateFlowUsersToDeterministicUUIDs(): void {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const mappings = this.getAllMappings();
+      let migrationCount = 0;
+
+      mappings.forEach(mapping => {
+        if (mapping.authMethod === 'flow' && mapping.flowAddress) {
+          const deterministicUUID = this.generateDeterministicUUID(mapping.flowAddress);
+          if (mapping.uuid !== deterministicUUID) {
+            // Update the mapping to use deterministic UUID
+            mapping.uuid = deterministicUUID;
+            migrationCount++;
+          }
+        }
+      });
+
+      if (migrationCount > 0) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(mappings));
+        console.log(`🔄 Migrated ${migrationCount} Flow users to deterministic UUIDs`);
+      }
+    } catch (error) {
+      console.warn('Failed to migrate Flow users to deterministic UUIDs:', error);
+    }
   }
 
   /**

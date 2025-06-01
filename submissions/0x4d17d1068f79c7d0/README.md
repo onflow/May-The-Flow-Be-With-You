@@ -71,6 +71,10 @@ npm run dev:node
 
 **Environment Setup**: Copy `.env.example` to `.env.local` and configure Supabase + Flow settings.
 
+## 🏆 **Hackathon Submission**
+
+**[Flow Hackathon Story](docs/FLOW_HACKATHON.md)** - Complete journey: Four weeks, four days, one vision
+
 ## 📚 **Documentation**
 
 Detailed guides available in `/docs/`:

@@ -130,65 +130,81 @@ access(all) fun main(userAddress: Address): [CreatureUIData] {
 }
 `;
 
-// Transacción de mint con pago de 0.1 FLOW para el sistema modular v2
+// Transacción de mint con pago de 0.1 FLOW - versión simplificada
 const MINT_NFT_WITH_PAYMENT_TRANSACTION = `
-import "EvolvingCreatureNFT"
-import "NonFungibleToken"
-import "TraitModule"
-import "FungibleToken"
-import "FlowToken"
+import EvolvingCreatureNFT from ${CONTRACT_ADDRESS}
+import TraitModule from ${CONTRACT_ADDRESS}
+import FungibleToken from ${FUNGIBLE_TOKEN_ADDRESS}
+import FlowToken from ${FLOW_TOKEN_ADDRESS}
 
 transaction(recipient: Address) {
-    let paymentVault: @{FungibleToken.Vault}
-    let recipientRef: &EvolvingCreatureNFT.Collection
-    
-    prepare(signer: auth(Storage, Capabilities, BorrowValue) &Account) {
+    prepare(acct: auth(Storage, Capabilities, BorrowValue) &Account) {
         // Retirar 0.1 FLOW como pago
-        let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
+        let vaultRef = acct.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
             ?? panic("No se pudo obtener bóveda de FlowToken.")
-        self.paymentVault <- vaultRef.withdraw(amount: 0.1)
+        let paymentVault <- vaultRef.withdraw(amount: 0.1)
         
-        // Verificar que el receptor tenga una colección configurada
-        let recipientAccount = getAccount(recipient)
-        self.recipientRef = recipientAccount.capabilities.get<&EvolvingCreatureNFT.Collection>(
-            EvolvingCreatureNFT.CollectionPublicPath
-        ).borrow() ?? panic("No se pudo obtener referencia a la colección del receptor")
-    }
-    
-    execute {
-        // Depositar el pago al contrato (asumiendo que hay un receptor configurado)
+        // Depositar el pago al contrato
         let contractAccount = getAccount(${CONTRACT_ADDRESS})
         let paymentReceiver = contractAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
             .borrow() ?? panic("No se pudo obtener receptor de pago del contrato")
+        paymentReceiver.deposit(from: <-paymentVault)
         
-        paymentReceiver.deposit(from: <-self.paymentVault)
-        
-        // Obtener el minter y crear el NFT
+        // Get minter capability from contract account
         let minterCap = contractAccount.capabilities.get<&EvolvingCreatureNFT.NFTMinter>(/public/EvolvingCreatureNFTMinter)
-        let minter = minterCap.borrow() ?? panic("No se pudo obtener minter del contrato")
         
-        // Crear traits iniciales dinámicamente
-        let initialTraits: @{String: {TraitModule.Trait}} <- {}
-        let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
-        
-        for moduleType in registeredModules {
-            if let factory = EvolvingCreatureNFT.getModuleFactory(moduleType: moduleType) {
-                let defaultTrait <- factory.createDefaultTrait()
-                initialTraits[moduleType] <-! defaultTrait
+        if minterCap.check() {
+            let minter = minterCap.borrow()!
+            
+            // Get recipient's collection reference
+            let recipientAccount = getAccount(recipient)
+            let recipientCap = recipientAccount.capabilities.get<&EvolvingCreatureNFT.Collection>(EvolvingCreatureNFT.CollectionPublicPath)
+            
+            if recipientCap.check() {
+                let collection = recipientCap.borrow()!
+                
+                // Create initial traits dynamically from ALL registered modules
+                let initialTraits: @{String: {TraitModule.Trait}} <- {}
+                let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
+
+                // Generate random seed from blockchain data for uniqueness
+        let currentBlock = getCurrentBlock()
+                let baseTimestamp = currentBlock.timestamp
+        let blockHeight = currentBlock.height
+                
+                // Create a pseudo-random seed combining multiple sources
+                let combinedSeed = UInt64(baseTimestamp) + blockHeight + UInt64(recipient.toString().length) * 12345
+                
+                // Create trait with seed for each registered module
+                var moduleIndex: UInt64 = 0
+                for moduleType in registeredModules {
+                    if let factory = EvolvingCreatureNFT.getModuleFactory(moduleType: moduleType) {
+                        // Create unique seed per module by adding module index
+                        let moduleSeed = combinedSeed + moduleIndex * 98765
+                        let randomTrait <- factory.createTraitWithSeed(seed: moduleSeed)
+                        initialTraits[moduleType] <-! randomTrait
+                        log("Created random trait for module: ".concat(moduleType).concat(" with seed: ").concat(moduleSeed.toString()))
+                    }
+                    moduleIndex = moduleIndex + 1
+                }
+                
+                // Mint new NFT with traits
+                let nft <- minter.mintNFT(
+                    name: "Evolving Creature",
+                    description: "A unique evolving digital creature",
+                    thumbnail: "https://i.imgur.com/R3jYmPZ.png",
+                    lifespanDays: 5.0,
+                    initialTraits: <- initialTraits
+                )
+                
+                collection.deposit(token: <-nft)
+                log("NFT minted with 0.1 FLOW payment and deposited successfully!")
+            } else {
+                panic("Recipient's collection not found or not accessible")
             }
+        } else {
+            panic("No minter capability found")
         }
-        
-        // Mint el NFT
-        let nft <- minter.mintNFT(
-            name: "Evolving Creature",
-            description: "A unique evolving digital creature",
-            thumbnail: "https://i.imgur.com/R3jYmPZ.png",
-            lifespanDays: 5.0,
-            initialTraits: <- initialTraits
-        )
-        
-        self.recipientRef.deposit(token: <-nft)
-        log("Nuevo EvolvingCreatureNFT minteado y depositado con pago de 0.1 FLOW")
     }
 }
 `;
@@ -227,7 +243,7 @@ transaction(creatureID: UInt64, epCost: UFix64) {
         ) ?? panic("No se pudo obtener referencia a la colección de criaturas modulares")
         
         // Verificar que el costo de EP es razonable
-        if epCost < 10.0 {
+        if epCost < 10.0 { 
             panic("El costo mínimo de EP para mitosis es 10.0")
         }
     }

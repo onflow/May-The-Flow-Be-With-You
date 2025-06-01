@@ -1,0 +1,130 @@
+.maze-container {
+    position: relative;
+    margin: 0 auto;
+    width: 600px;
+    height: 600px;
+    overflow: hidden;
+    background-color: #050b17;
+   
+    border-radius: 10px;
+    border: 2px solid rgba(52, 152, 219, 0.4);
+  }
+  
+  .maze-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('../assets/bg.jpg'); /* Replace with your maze image path */
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 1;
+    border-radius: 18px;
+   
+  }
+  
+  /* This container maintains the position of frames relative to the image */
+  .frames-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none; /* This allows clicks to pass through to the frames */
+  }
+  
+  .image-frame {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: rgba(16, 24, 48, 0.85);
+    border: 2px solid rgba(52, 152, 219, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(0, 195, 255, 0.6);
+    transition: all 0.3s ease;
+    pointer-events: auto; /* Re-enable pointer events for frames */
+    backdrop-filter: blur(3px);
+  }
+  
+  .image-frame:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 20px rgba(0, 195, 255, 0.9);
+    background-color: rgba(25, 40, 80, 0.9);
+    border-color: rgba(52, 200, 255, 0.9);
+  }
+  
+  .image-frame:active {
+    transform: scale(0.95);
+  }
+  
+  .frame-content {
+    font-weight: bold;
+    color: #38c4ff;
+    font-size: 16px;
+    text-shadow: 0 0 5px rgba(0, 195, 255, 0.7);
+    font-family: 'Orbitron', sans-serif;
+  }
+  
+  /* Web3 style animation */
+  .image-frame::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+    pointer-events: none;
+  }
+  
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+      border-color: rgba(52, 152, 219, 0.2);
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.4;
+      border-color: rgba(52, 152, 219, 0.5);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0.8;
+      border-color: rgba(52, 152, 219, 0.2);
+    }
+  }
+  
+  /* For responsiveness */
+  @media (max-width: 768px) {
+    .maze-container {
+      width: 100%;
+      max-width: 500px;
+      height: 500px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .maze-container {
+      width: 100%;
+      height: 400px;
+    }
+    
+    .image-frame {
+      width: 30px;
+      height: 30px;
+    }
+    
+    .frame-content {
+      font-size: 12px;
+    }
+  }

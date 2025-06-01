@@ -1,0 +1,35 @@
+{
+  "name": "doodle-mutation",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@rainbow-me/rainbowkit": "^2.2.4",
+    "@tanstack/react-query": "^5.76.0",
+    "dotenv": "^16.5.0",
+    "ethers": "^6.14.1",
+    "formidable": "^3.5.4",
+    "fs": "^0.0.1-security",
+    "lucide-react": "^0.510.0",
+    "next": "15.3.2",
+    "openai": "^4.103.0",
+    "pinata": "^2.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "uuid": "^11.1.0",
+    "viem": "2.23.9",
+    "wagmi": "2.14.15"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.2",
+    "tailwindcss": "^4"
+  }
+}

@@ -377,25 +377,23 @@ contract Leaderboard {
         }
 
         access(contract)
-        fun onParticipantScoreUpdated(_ owner: Address, _ participant: String) {
+        fun onParticipantScoreUpdated(_ owner: Address, _ participant: String, _ periodId: UInt64) {
             let userScoreProfileRef = Leaderboard.borrowUserScoringProfile(owner, participant)
                 ?? panic("User score profile not found")
             
             let adminAddress = self.owner?.address ?? panic("Owner not found")
             // update in global leaderboard
-            let totalScoreRef = userScoreProfileRef.borrowUserScore(adminAddress, 0)
-                ?? panic("Total score not found")
-            self.leaderboard.onParticipantScoreUpdated(totalScoreRef)
+            if let totalScoreRef = userScoreProfileRef.borrowUserScore(adminAddress, 0) {
+                self.leaderboard.onParticipantScoreUpdated(totalScoreRef)
+            }
 
             // update in period leaderboard
-            let periodScoreRef = userScoreProfileRef.borrowUserScore(adminAddress, self.currentPeriod)
-                ?? panic("Period score not found")
-            let periodRef = self.borrowPeriod(self.currentPeriod)
-                ?? panic("Period not found")
-            periodRef.leaderboard.onParticipantScoreUpdated(periodScoreRef)
-
-            // add participant to period
-            periodRef.addParticipant(participant)
+            if let periodScoreRef = userScoreProfileRef.borrowUserScore(adminAddress, periodId) {
+                if let periodRef = self.borrowPeriod(periodId) {
+                    periodRef.leaderboard.onParticipantScoreUpdated(periodScoreRef)
+                    periodRef.addParticipant(participant)
+                }
+            }
         }
     }
 
@@ -476,7 +474,7 @@ contract Leaderboard {
 
             // Inform the admin that the score has been updated
             let owner = self.owner?.address ?? panic("Owner not found")
-            adminRef.onParticipantScoreUpdated(owner, self.id)
+            adminRef.onParticipantScoreUpdated(owner, self.id, periodRef.id)
 
             // Emit event
             emit ChecklistSubmitted(

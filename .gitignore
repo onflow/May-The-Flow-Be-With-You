@@ -32,6 +32,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+submissions/0xc65395858a38d8ff/emulator-account.pkey
+submissions/0xc65395858a38d8ff/flow.json.old
 
 # Logs
 logs
@@ -57,3 +59,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+submissions/0xc65395858a38d8ff/testnet-deployer.pkey

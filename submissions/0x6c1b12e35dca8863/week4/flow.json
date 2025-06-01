@@ -1,0 +1,27 @@
+{
+  "contracts": {
+    "StandaloneAINFT": "./contracts/AINFTCreator.cdc"
+  },
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "testnet": "access.devnet.nodes.onflow.org:9000"
+  },
+  "accounts": {
+    "emulator-account": {
+      "address": "f8d6e0586b0a20c7",
+      "key": "5112883de06b9576af62b9aafa7ead6858e4e18e5513e8dde4e1d6e5b6e6c7b"
+    },
+    "testnet-account": {
+      "address": "0x6c1b12e35dca8863",
+      "key": "YOUR_PRIVATE_KEY_HERE"
+    }
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": ["StandaloneAINFT"]
+    },
+    "testnet": {
+      "testnet-account": ["StandaloneAINFT"]
+    }
+  }
+}

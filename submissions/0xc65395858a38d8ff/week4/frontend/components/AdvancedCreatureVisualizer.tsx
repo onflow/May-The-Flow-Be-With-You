@@ -17,10 +17,16 @@ import {
   Tooltip,
   Button,
   ButtonGroup,
-  Tag
+  Tag,
+  Input,
+  FormControl,
+  FormLabel,
+  useToast
 } from '@chakra-ui/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiZap, FiHeart, FiEye, FiStar } from 'react-icons/fi';
+import { FiZap, FiHeart, FiEye, FiStar, FiMessageCircle } from 'react-icons/fi';
+import { OpenRouterService } from '../services/OpenRouterService';
+import { PersonalityService, PersonalityData } from '../services/PersonalityService';
 
 // Interfaces
 interface CreatureVisualData {
@@ -40,6 +46,17 @@ interface AdvancedCreatureVisualizerProps {
   creatures: CreatureVisualData[];
   onRefresh?: () => void;
   isLoading?: boolean;
+}
+
+// Chat bubble interface
+interface ChatBubble {
+  id: number;
+  creatureId: number;
+  message: string;
+  timestamp: number;
+  duration: number;
+  position: { x: number; y: number };
+  level: string; // communication level
 }
 
 const MotionBox = motion(Box);
@@ -126,6 +143,136 @@ const parseAdvancedVisualTraits = (traitValue: string | null) => {
   return traits;
 };
 
+// Parse PersonalityModuleV2 traits for chat functionality
+const parsePersonalityTraits = (traitValue: string | null) => {
+  if (!traitValue) return null;
+  
+  const traits: any = {};
+  const parts = traitValue.split('|');
+  
+  parts.forEach(part => {
+    // Core temperament
+    if (part.includes('TEMP:')) traits.temperamento = parseFloat(part.split('TEMP:')[1]) || 0.5;
+    if (part.includes('AGR:')) traits.agresividad = parseFloat(part.split('AGR:')[1]) || 0.3;
+    if (part.includes('CUR:')) traits.curiosidad = parseFloat(part.split('CUR:')[1]) || 0.7;
+    if (part.includes('SOC:')) traits.energia_social = parseFloat(part.split('SOC:')[1]) || 0.5;
+    if (part.includes('CREA:')) traits.creatividad = parseFloat(part.split('CREA:')[1]) || 0.5;
+    if (part.includes('EMP:')) traits.empatia = parseFloat(part.split('EMP:')[1]) || 0.6;
+    
+    // Intelligence & communication
+    if (part.includes('INT:')) traits.inteligencia_base = parseFloat(part.split('INT:')[1]) || 0.4;
+    if (part.includes('VOC:')) traits.vocabulario_size = parseInt(part.split('VOC:')[1]) || 10;
+    if (part.includes('LING:')) traits.complejidad_linguistica = parseFloat(part.split('LING:')[1]) || 0.1;
+    
+    // Emotional state
+    if (part.includes('FEL:')) traits.felicidad = parseFloat(part.split('FEL:')[1]) || 0.5;
+    if (part.includes('CONF:')) traits.confianza = parseFloat(part.split('CONF:')[1]) || 0.5;
+    if (part.includes('EST:')) traits.estres = parseFloat(part.split('EST:')[1]) || 0.2;
+    
+    // Family data
+    if (part.includes('GEN:')) traits.generacion = parseInt(part.split('GEN:')[1]) || 0;
+    if (part.includes('ORIG:')) traits.origen_nacimiento = part.split('ORIG:')[1] || 'created';
+  });
+  
+  return traits;
+};
+
+// Communication level determination based on traits
+const getCommunicationLevel = (personality: any): string => {
+  if (!personality) return 'bebe';
+  
+  const vocabulary_factor = personality.vocabulario_size / 2000; // MAX_VOCABULARY_SIZE from contract
+  const intelligence_factor = personality.inteligencia_base || 0.4;
+  const linguistic_factor = personality.complejidad_linguistica || 0.1;
+  
+  const development_score = (vocabulary_factor + intelligence_factor + linguistic_factor) / 3.0;
+  
+  if (development_score < 0.2) return 'bebe';
+  if (development_score < 0.4) return 'toddler';
+  if (development_score < 0.6) return 'child';
+  if (development_score < 0.8) return 'teen';
+  return 'adult';
+};
+
+// Check if creature should send spontaneous message (based on contract logic)
+const shouldSendSpontaneousMessage = (personality: any): boolean => {
+  if (!personality) {
+    console.log('🎲 No personality data for chat roll');
+    return false;
+  }
+  
+  // Increased base chance for more frequent messages
+  const frecuencia_chat = 0.6; // Increased from 0.3
+  const baseChance = frecuencia_chat * 0.25; // 0-25% base (increased from 0.1)
+  
+  // Calculate all modifiers
+  let multiplier = 1.0;
+  const modifiers = [];
+  
+  // Emotional modifiers - more generous
+  if (personality.felicidad > 0.6) {
+    multiplier *= 1.4;
+    modifiers.push(`happy(${personality.felicidad.toFixed(2)}): x1.4`);
+  }
+  if (personality.estres > 0.5) {
+    multiplier *= 1.3;
+    modifiers.push(`stressed(${personality.estres.toFixed(2)}): x1.3`);
+  }
+  if (personality.energia_social > 0.4) {
+    multiplier *= 1.3;
+    modifiers.push(`social(${personality.energia_social.toFixed(2)}): x1.3`);
+  }
+  
+  // Personality modifiers - more generous
+  if (personality.temperamento < 0.3) {
+    multiplier *= 0.7;
+    modifiers.push(`shy(${personality.temperamento.toFixed(2)}): x0.7`);
+  }
+  if (personality.curiosidad > 0.5) {
+    multiplier *= 1.2;
+    modifiers.push(`curious(${personality.curiosidad.toFixed(2)}): x1.2`);
+  }
+  if (personality.creatividad > 0.6) {
+    multiplier *= 1.1;
+    modifiers.push(`creative(${personality.creatividad.toFixed(2)}): x1.1`);
+  }
+  if (personality.empatia > 0.6) {
+    multiplier *= 1.1;
+    modifiers.push(`empathetic(${personality.empatia.toFixed(2)}): x1.1`);
+  }
+  
+  // Intelligence bonus
+  if (personality.inteligencia_base > 0.6) {
+    multiplier *= 1.2;
+    modifiers.push(`intelligent(${personality.inteligencia_base.toFixed(2)}): x1.2`);
+  }
+  
+  // Communication level bonus
+  const level = getCommunicationLevel(personality);
+  if (level === 'adult') {
+    multiplier *= 1.3;
+    modifiers.push(`adult: x1.3`);
+  } else if (level === 'teen') {
+    multiplier *= 1.2;
+    modifiers.push(`teen: x1.2`);
+  } else if (level === 'child') {
+    multiplier *= 1.1;
+    modifiers.push(`child: x1.1`);
+  }
+  
+  // Calculate final chance
+  const finalChance = Math.min(baseChance * multiplier, 0.8); // Max 80% chance (increased from 50%)
+  const roll = Math.random();
+  const willChat = finalChance > 0.02 && roll < finalChance;
+  
+  console.log(`🎲 Chat probability: base=${(baseChance*100).toFixed(1)}% × ${multiplier.toFixed(2)} = ${(finalChance*100).toFixed(1)}% | roll=${(roll*100).toFixed(1)}% | result=${willChat ? 'CHAT' : 'NO'}`);
+  if (modifiers.length > 0) {
+    console.log(`   Modifiers: ${modifiers.join(', ')}`);
+  }
+  
+  return willChat;
+};
+
 // Visual trait type mappings - COMPLETE FROM CONTRACTS
 const PATTERN_TYPES = ['Smooth', 'Spots', 'Stripes', 'Dots', 'Swirls'];
 const AURA_TYPES = ['None', '🔥Fire', '💧Water', '🌍Earth', '💨Air'];
@@ -155,6 +302,7 @@ export default function AdvancedCreatureVisualizer({
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const cardBg = useColorModeValue('gray.50', 'gray.700');
+  const toast = useToast();
   
   // Canvas colors (moved out of useEffect to avoid hook violations)
   const canvasBgColor = useColorModeValue('#f7fafc', '#0f0f23');
@@ -173,13 +321,23 @@ export default function AdvancedCreatureVisualizer({
   const selectionColor = useColorModeValue('#ff6b6b', '#ffa726');
   const gridColor = useColorModeValue('rgba(138, 43, 226, 0.2)', 'rgba(157, 78, 221, 0.3)');
   
-  // Environment controls
-  const [showTrails, setShowTrails] = useState(true);
-  const [showParticles, setShowParticles] = useState(true);
-  const [showGrid, setShowGrid] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [animationSpeed, setAnimationSpeed] = useState(1.0);
+  // Environment state - simplified, no UI controls
+  const [showTrails] = useState(true);
+  const [showParticles] = useState(true);
+  const [showGrid] = useState(false);
+  const [isPlaying] = useState(true);
+  const [animationSpeed] = useState(1.0);
   const [selectedCreature, setSelectedCreature] = useState<number | null>(null);
+
+  // Chat system state
+  const chatBubblesRef = useRef<ChatBubble[]>([]);
+  const [openRouterApiKey, setOpenRouterApiKey] = useState<string>('');
+  const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(false);
+  const [openRouterService, setOpenRouterService] = useState<OpenRouterService | null>(null);
+  const chatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastChatTimeRef = useRef<Map<number, number>>(new Map());
+  const [isGeneratingMessages, setIsGeneratingMessages] = useState<boolean>(false);
+  const [generationProgress, setGenerationProgress] = useState<{current: number, total: number}>({current: 0, total: 0});
 
   // Enhanced creature data with physics - using useRef to persist between renders
   const creaturePhysicsRef = useRef<Map<number, any>>(new Map());
@@ -189,14 +347,380 @@ export default function AdvancedCreatureVisualizer({
     return creatures.map(creature => {
       const visualTraits = parseVisualTraits(creature.traitValues['visual']);
       const advancedTraits = parseAdvancedVisualTraits(creature.traitValues['advanced_visual']);
+      const personalityTraits = parsePersonalityTraits(creature.traitValues['personality']);
       
       return {
         ...creature,
         visual: visualTraits,
-        advanced: advancedTraits
+        advanced: advancedTraits,
+        personality: personalityTraits
       };
     });
   }, [creatures]);
+
+  // Initialize OpenRouter service when API key is provided
+  useEffect(() => {
+    if (openRouterApiKey.trim()) {
+      try {
+        const service = new OpenRouterService(openRouterApiKey);
+        setOpenRouterService(service);
+        setShowApiKeyInput(false);
+        console.log('🤖 AI Service initialized successfully');
+        toast({
+          title: "AI Service Connected",
+          description: "Generating initial messages for all creatures...",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } catch (error) {
+        console.error('❌ Failed to initialize AI service:', error);
+        toast({
+          title: "Connection Failed",
+          description: "Invalid API key or service unavailable",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    }
+  }, [openRouterApiKey, toast]);
+
+  // Generate initial messages when service is ready
+  useEffect(() => {
+    if (openRouterService && parsedCreatures.length > 0 && !isGeneratingMessages) {
+      generateInitialMessages();
+    }
+  }, [openRouterService, parsedCreatures.length]);
+
+  // Chat cache management
+  const getCachedMessages = (creatureId: number): string[] => {
+    const cached = localStorage.getItem(`creature_messages_${creatureId}`);
+    return cached ? JSON.parse(cached) : [];
+  };
+
+  const setCachedMessages = (creatureId: number, messages: string[]) => {
+    localStorage.setItem(`creature_messages_${creatureId}`, JSON.stringify(messages));
+  };
+
+  const getNextMessage = (creatureId: number): string | null => {
+    const messages = getCachedMessages(creatureId);
+    console.log(`🎯 getNextMessage for creature ${creatureId}: ${messages.length} cached messages`);
+    
+    if (messages.length === 0) {
+      console.log(`📭 No cached messages for creature ${creatureId}`);
+      return null;
+    }
+    
+    // Take the first message and remove it from cache
+    const message = messages.shift();
+    setCachedMessages(creatureId, messages);
+    
+    console.log(`📤 Consumed message for creature ${creatureId}: "${message}". Remaining: ${messages.length}`);
+    
+    // If we're running low (< 2 messages), trigger background generation
+    if (messages.length < 2) {
+      console.log(`🔔 Triggering background generation for creature ${creatureId} (${messages.length} messages remaining)`);
+      generateBackgroundMessage(creatureId);
+    }
+    
+    return message || null;
+  };
+
+  const generateBackgroundMessage = async (creatureId: number) => {
+    console.log(`🎬 generateBackgroundMessage called for creature ${creatureId}`);
+    
+    if (isGeneratingMessages) {
+      console.log(`⏸️ Background generation blocked: already generating messages (isGeneratingMessages=${isGeneratingMessages})`);
+      return; // Avoid concurrent generation
+    }
+    
+    const creature = parsedCreatures.find(c => c.id === creatureId);
+    if (!creature) {
+      console.log(`❌ Creature ${creatureId} not found in parsedCreatures`);
+      return;
+    }
+    
+    if (!openRouterService) {
+      console.log(`❌ OpenRouter service not available`);
+      return;
+    }
+    
+    try {
+      console.log(`🔄 Generating background message for creature ${creatureId}...`);
+      
+      // Get prompt from contract instead of generating in frontend
+      const personalityData = await PersonalityService.getCreaturePersonalityPrompts(
+        '0xf8d6e0586b0a20c7', // Your address  
+        creatureId
+      );
+      
+      if (!personalityData) {
+        console.error(`❌ Could not get personality data for creature ${creatureId}, falling back to local generation`);
+        // Fallback to local generation
+        const message = await generateCreatureChat(creature);
+        if (message) {
+          const cached = getCachedMessages(creatureId);
+          cached.push(message);
+          setCachedMessages(creatureId, cached);
+          console.log(`✅ Background message cached (fallback) for creature ${creatureId}: "${message}"`);
+        }
+        return;
+      }
+      
+      // Log the prompt from contract
+      console.log(`📝 [PersonalityService] Prompt for creature ${creatureId} (${personalityData.spontaneousPrompt.length} chars):`, personalityData.spontaneousPrompt);
+      
+      const message = await openRouterService.chat(personalityData.spontaneousPrompt);
+      if (message) {
+        const cached = getCachedMessages(creatureId);
+        cached.push(message);
+        setCachedMessages(creatureId, cached);
+        console.log(`✅ Background message cached for creature ${creatureId}: "${message}"`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to generate background message for creature ${creatureId}:`, error);
+    }
+  };
+
+  // Generate initial messages for all creatures
+  const generateInitialMessages = async () => {
+    if (!openRouterService) return;
+    
+    const aliveCreatures = parsedCreatures.filter(c => c.estaViva && c.personality);
+    if (aliveCreatures.length === 0) return;
+    
+    setIsGeneratingMessages(true);
+    setGenerationProgress({current: 0, total: aliveCreatures.length});
+    
+    console.log(`🚀 Generating initial messages for ${aliveCreatures.length} creatures...`);
+    
+    for (let i = 0; i < aliveCreatures.length; i++) {
+      const creature = aliveCreatures[i];
+      
+      try {
+        console.log(`🤖 Generating initial message for creature ${creature.id} (${i + 1}/${aliveCreatures.length})...`);
+        setGenerationProgress({current: i + 1, total: aliveCreatures.length});
+        
+        const message = await generateCreatureChat(creature);
+        
+        if (message) {
+          const cached = getCachedMessages(creature.id);
+          cached.push(message);
+          setCachedMessages(creature.id, cached);
+          console.log(`✅ Initial message cached for creature ${creature.id}: "${message}"`);
+        }
+        
+        // Small delay between requests to avoid rate limiting
+        if (i < aliveCreatures.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+      } catch (error) {
+        console.error(`❌ Failed to generate initial message for creature ${creature.id}:`, error);
+      }
+    }
+    
+    setIsGeneratingMessages(false);
+    console.log(`🎉 Initial message generation complete!`);
+  };
+
+  // Chat system functions
+  const generateChatPrompt = (creature: any): string => {
+    const personality = creature.personality;
+    if (!personality) return '';
+    
+    const level = getCommunicationLevel(personality);
+    const personalityDesc = getPersonalityDescription(personality);
+    const emotionalState = getEmotionalState(personality);
+    
+    let prompt = `You are a digital life form in the Primordia Genesis Protocol with these characteristics:\n\n`;
+    prompt += `PERSONALITY: ${personalityDesc}\n`;
+    prompt += `COMMUNICATION LEVEL: ${level}\n`;
+    prompt += `CURRENT MOOD: ${emotionalState}\n`;
+    prompt += `INTELLIGENCE: ${(personality.inteligencia_base * 100).toFixed(0)}%\n`;
+    prompt += `VOCABULARY: ${personality.vocabulario_size} words\n`;
+    prompt += `AGE: ${creature.edadDiasCompletos} days old, Generation ${personality.generacion}\n`;
+    prompt += `ANIMA ESSENCE: ${creature.puntosEvolucion}\n`;
+    prompt += `HEALTH: ${((creature.advanced?.nivelSalud || 1) * 100).toFixed(0)}%\n`;
+    prompt += `ENERGY: ${((creature.advanced?.nivelEnergia || 1) * 100).toFixed(0)}%\n\n`;
+    
+    // Communication level specific instructions
+    switch (level) {
+      case 'bebe':
+        prompt += `COMMUNICATION RULES:\n- Use ONLY simple sounds and baby babble\n- Examples: 'guu guu', 'mmmm', 'aaa', 'baba'\n- Maximum 2-3 syllables\n- Express emotions through sounds, not words\n`;
+        break;
+      case 'toddler':
+        prompt += `COMMUNICATION RULES:\n- Use 1-2 words maximum\n- Simple vocabulary: 'happy', 'sad', 'hungry', 'play', 'want'\n- Show basic emotions clearly\n`;
+        break;
+      case 'child':
+        prompt += `COMMUNICATION RULES:\n- Use simple 3-5 word sentences\n- Basic grammar\n- Show curiosity with simple questions\n`;
+        break;
+      case 'teen':
+        prompt += `COMMUNICATION RULES:\n- Use normal sentences but show teenage personality\n- More emotional and expressive\n- Emotional swings are normal\n`;
+        break;
+      case 'adult':
+        prompt += `COMMUNICATION RULES:\n- Communicate with full complexity\n- Express complex thoughts and emotions\n- Reference abstract concepts\n`;
+        break;
+    }
+    
+    prompt += `\nINSTRUCTION: Generate a spontaneous message based on your current emotional state and personality. Keep it brief (1-2 sentences max). This should feel natural for your communication level and current mood.`;
+    
+    return prompt;
+  };
+
+  const getPersonalityDescription = (personality: any): string => {
+    const traits = [];
+    if (personality.temperamento > 0.7) traits.push('extroverted');
+    else if (personality.temperamento < 0.3) traits.push('shy');
+    
+    if (personality.agresividad > 0.7) traits.push('aggressive');
+    else if (personality.agresividad < 0.3) traits.push('peaceful');
+    
+    if (personality.curiosidad > 0.7) traits.push('curious');
+    if (personality.creatividad > 0.7) traits.push('creative');
+    if (personality.empatia > 0.7) traits.push('empathetic');
+    
+    return traits.length > 0 ? traits.join(', ') : 'balanced';
+  };
+
+  const getEmotionalState = (personality: any): string => {
+    if (personality.felicidad > 0.8) return 'very happy';
+    if (personality.estres > 0.7) return 'stressed';
+    if (personality.felicidad < 0.3) return 'sad';
+    return 'calm';
+  };
+
+  const generateCreatureChat = async (creature: any): Promise<string | null> => {
+    if (!openRouterService || !creature.personality) return null;
+    
+    try {
+      const prompt = generateChatPrompt(creature);
+      const response = await openRouterService.chat(prompt);
+      return response?.trim() || null;
+    } catch (error) {
+      console.error('Failed to generate creature chat:', error);
+      return null;
+    }
+  };
+
+  const addChatBubble = (creatureId: number, message: string, level: string) => {
+    const physics = creaturePhysicsRef.current.get(creatureId);
+    if (!physics) {
+      console.warn(`💭 Cannot add chat bubble for creature ${creatureId}: no physics found`);
+      return;
+    }
+    
+    const bubble: ChatBubble = {
+      id: Date.now() + Math.random(),
+      creatureId,
+      message,
+      timestamp: Date.now(),
+      duration: Math.max(5000, message.length * 150), // LONGER DURATION: 5+ seconds minimum
+      position: { x: physics.x, y: physics.y },
+      level
+    };
+    
+    // Add to ref directly - no async state updates
+    chatBubblesRef.current = [...chatBubblesRef.current, bubble];
+    
+    // Remove bubble after duration
+    setTimeout(() => {
+      chatBubblesRef.current = chatBubblesRef.current.filter(b => b.id !== bubble.id);
+    }, bubble.duration);
+  };
+
+  // Check for creature message display (using cached messages)
+  useEffect(() => {
+    if (!openRouterService) {
+      console.log('💬 No OpenRouter service available for chat');
+      return;
+    }
+    
+    console.log('💬 Starting cached message display system');
+    
+    const checkCachedMessageDisplay = () => {
+      const now = Date.now();
+      const aliveCreatures = parsedCreatures.filter(c => c.estaViva && c.personality);
+      
+      if (aliveCreatures.length === 0) {
+        return;
+      }
+      
+      let eligibleCount = 0;
+      let restingCount = 0;
+      
+      for (const creature of aliveCreatures) {
+        const lastChatTime = lastChatTimeRef.current.get(creature.id) || 0;
+        const timeSinceLastChat = now - lastChatTime;
+        
+        // Only check every 45 seconds per creature (save API credits)
+        if (timeSinceLastChat < 45000) {
+          continue;
+        }
+        
+        // Check if creature is in a resting state
+        const physics = creaturePhysicsRef.current.get(creature.id);
+        if (!physics) continue;
+        
+        const currentSpeed = Math.sqrt(physics.vx * physics.vx + physics.vy * physics.vy);
+        
+        const isSlowOrResting = currentSpeed < 0.5 || 
+                               physics.activityState === 'resting' || 
+                               physics.activityState === 'observing' ||
+                               physics.activityState === 'sleeping' ||
+                               physics.activityState === 'drowsy';
+        
+        if (physics.activityState === 'resting' || physics.activityState === 'observing' || 
+            physics.activityState === 'sleeping' || physics.activityState === 'drowsy') {
+          restingCount++;
+        }
+        
+        if (!isSlowOrResting) continue;
+        
+        eligibleCount++;
+        
+        // Check if creature should chat (simpler logic)
+        const shouldChat = shouldSendSpontaneousMessage(creature.personality);
+        
+        if (shouldChat) {
+          // Get cached message instead of generating new one
+          const message = getNextMessage(creature.id);
+          
+          if (message) {
+            const level = getCommunicationLevel(creature.personality);
+            addChatBubble(creature.id, message, level);
+            lastChatTimeRef.current.set(creature.id, now);
+            console.log(`💬 Creature ${creature.id} says: "${message}" (${level} level, cached)`);
+          } else {
+            console.log(`📭 Creature ${creature.id}: No cached messages available`);
+          }
+        }
+      }
+      
+      if (eligibleCount > 0) {
+        console.log(`💬 Chat check: ${eligibleCount}/${aliveCreatures.length} eligible, ${restingCount} resting`);
+      }
+    };
+    
+    // Check every 15 seconds (save API credits)
+    chatIntervalRef.current = setInterval(checkCachedMessageDisplay, 15000);
+    
+    return () => {
+      if (chatIntervalRef.current) {
+        clearInterval(chatIntervalRef.current);
+      }
+    };
+  }, [openRouterService, parsedCreatures]);
+
+  // Cleanup chat interval on unmount
+  useEffect(() => {
+    return () => {
+      if (chatIntervalRef.current) {
+        clearInterval(chatIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Initialize creature physics
   const initializeCreaturePhysics = useCallback((creature: any, index: number, canvasW: number, canvasH: number) => {
@@ -231,17 +755,17 @@ export default function AdvancedCreatureVisualizer({
       particles: [],
       energy: Math.min(1.0, parseFloat(creature.puntosEvolucion) / 50),
       
-      // Movement patterns based on traits - FULL decimal precision for uniqueness
-      movementType: Math.floor(visual.patronMovimiento || 1) % 4,
-      movementVariation: (visual.patronMovimiento || 1) % 1, // Decimal part = personality signature
-      movementPersonality: {
-        // Extract decimals from multiple traits for compound uniqueness
-        speedMod: (visual.tamanoBase || 1) % 1, // Size decimal affects speed
-        patternMod: (visual.formaPrincipal || 1) % 1, // Form decimal affects pattern
-        energyMod: (visual.numApendices || 0) % 1, // Appendage decimal affects energy
-      },
-      movementTimer: Math.random() * 1000,
-      movementIntensity: Math.max(0.3, advanced.nivelEnergia || 0.5), // Ensure minimum energy
+          // Movement patterns based on traits - FULL decimal precision for uniqueness
+    movementType: Math.floor(visual.patronMovimiento || 1) % 4,
+    movementVariation: (visual.patronMovimiento || 1) % 1, // Decimal part = personality signature
+    movementPersonality: {
+      // Extract decimals from multiple traits for compound uniqueness
+      speedMod: (visual.tamanoBase || 1) % 1, // Size decimal affects speed
+      patternMod: (visual.formaPrincipal || 1) % 1, // Form decimal affects pattern
+      energyMod: (visual.numApendices || 0) % 1, // Appendage decimal affects energy
+    },
+    movementTimer: Math.random() * 1000,
+    movementIntensity: Math.max(0.2, advanced.nivelEnergia || 0.4), // Even more conservative
       
       // Territory for territorial creatures
       territoryX: baseX,
@@ -252,7 +776,7 @@ export default function AdvancedCreatureVisualizer({
       activityState: 'active', // 'active', 'resting', 'observing'
       activityTimer: 0,
       restDuration: 0,
-      nextActivityChange: Math.random() * 180 + 120, // 2-5 seconds initially
+      nextActivityChange: Math.random() * 240 + 180, // 3-7 seconds initially (longer for clicks)
     };
   }, [parsedCreatures.length]);
 
@@ -292,24 +816,18 @@ export default function AdvancedCreatureVisualizer({
     
     // Always update physics, but movement speed depends on isPlaying
     const speedMultiplier = isPlaying ? 1.0 : 0.0;
-    
-    console.log(`updateCreaturePhysics called for creature ${physics.id}, speedMultiplier: ${speedMultiplier}, isPlaying: ${isPlaying}`);
 
     const visual = creature.visual || {};
     const advanced = creature.advanced || {};
     
     // Update animation phases (always animate breathing)
     physics.pulsePhase += 0.02 * animationSpeed;
-    const oldTimer = physics.movementTimer;
     physics.movementTimer += speedMultiplier; // Only increment timer when playing
-    console.log(`Timer update: ${oldTimer} -> ${physics.movementTimer} (speedMultiplier: ${speedMultiplier})`);
     
-    // Movement patterns - smooth acceleration from rest
-    const baseSpeed = 0.06 * animationSpeed * speedMultiplier;  // Reduced for gentler starts
+    // Movement patterns - smooth acceleration from rest - ULTRA SLOW FOR EASY CLICKS
+    const baseSpeed = 0.015 * animationSpeed * speedMultiplier;  // Ultra slow for easy clicking
     const energyMod = Math.max(0.1, physics.movementIntensity || 0.5); // SAFETY: Ensure minimum energy
     const movementVariation = Math.max(0, Math.min(1, physics.movementVariation || 0)); // SAFETY: Clamp to [0,1]
-    
-        console.log(`Creature ${physics.id}: movementType=${physics.movementType}, timer=${physics.movementTimer}, energyMod=${energyMod}, state=${physics.activityState}`);
     
     // CIRCADIAN RHYTHM: Based on real browser time
     const now = new Date();
@@ -352,26 +870,26 @@ export default function AdvancedCreatureVisualizer({
       if (sleepIntensity > 0.5) {
         // Should be sleeping due to circadian rhythm
         physics.activityState = 'sleeping';
-        physics.nextActivityChange = physics.activityTimer + Math.floor(300 + Math.random() * 600); // 5-15 seconds of sleep
+        physics.nextActivityChange = physics.activityTimer + Math.floor(600 + Math.random() * 900); // 10-25 seconds of sleep (MUCH LONGER)
       } else if (!shouldBeAwake && sleepIntensity > 0.2) {
         // Drowsy period
         physics.activityState = 'drowsy';
-        physics.nextActivityChange = physics.activityTimer + Math.floor(120 + Math.random() * 180); // 2-5 seconds
+        physics.nextActivityChange = physics.activityTimer + Math.floor(240 + Math.random() * 360); // 4-10 seconds (MUCH LONGER)
       } else if (physics.activityState === 'active') {
-        // Normal activity cycle when awake
-        const shouldRest = Math.random() < (0.3 + (1 - energyFactor) * 0.2 + sleepIntensity * 0.3);
+        // Normal activity cycle when awake - MUCH MORE RESTING FOR EASIER CLICKS AND CHAT
+        const shouldRest = Math.random() < (0.7 + (1 - energyFactor) * 0.2 + sleepIntensity * 0.1); // MUCH higher chance to rest (70%+)
         physics.activityState = shouldRest ? 'resting' : 'observing';
         
         if (shouldRest) {
-          physics.restDuration = Math.floor(60 + Math.random() * 120 + (1 - energyFactor) * 120);
+          physics.restDuration = Math.floor(300 + Math.random() * 600 + (1 - energyFactor) * 300); // 5-20 seconds rest (MUCH LONGER)
           physics.nextActivityChange = physics.activityTimer + physics.restDuration;
         } else {
-          physics.nextActivityChange = physics.activityTimer + Math.floor(30 + Math.random() * 90);
+          physics.nextActivityChange = physics.activityTimer + Math.floor(180 + Math.random() * 300); // 3-8 seconds observing (MUCH LONGER)
         }
       } else {
-        // Return to activity when awake
+        // Return to activity when awake - SHORTER ACTIVE PERIODS
         physics.activityState = 'active';
-        const activityDuration = Math.floor(120 + Math.random() * 240 + energyFactor * 180);
+        const activityDuration = Math.floor(60 + Math.random() * 120 + energyFactor * 60); // 1-4 seconds active (MUCH SHORTER)
         physics.nextActivityChange = physics.activityTimer + activityDuration;
       }
     }
@@ -383,8 +901,8 @@ export default function AdvancedCreatureVisualizer({
     if (physics.activityState === 'active' || physics.activityState === 'drowsy') {
       switch (physics.movementType) {
         case 0: // Guardian - distinctive protective patrols with decimal personality
-          const guardianSpeedBase = 0.001 * (0.5 + movementVariation) * sleepSpeedMod;
-          const guardianSpeed = guardianSpeedBase * (0.7 + physics.movementPersonality.speedMod * 0.6); // Individual speed signature
+          const guardianSpeedBase = 0.0002 * (0.5 + movementVariation) * sleepSpeedMod; // Even slower for clicks
+          const guardianSpeed = guardianSpeedBase * (0.6 + physics.movementPersonality.speedMod * 0.4); // Individual speed signature
           const guardianRange = 30 * (0.8 + movementVariation * 0.4) * (0.8 + physics.movementPersonality.patternMod * 0.4);
           
           // Unique float pattern combining multiple decimals
@@ -402,7 +920,7 @@ export default function AdvancedCreatureVisualizer({
         
         case 1: // Circular hunter - distinctive hunting spirals
           const huntRadius = (70 + energyMod * 50) * (0.7 + movementVariation * 0.6);
-          const huntSpeed = 0.0015 * energyMod * (0.5 + movementVariation * 1.0) * sleepSpeedMod; // Smoother
+          const huntSpeed = 0.0003 * energyMod * (0.5 + movementVariation * 0.8) * sleepSpeedMod; // Even slower
           const huntPhase = physics.id + movementVariation * Math.PI * 2;
           
           // Add spiral effect - radius changes over time
@@ -438,7 +956,7 @@ export default function AdvancedCreatureVisualizer({
           break;
         
         case 3: // Territorial - distinctive figure-8 patrols
-          const territorySpeed = 0.002 * energyMod * (0.4 + movementVariation * 1.2) * sleepSpeedMod; // Moderate
+          const territorySpeed = 0.0004 * energyMod * (0.4 + movementVariation * 0.8) * sleepSpeedMod; // Even slower
           const territoryAngle = currentTime * territorySpeed + movementVariation * Math.PI * 2;
           const patrolRadius = physics.territoryRadius * (0.7 + movementVariation * 0.3); // Moderate radius
           
@@ -669,32 +1187,81 @@ export default function AdvancedCreatureVisualizer({
         }
       }
 
-      // MAIN BODY - Enhanced with texture and patterns
+      // REVOLUTIONARY BODY FORM - Using ALL decimals for unique shapes
       ctx.beginPath();
-      const numPoints = 8;
+      
+      // DECIMAL-DRIVEN FORM UNIQUENESS
+      const formaPrincipalRaw = visual.formaPrincipal || 1;
+      const formBaseType = Math.floor(formaPrincipalRaw); // 1, 2, 3 = Agile, Tank, Attacker
+      const formDecimalSignature = formaPrincipalRaw % 1; // 0.0 to 0.999 = unique shape modifier
+      
+      const tamanoBaseRaw = visual.tamanoBase || 1;
+      const tamanoDecimalSignature = tamanoBaseRaw % 1; // Size shape modifier
+      
+      const numApendicesRaw = visual.numApendices || 0;
+      const appendageDecimalSignature = numApendicesRaw % 1; // Appendage shape influence
+      
+      // FORM-SPECIFIC POINT COUNTS AND CHARACTERISTICS
+      let numPoints, shapeComplexity, asymmetryFactor;
+      switch (formBaseType) {
+        case 1: // Agile - More angular, dynamic
+          numPoints = 6 + Math.floor(formDecimalSignature * 4); // 6-9 points
+          shapeComplexity = 2.5 + formDecimalSignature * 1.5; // 2.5-4.0 complexity
+          asymmetryFactor = 0.15 + formDecimalSignature * 0.1; // 0.15-0.25 asymmetry
+          break;
+        case 2: // Tank - Rounder, more points for bulk
+          numPoints = 8 + Math.floor(formDecimalSignature * 6); // 8-13 points
+          shapeComplexity = 1.8 + formDecimalSignature * 0.8; // 1.8-2.6 complexity 
+          asymmetryFactor = 0.05 + formDecimalSignature * 0.1; // 0.05-0.15 asymmetry
+          break;
+        case 3: // Attacker - Sharp, fewer points
+          numPoints = 5 + Math.floor(formDecimalSignature * 3); // 5-7 points
+          shapeComplexity = 3.0 + formDecimalSignature * 2.0; // 3.0-5.0 complexity
+          asymmetryFactor = 0.2 + formDecimalSignature * 0.15; // 0.2-0.35 asymmetry
+          break;
+        default:
+          numPoints = 8;
+          shapeComplexity = 3.0;
+          asymmetryFactor = 0.15;
+      }
+      
       for (let i = 0; i <= numPoints; i++) {
         const angle = (i / numPoints) * Math.PI * 2;
         
-        // Organic variation influenced by texture type
+        // DECIMAL-DRIVEN UNIQUE SHAPE MODIFIERS
+        const shapePersonality = Math.sin(angle * shapeComplexity + formDecimalSignature * Math.PI * 2);
+        const sizePersonality = Math.cos(angle * 2 + tamanoDecimalSignature * Math.PI * 2);
+        const appendageInfluence = Math.sin(angle * 4 + appendageDecimalSignature * Math.PI * 2);
+        
+        // Organic variation influenced by texture type AND decimals
         let textureModifier = 1.0;
         const textureType = advanced?.texturaPiel || 0;
-        switch (textureType) {
-          case 1: // Scaled - more angular
-            textureModifier = 0.95 + 0.1 * Math.sin(angle * 6);
+        const textureDecimal = textureType % 1; // Extract decimal from texture too!
+        
+        switch (Math.floor(textureType)) {
+          case 1: // Scaled - more angular with decimal variation
+            textureModifier = 0.90 + 0.15 * Math.sin(angle * (5 + textureDecimal * 4)) * (0.8 + textureDecimal * 0.4);
             break;
-          case 2: // Furry - softer
-            textureModifier = 0.98 + 0.04 * Math.sin(angle * 12);
+          case 2: // Furry - softer with decimal fuzziness
+            textureModifier = 0.95 + 0.08 * Math.sin(angle * (10 + textureDecimal * 8)) * (0.9 + textureDecimal * 0.2);
             break;
-          case 3: // Crystalline - geometric
-            textureModifier = 0.9 + 0.2 * Math.sin(angle * 4);
+          case 3: // Crystalline - geometric with decimal facets
+            textureModifier = 0.85 + 0.25 * Math.sin(angle * (3 + textureDecimal * 3)) * (0.7 + textureDecimal * 0.6);
             break;
+          default:
+            textureModifier = 0.92 + 0.12 * Math.sin(angle * (6 + textureDecimal * 2));
         }
         
-        const baseVariation = (0.8 + 0.3 * Math.sin(angle * 3)) * textureModifier;
-        const breathingEffect = 1 + 0.15 * Math.sin(currentTime * 0.003 + creature.id);
-        const organicNoise = 0.9 + 0.2 * Math.sin(currentTime * 0.005 + angle * 2 + creature.id);
+        // COMPOUND SHAPE VARIATION - All decimals working together
+        const baseVariation = (0.7 + 0.4 * shapePersonality) * textureModifier;
+        const sizeVariation = 0.9 + 0.2 * sizePersonality * (0.8 + tamanoDecimalSignature * 0.4);
+        const asymmetryVariation = 1.0 + asymmetryFactor * appendageInfluence * (formDecimalSignature - 0.5);
         
-        const radius = baseSize * baseVariation * breathingEffect * organicNoise;
+        // Breathing and organic effects
+        const breathingEffect = 1 + 0.15 * Math.sin(currentTime * 0.003 + creature.id);
+        const organicNoise = 0.85 + 0.3 * Math.sin(currentTime * 0.005 + angle * 2 + creature.id);
+        
+        const radius = baseSize * baseVariation * sizeVariation * asymmetryVariation * breathingEffect * organicNoise;
         const bx = Math.cos(angle) * radius;
         const by = Math.sin(angle) * radius;
         
@@ -702,12 +1269,27 @@ export default function AdvancedCreatureVisualizer({
           ctx.moveTo(bx, by);
         } else {
           const prevAngle = ((i - 1) / numPoints) * Math.PI * 2;
-          const prevRadius = baseSize * (0.8 + 0.3 * Math.sin(prevAngle * 3)) * textureModifier * breathingEffect;
+          
+          // Previous point with same decimal-driven calculations
+          const prevShapePersonality = Math.sin(prevAngle * shapeComplexity + formDecimalSignature * Math.PI * 2);
+          const prevSizePersonality = Math.cos(prevAngle * 2 + tamanoDecimalSignature * Math.PI * 2);
+          const prevAppendageInfluence = Math.sin(prevAngle * 4 + appendageDecimalSignature * Math.PI * 2);
+          
+          const prevBaseVariation = (0.7 + 0.4 * prevShapePersonality) * textureModifier;
+          const prevSizeVariation = 0.9 + 0.2 * prevSizePersonality * (0.8 + tamanoDecimalSignature * 0.4);
+          const prevAsymmetryVariation = 1.0 + asymmetryFactor * prevAppendageInfluence * (formDecimalSignature - 0.5);
+          
+          const prevRadius = baseSize * prevBaseVariation * prevSizeVariation * prevAsymmetryVariation * breathingEffect * organicNoise;
           const prevX = Math.cos(prevAngle) * prevRadius;
           const prevY = Math.sin(prevAngle) * prevRadius;
           
-          const cpX = (prevX + bx) / 2;
-          const cpY = (prevY + by) / 2;
+          // DECIMAL-DRIVEN CURVE CONTROL - Each creature has unique curve style
+          const curvePersonality = formDecimalSignature + tamanoDecimalSignature + appendageDecimalSignature;
+          const curveIntensity = 0.3 + (curvePersonality % 1) * 0.4; // 0.3-0.7 curve intensity
+          const curveDirection = (curvePersonality > 1.5) ? 1 : -1; // Some curve inward, some outward
+          
+          const cpX = (prevX + bx) / 2 + curveDirection * curveIntensity * Math.sin(angle + formDecimalSignature * Math.PI) * baseSize * 0.1;
+          const cpY = (prevY + by) / 2 + curveDirection * curveIntensity * Math.cos(angle + tamanoDecimalSignature * Math.PI) * baseSize * 0.1;
           
           ctx.quadraticCurveTo(cpX, cpY, bx, by);
         }
@@ -962,44 +1544,145 @@ export default function AdvancedCreatureVisualizer({
          });
        }
 
-      // ENHANCED MOUTH - Using decimal precision for uniqueness
+      // REVOLUTIONARY MOUTH SYSTEM - Using ALL traits for unique expressions
       const mouthTypeRaw = advanced?.tipoBoca || 0;
       const mouthType = Math.floor(mouthTypeRaw);
       const mouthVariation = mouthTypeRaw % 1; // Extract decimal for unique mouth characteristics
       
-      const mouthY = baseSize * (0.28 + mouthVariation * 0.04); // 0.28-0.32 position variation
-      const mouthWidth = baseSize * (0.25 + mouthVariation * 0.1); // 0.25-0.35 width variation
-      const mouthOpenness = 0.5 + 0.5 * Math.sin(currentTime * 0.004 * (advanced?.nivelEnergia || 1) * (0.8 + mouthVariation * 0.4));
+      // DECIMAL-DRIVEN UNIQUENESS - Each mouth is completely individual
+      const mouthDecimalSignature = mouthVariation; // 0.0 to 0.999...
+      const mouthY = baseSize * (0.26 + mouthDecimalSignature * 0.08); // 0.26-0.34 position variation
+      const mouthWidth = baseSize * (0.2 + mouthDecimalSignature * 0.15); // 0.2-0.35 width variation
+      const mouthAsymmetry = (mouthDecimalSignature - 0.5) * 0.1; // Slight left/right tilt
+      const mouthCurvature = 0.8 + mouthDecimalSignature * 0.4; // 0.8-1.2 curvature multiplier
+      
+      // EMOTIONAL STATE - Based on health, energy, activity, and circadian rhythm
+      const healthState = advanced?.nivelSalud || 1.0;
+      const energyState = advanced?.nivelEnergia || 1.0;
+      const currentHour = new Date().getHours();
+      const circadianPreference = advanced?.ritmoCircadiano || 0.5;
+      
+      // Calculate emotional expression
+      let emotionalState = 'neutral';
+      let expressionIntensity = 0.5;
+      
+      // Activity-based emotions
+      if (physics.activityState === 'sleeping') {
+        emotionalState = 'sleeping';
+        expressionIntensity = 0.2;
+      } else if (physics.activityState === 'drowsy') {
+        emotionalState = 'tired';
+        expressionIntensity = 0.3;
+      } else if (healthState < 0.3) {
+        emotionalState = 'sick';
+        expressionIntensity = 0.2;
+      } else if (healthState > 0.8 && energyState > 0.7) {
+        emotionalState = 'happy';
+        expressionIntensity = 0.8;
+      } else if (energyState < 0.3) {
+        emotionalState = 'tired';
+        expressionIntensity = 0.4;
+      } else if (energyState > 0.6) {
+        emotionalState = 'excited';
+        expressionIntensity = 0.7;
+      }
+      
+      // Circadian mismatch creates stress
+      const isNocturnal = circadianPreference < 0.3;
+      const isDiurnal = circadianPreference > 0.7;
+      const isDaytime = currentHour >= 6 && currentHour <= 18;
+      
+      if ((isNocturnal && isDaytime) || (isDiurnal && !isDaytime)) {
+        emotionalState = 'stressed';
+        expressionIntensity = Math.max(0.3, expressionIntensity * 0.7);
+      }
+      
+      // Breathing/speaking animation
+      const breathingCycle = Math.sin(currentTime * 0.004 * (energyState + 0.5) * (0.8 + mouthVariation * 0.4));
+      const mouthOpenness = Math.max(0.1, 0.3 + breathingCycle * 0.3 * expressionIntensity);
       
       ctx.strokeStyle = `hsl(${hslHue - 30}, 50%, 30%)`;
       ctx.fillStyle = `hsl(${hslHue - 30}, 40%, 20%)`;
       ctx.lineWidth = 2;
       ctx.lineCap = 'round';
       
+      // EMOTIONAL EXPRESSIONS - Each type has different emotional expressions
       switch (mouthType) {
-        case 1: // Large mouth
-          ctx.beginPath();
-          ctx.arc(0, mouthY, mouthWidth * 1.5 * mouthOpenness, 0, Math.PI);
-          ctx.stroke();
-          if (mouthOpenness > 0.7) {
-            ctx.fill(); // Show interior when wide open
+        case 1: // Large mouth - More expressive
+          switch (emotionalState) {
+            case 'happy':
+              // Big smile
+              ctx.beginPath();
+              ctx.arc(0, mouthY - 2, mouthWidth * 1.5, 0.2, Math.PI - 0.2);
+              ctx.stroke();
+              break;
+            case 'excited':
+              // Open excited mouth
+              ctx.beginPath();
+              ctx.ellipse(0, mouthY, mouthWidth * 0.8, mouthWidth * 0.6 * mouthOpenness, 0, 0, Math.PI * 2);
+              ctx.stroke();
+              if (mouthOpenness > 0.5) ctx.fill();
+              break;
+            case 'sick':
+              // Downward mouth
+              ctx.beginPath();
+              ctx.arc(0, mouthY + 3, mouthWidth * 1.2, Math.PI + 0.3, -0.3);
+              ctx.stroke();
+              break;
+            case 'sleeping':
+              // Closed line
+              ctx.beginPath();
+              ctx.moveTo(-mouthWidth * 0.5, mouthY);
+              ctx.lineTo(mouthWidth * 0.5, mouthY);
+              ctx.stroke();
+              break;
+            case 'stressed':
+              // Wavy stressed mouth
+              ctx.beginPath();
+              ctx.moveTo(-mouthWidth, mouthY);
+              ctx.quadraticCurveTo(-mouthWidth * 0.5, mouthY + 2, 0, mouthY);
+              ctx.quadraticCurveTo(mouthWidth * 0.5, mouthY - 2, mouthWidth, mouthY);
+              ctx.stroke();
+              break;
+            default:
+              // Neutral large mouth
+              ctx.beginPath();
+              ctx.arc(0, mouthY, mouthWidth * 1.2 * mouthOpenness, 0.1, Math.PI - 0.1);
+              ctx.stroke();
           }
           break;
-        case 2: // Beak
+          
+        case 2: // Beak - Different beak positions
+          ctx.save();
+          const beakAngle = emotionalState === 'excited' ? -0.2 : 
+                           emotionalState === 'sick' ? 0.3 : 
+                           emotionalState === 'sleeping' ? 0.1 : 0;
+          ctx.rotate(beakAngle);
+          
           ctx.beginPath();
-          ctx.moveTo(-mouthWidth * 0.3, mouthY - 2);
-          ctx.lineTo(0, mouthY + mouthWidth * 0.5);
-          ctx.lineTo(mouthWidth * 0.3, mouthY - 2);
+          const beakSize = emotionalState === 'excited' ? 1.2 : 
+                          emotionalState === 'sick' ? 0.8 : 1.0;
+          ctx.moveTo(-mouthWidth * 0.3 * beakSize, mouthY - 2);
+          ctx.lineTo(0, mouthY + mouthWidth * 0.5 * beakSize);
+          ctx.lineTo(mouthWidth * 0.3 * beakSize, mouthY - 2);
           ctx.closePath();
           ctx.fillStyle = `hsl(${hslHue + 40}, 60%, 40%)`;
           ctx.fill();
           ctx.stroke();
+          ctx.restore();
           break;
-        case 3: // Tentacle mouth
+          
+        case 3: // Tentacle mouth - Tentacles show emotion
           const tentacleCount = 4;
+          const tentacleSpread = emotionalState === 'excited' ? 1.5 : 
+                                emotionalState === 'sick' ? 0.5 : 
+                                emotionalState === 'sleeping' ? 0.3 : 1.0;
+          
           for (let i = 0; i < tentacleCount; i++) {
-            const angle = (i / tentacleCount) * Math.PI + Math.PI * 0.2;
-            const length = mouthWidth * (0.5 + mouthOpenness * 0.5);
+            const baseAngle = (i / tentacleCount) * Math.PI + Math.PI * 0.2;
+            const emotionalOffset = (emotionalState === 'happy' ? Math.sin(currentTime * 0.01 + i) * 0.3 : 0);
+            const angle = baseAngle + emotionalOffset;
+            const length = mouthWidth * (0.5 + mouthOpenness * 0.5) * tentacleSpread;
             const endX = Math.cos(angle) * length;
             const endY = mouthY + Math.sin(angle) * length * 0.5;
             
@@ -1010,14 +1693,78 @@ export default function AdvancedCreatureVisualizer({
             
             // Tentacle tip
             ctx.beginPath();
-            ctx.arc(endX, endY, 1, 0, Math.PI * 2);
+            ctx.arc(endX, endY, emotionalState === 'excited' ? 2 : 1, 0, Math.PI * 2);
             ctx.fill();
           }
           break;
-        default: // Small mouth
-          ctx.beginPath();
-          ctx.arc(0, mouthY, mouthWidth * mouthOpenness, 0, Math.PI);
-          ctx.stroke();
+          
+        default: // Small mouth - Subtle expressions with DECIMAL UNIQUENESS
+          const expressionOffset = mouthDecimalSignature * 4 - 2; // -2 to 2 offset
+          
+          ctx.save();
+          ctx.rotate(mouthAsymmetry); // Unique tilt per creature
+          
+          switch (emotionalState) {
+            case 'happy':
+              // Small smile with unique decimal curve
+              ctx.beginPath();
+              const smileRadius = mouthWidth * (0.6 + mouthDecimalSignature * 0.6) * mouthCurvature;
+              const smileStart = 0.2 + mouthDecimalSignature * 0.3; // 0.2-0.5 start angle
+              const smileEnd = Math.PI - smileStart;
+              ctx.arc(0, mouthY - 1 + expressionOffset, smileRadius, smileStart, smileEnd);
+              ctx.stroke();
+              break;
+            case 'excited':
+              // Small O shape with decimal size variation
+              ctx.beginPath();
+              const excitedSize = mouthWidth * (0.4 + mouthDecimalSignature * 0.4) * mouthOpenness;
+              ctx.arc(0, mouthY + expressionOffset, excitedSize, 0, Math.PI * 2);
+              ctx.stroke();
+              break;
+            case 'sick':
+              // Downward curve with decimal depth
+              ctx.beginPath();
+              const sickRadius = mouthWidth * (0.6 + mouthDecimalSignature * 0.4);
+              const sickDepth = 2 + mouthDecimalSignature * 2; // 2-4 pixels down
+              ctx.arc(0, mouthY + sickDepth + expressionOffset, sickRadius, Math.PI + 0.4, -0.4);
+              ctx.stroke();
+              break;
+            case 'tired':
+              // Slightly open, droopy with decimal variation
+              ctx.beginPath();
+              const tiredWidth = mouthWidth * (0.3 + mouthDecimalSignature * 0.4);
+              const tiredHeight = mouthWidth * 0.2 * mouthOpenness * (0.8 + mouthDecimalSignature * 0.4);
+              ctx.ellipse(0, mouthY + 1 + expressionOffset, tiredWidth, tiredHeight, 0, 0, Math.PI);
+              ctx.stroke();
+              break;
+            case 'sleeping':
+              // Tiny closed line with decimal length
+              ctx.beginPath();
+              const sleepLength = mouthWidth * (0.2 + mouthDecimalSignature * 0.2);
+              ctx.moveTo(-sleepLength, mouthY + expressionOffset);
+              ctx.lineTo(sleepLength, mouthY + expressionOffset);
+              ctx.stroke();
+              break;
+            case 'stressed':
+              // Tight line with decimal wave pattern
+              ctx.beginPath();
+              const stressWidth = mouthWidth * (0.3 + mouthDecimalSignature * 0.2);
+              const stressWave = 1 + mouthDecimalSignature * 2; // 1-3 pixel wave
+              ctx.moveTo(-stressWidth, mouthY + expressionOffset);
+              ctx.quadraticCurveTo(0, mouthY + stressWave + expressionOffset, stressWidth, mouthY + expressionOffset);
+              ctx.stroke();
+              break;
+            default:
+              // Neutral with unique decimal positioning and size
+              ctx.beginPath();
+              const neutralRadius = mouthWidth * mouthOpenness * (0.6 + mouthDecimalSignature * 0.6);
+              const neutralStart = 0.1 + mouthDecimalSignature * 0.2; // Unique smile start
+              const neutralEnd = Math.PI - neutralStart;
+              ctx.arc(0, mouthY + expressionOffset, neutralRadius, neutralStart, neutralEnd);
+              ctx.stroke();
+          }
+          
+          ctx.restore();
       }
 
       // TENTACLES/APPENDAGES
@@ -1173,10 +1920,7 @@ export default function AdvancedCreatureVisualizer({
     const animate = () => {
       const currentTime = Date.now();
       
-              // Debug: log less frequently
-        if (currentTime % 2000 < 20) { // Log every 2 seconds
-          console.log(`Animation running - isPlaying: ${isPlaying}, creatures: ${parsedCreatures.length}, speed: ${animationSpeed}x`);
-        }
+        
       
       // Always clear and redraw canvas for smooth animation
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1311,23 +2055,8 @@ export default function AdvancedCreatureVisualizer({
         }
         
         // Update physics
-        const oldX = physics.x;
-        const oldY = physics.y;
-        console.log(`Before update - Creature ${creature.id}: (${oldX.toFixed(2)}, ${oldY.toFixed(2)}) target: (${physics.targetX.toFixed(2)}, ${physics.targetY.toFixed(2)}) vx: ${physics.vx.toFixed(4)} vy: ${physics.vy.toFixed(4)}`);
-        
         physics = updateCreaturePhysics(physics, creature, currentTime, canvas.width, canvas.height);
         localCreaturePhysics.set(creature.id, physics);
-        
-        console.log(`After update - Creature ${creature.id}: (${physics.x.toFixed(2)}, ${physics.y.toFixed(2)}) target: (${physics.targetX.toFixed(2)}, ${physics.targetY.toFixed(2)}) vx: ${physics.vx.toFixed(4)} vy: ${physics.vy.toFixed(4)}`);
-        
-        
-        // Only log movement if there's significant change
-        const moved = Math.abs(physics.x - oldX) > 0.1 || Math.abs(physics.y - oldY) > 0.1;
-        if (moved && currentTime % 500 < 20) { // Log movement every half second if creature moved
-          const speedMultiplier = isPlaying ? 1.0 : 0.0;
-          const baseSpeed = 0.05 * animationSpeed * speedMultiplier;
-          console.log(`Creature ${creature.id} moved: (${physics.x.toFixed(1)}, ${physics.y.toFixed(1)}) target: (${physics.targetX.toFixed(1)}, ${physics.targetY.toFixed(1)}) speed: ${baseSpeed.toFixed(3)} isPlaying: ${isPlaying}`);
-        }
         
         // Draw trails first - MORE VIBRANT
         if (showTrails && physics.trailPoints.length > 1) {
@@ -1371,7 +2100,6 @@ export default function AdvancedCreatureVisualizer({
         }
         
         // Draw creature
-        console.log('Drawing creature at:', physics.x, physics.y);
         drawCreature(physics, creature, currentTime);
         
         // Selection indicator
@@ -1407,6 +2135,9 @@ export default function AdvancedCreatureVisualizer({
         }
       });
 
+      // Draw chat bubbles on top of everything
+      drawChatBubbles(ctx);
+
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -1420,75 +2151,192 @@ export default function AdvancedCreatureVisualizer({
     };
       }, [parsedCreatures, nebulaTopColor, nebulaMidColor, nebulaDeepColor, nebulaBottomColor, animaStreamColor, creationEnergyColor, echoColor, elementalStratumColor, selectionColor, gridColor, textColor, showTrails, showParticles, showGrid, isPlaying, animationSpeed, updateCreaturePhysics, initializeCreaturePhysics]);
 
-  return (
-    <VStack spacing={6} align="stretch" w="full">
-      {/* Environment Controls */}
-      <MotionBox
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <Flex justify="space-between" align="center" wrap="wrap" gap={2} mb={4}>
-          <ButtonGroup size="sm" isAttached variant="outline">
-            <Button 
-              onClick={() => setIsPlaying(!isPlaying)}
-              colorScheme={isPlaying ? "red" : "green"}
-            >
-              {isPlaying ? "⏸️ Pause" : "▶️ Play"}
-            </Button>
-            <Button onClick={() => setAnimationSpeed(prev => prev === 1 ? 2 : prev === 2 ? 0.5 : 1)}>
-              {animationSpeed === 2 ? "⏩ 2x" : animationSpeed === 0.5 ? "🐌 0.5x" : "🎯 1x"}
-            </Button>
-          </ButtonGroup>
-          
-          <Flex gap={2} wrap="wrap">
-            <Tag 
-              size="sm" 
-              colorScheme={showTrails ? "blue" : "gray"}
-              cursor="pointer"
-              onClick={() => setShowTrails(!showTrails)}
-            >
-              ✨ Trails
-            </Tag>
-            <Tag 
-              size="sm" 
-              colorScheme={showParticles ? "purple" : "gray"}
-              cursor="pointer"
-              onClick={() => setShowParticles(!showParticles)}
-            >
-              💫 Particles
-            </Tag>
-            <Tag 
-              size="sm" 
-              colorScheme={showGrid ? "green" : "gray"}
-              cursor="pointer"
-              onClick={() => setShowGrid(!showGrid)}
-            >
-              📐 Grid
-            </Tag>
-          </Flex>
-        </Flex>
-      </MotionBox>
+  // === CHAT BUBBLE DRAWING FUNCTION ===
+  const drawChatBubbles = (ctx: CanvasRenderingContext2D) => {
+    const currentTime = Date.now();
+    const bubbles = chatBubblesRef.current;
+    
+    bubbles.forEach((bubble) => {
+      const physics = creaturePhysicsRef.current.get(bubble.creatureId);
+      if (!physics) return;
+      
+      // Update bubble position to follow creature
+      const bubbleX = physics.x;
+      const bubbleY = physics.y - 70; // Position above creature
+      
+      // Calculate fade-out based on remaining time
+      const remainingTime = bubble.duration - (currentTime - bubble.timestamp);
+      const alpha = Math.min(1, remainingTime / 1000); // Fade in last second
+      
+      if (alpha <= 0) return;
+      
+      // Save context for bubble styling
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      
+      // Measure text for bubble sizing
+      ctx.font = getBubbleFont(bubble.level);
+      const textMetrics = ctx.measureText(bubble.message);
+      const textWidth = textMetrics.width;
+      const textHeight = 16; // Approximate font height
+      
+      // Bubble dimensions
+      const padding = 12;
+      const bubbleWidth = textWidth + padding * 2;
+      const bubbleHeight = textHeight + padding;
+      const borderRadius = 8;
+      
+      // Draw bubble background
+      ctx.fillStyle = getBubbleColor(bubble.level);
+      ctx.strokeStyle = getBubbleBorderColor(bubble.level);
+      ctx.lineWidth = 2;
+      
+      // Rounded rectangle bubble
+      ctx.beginPath();
+      
+      // Use roundRect if available, otherwise fallback to manual rounded corners
+      if (ctx.roundRect) {
+        ctx.roundRect(
+          bubbleX - bubbleWidth / 2,
+          bubbleY - bubbleHeight,
+          bubbleWidth,
+          bubbleHeight,
+          borderRadius
+        );
+      } else {
+        // Manual rounded rectangle fallback
+        const x = bubbleX - bubbleWidth / 2;
+        const y = bubbleY - bubbleHeight;
+        const w = bubbleWidth;
+        const h = bubbleHeight;
+        const r = borderRadius;
+        
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+      
+      ctx.fill();
+      ctx.stroke();
+      
+      // Draw bubble tail (pointing to creature)
+      const tailX = bubbleX;
+      const tailY = bubbleY;
+      const tailWidth = 8;
+      const tailHeight = 8;
+      
+      ctx.beginPath();
+      ctx.moveTo(tailX - tailWidth / 2, tailY);
+      ctx.lineTo(tailX, tailY + tailHeight);
+      ctx.lineTo(tailX + tailWidth / 2, tailY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      
+      // Draw text
+      ctx.fillStyle = getBubbleTextColor(bubble.level);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        bubble.message,
+        bubbleX,
+        bubbleY - bubbleHeight / 2
+      );
+      
+      ctx.restore();
+    });
+  };
 
-      {/* Enhanced Canvas */}
-      <MotionBox
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        bg={bgColor}
-        p={4}
-        borderRadius="xl"
-        border="1px"
-        borderColor={borderColor}
-        boxShadow="0 10px 40px rgba(0, 0, 0, 0.3)"
+  // Helper functions for bubble styling
+  const getBubbleFont = (level: string): string => {
+    switch (level) {
+      case 'bebe':
+        return '12px Arial';
+      case 'toddler':
+        return '13px Arial';
+      case 'child':
+        return '14px Arial';
+      case 'teen':
+        return '15px Arial';
+      case 'adult':
+        return '16px Arial';
+      default:
+        return '14px Arial';
+    }
+  };
+
+  const getBubbleColor = (level: string): string => {
+    switch (level) {
+      case 'bebe':
+        return 'rgba(255, 182, 193, 0.9)'; // Light pink
+      case 'toddler':
+        return 'rgba(255, 215, 0, 0.9)'; // Gold
+      case 'child':
+        return 'rgba(135, 206, 235, 0.9)'; // Sky blue
+      case 'teen':
+        return 'rgba(147, 112, 219, 0.9)'; // Medium slate blue
+      case 'adult':
+        return 'rgba(106, 90, 205, 0.9)'; // Slate blue
+      default:
+        return 'rgba(255, 255, 255, 0.9)';
+    }
+  };
+
+  const getBubbleBorderColor = (level: string): string => {
+    switch (level) {
+      case 'bebe':
+        return 'rgba(255, 105, 180, 0.8)'; // Hot pink
+      case 'toddler':
+        return 'rgba(255, 165, 0, 0.8)'; // Orange
+      case 'child':
+        return 'rgba(30, 144, 255, 0.8)'; // Dodger blue
+      case 'teen':
+        return 'rgba(123, 104, 238, 0.8)'; // Medium slate blue
+      case 'adult':
+        return 'rgba(72, 61, 139, 0.8)'; // Dark slate blue
+      default:
+        return 'rgba(128, 128, 128, 0.8)';
+    }
+  };
+
+  const getBubbleTextColor = (level: string): string => {
+    switch (level) {
+      case 'bebe':
+      case 'toddler':
+        return '#333333';
+      default:
+        return '#ffffff';
+    }
+  };
+
+  return (
+    <Box 
+      w="100vw" 
+      h="100vh" 
+      overflow="hidden" 
+      position="fixed"
+      top={0}
+      left={0}
+      bg="black"
+      zIndex={9999}
+    >
+      {/* FULL ENVIRONMENT - The entire page IS Primordia */}
+      <Box
+        w="full"
+        h="full"
+        position="relative"
       >
-        <Text fontSize="lg" fontWeight="bold" mb={4} textAlign="center">
-          🌌 Primordia: Genesis Shaper's Realm
-        </Text>
         <canvas 
           ref={canvasRef}
-          width={900}
-          height={600}
+          width={typeof window !== 'undefined' ? window.innerWidth : 1920}
+          height={typeof window !== 'undefined' ? window.innerHeight : 1080}
           onClick={(e) => {
             const canvas = canvasRef.current;
             if (!canvas) return;
@@ -1507,7 +2355,7 @@ export default function AdvancedCreatureVisualizer({
               if (!physics) return;
               
               const distance = Math.sqrt((x - physics.x) ** 2 + (y - physics.y) ** 2);
-              const clickRadius = 30; // Click tolerance
+              const clickRadius = 60; // Even larger for full screen
               
               if (distance <= clickRadius) {
                 clickedCreature = creature.id;
@@ -1517,254 +2365,341 @@ export default function AdvancedCreatureVisualizer({
             setSelectedCreature(clickedCreature === selectedCreature ? null : clickedCreature);
           }}
           style={{ 
-            width: '100%', 
-            maxWidth: '900px',
-            height: 'auto', 
-            borderRadius: '12px',
+            width: '100vw',
+            height: '100vh',
             backgroundColor: canvasBgColor,
-            margin: '0 auto',
-            display: 'block',
-            cursor: 'pointer',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+            cursor: 'crosshair',
+            display: 'block'
           }}
         />
+          
+        {/* Exit Button - Top Left */}
+        <Button
+          position="absolute"
+          top={4}
+          left={4}
+          size="sm"
+          variant="ghost"
+          colorScheme="red"
+          onClick={() => {
+            // TODO: Add proper close functionality
+            console.log('Exit full screen mode');
+          }}
+          bg="rgba(255, 0, 0, 0.1)"
+          _hover={{ bg: "rgba(255, 0, 0, 0.2)" }}
+          border="1px solid rgba(255, 0, 0, 0.3)"
+          backdropFilter="blur(5px)"
+          zIndex={25}
+        >
+          ✕ Exit
+        </Button>
         
-        {/* Genesis Protocol Stats */}
-        <Flex justify="center" gap={4} wrap="wrap" mt={4}>
-          <Text fontSize="sm" color="gray.400">
-            🧬 Active Life Forms: {parsedCreatures.filter(c => c.estaViva).length}
-          </Text>
-          <Text fontSize="sm" color="gray.400">
-            ⚡ Anima Essence: {parsedCreatures.reduce((sum, c) => sum + parseFloat(c.puntosEvolucion), 0).toFixed(1)}
-          </Text>
-          <Text fontSize="sm" color="gray.400">
-            🌌 Nebula Flow: {isPlaying ? 'Active' : 'Stasis'} ({animationSpeed}x)
-          </Text>
-        </Flex>
-      </MotionBox>
+        {/* Subtle Integrated UI */}
+        <HStack 
+          position="absolute" 
+          top={4} 
+          left={20} 
+          spacing={4} 
+          zIndex={20}
+          ml={16}
+        >
+          <Button
+            colorScheme="purple" 
+            variant="ghost"
+            size="sm"
+            leftIcon={<Icon as={FiZap} />}
+            onClick={onRefresh}
+            isLoading={isLoading}
+            loadingText="Processing..."
+            bg="rgba(138, 43, 226, 0.1)"
+            _hover={{ bg: "rgba(138, 43, 226, 0.2)" }}
+            border="1px solid rgba(138, 43, 226, 0.3)"
+            backdropFilter="blur(5px)"
+          >
+            Process Evolution
+          </Button>
+          
+          <Button
+            colorScheme="green" 
+            variant="ghost"
+            size="sm"
+            leftIcon={<Icon as={FiStar} />}
+            onClick={() => {
+              // TODO: Implement mint functionality
+              console.log('Mint new life form');
+            }}
+            bg="rgba(46, 160, 67, 0.1)"
+            _hover={{ bg: "rgba(46, 160, 67, 0.2)" }}
+            border="1px solid rgba(46, 160, 67, 0.3)"
+            backdropFilter="blur(5px)"
+          >
+            Mint Life Form
+          </Button>
+          
+          <Button
+            colorScheme="blue" 
+            variant="ghost"
+            size="sm"
+            leftIcon={<Icon as={FiMessageCircle} />}
+            onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+            bg="rgba(59, 130, 246, 0.1)"
+            _hover={{ bg: "rgba(59, 130, 246, 0.2)" }}
+            border="1px solid rgba(59, 130, 246, 0.3)"
+            backdropFilter="blur(5px)"
+            isLoading={isGeneratingMessages}
+            loadingText={`Generating ${generationProgress.current}/${generationProgress.total}`}
+          >
+            {openRouterService ? 
+              (isGeneratingMessages ? 
+                `🔄 Generating...` : 
+                '🎯 AI Ready'
+              ) : 
+              '🤖 Enable Chat'
+            }
+          </Button>
+        </HStack>
 
-      {/* Selected Creature Card */}
-      {selectedCreature && (
-        <MotionBox
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-          mb={4}
-        >
-          <Text fontSize="lg" fontWeight="bold" mb={3} textAlign="center">
-            🔮 Elemental Life Form Analysis
-          </Text>
-        </MotionBox>
-      )}
-      
-      {!selectedCreature && (
-        <MotionBox
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          textAlign="center"
-          py={8}
-        >
-          <Text fontSize="lg" color="gray.500" mb={2}>
-            ✨ Click on any life form to commune with its essence
-          </Text>
-          <Text fontSize="sm" color="gray.400">
-            Explore their elemental traits, Anima patterns, and primordial nature
-          </Text>
-        </MotionBox>
-      )}
-      
-      <SimpleGrid columns={{ base: 1 }} spacing={4}>
+        {/* API Key Input Panel */}
         <AnimatePresence>
-          {parsedCreatures
-            .filter(creature => selectedCreature ? creature.id === selectedCreature : false)
-            .map((creature, index) => (
-            <MotionCard
-              key={creature.id}
-              initial={{ opacity: 0, y: 20 }}
+          {showApiKeyInput && (
+            <MotionBox
+              position="absolute"
+              top={16}
+              left={20}
+              w="400px"
+              bg="rgba(0,0,0,0.9)"
+              backdropFilter="blur(15px)"
+              borderRadius="lg"
+              p={4}
+              border="1px solid rgba(59, 130, 246, 0.4)"
+              zIndex={25}
+              initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              transition={{ delay: index * 0.1 }}
-              bg={cardBg}
-              border="1px"
-              borderColor={borderColor}
-              overflow="hidden"
             >
-              <CardBody>
-                <VStack align="stretch" spacing={3}>
+              <VStack spacing={3} align="stretch">
+                <Text fontSize="sm" color="blue.200" fontWeight="bold">
+                  🤖 AI Chat System
+                </Text>
+                <Text fontSize="xs" color="gray.400">
+                  Creatures will express their personalities through AI-generated messages based on their traits
+                </Text>
+                <FormControl>
+                  <FormLabel fontSize="xs" color="gray.300">OpenRouter API Key</FormLabel>
+                  <Input
+                    size="sm"
+                    type="password"
+                    placeholder="sk-or-..."
+                    value={openRouterApiKey}
+                    onChange={(e) => setOpenRouterApiKey(e.target.value)}
+                    bg="rgba(255,255,255,0.1)"
+                    border="1px solid rgba(59, 130, 246, 0.3)"
+                    _hover={{ borderColor: "rgba(59, 130, 246, 0.5)" }}
+                    _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.4)" }}
+                    color="white"
+                  />
+                </FormControl>
+                <HStack justify="space-between">
+                  <Text fontSize="xs" color="gray.500">
+                    Get your key at openrouter.ai
+                  </Text>
+                  <Button
+                    size="xs"
+                    colorScheme="blue"
+                    onClick={() => setShowApiKeyInput(false)}
+                  >
+                    Close
+                  </Button>
+                </HStack>
+                {openRouterService && (
+                  <Text fontSize="xs" color="green.400" textAlign="center">
+                    ✅ AI service connected! Creatures will now chat when resting.
+                  </Text>
+                )}
+              </VStack>
+            </MotionBox>
+          )}
+        </AnimatePresence>
+        
+        {/* Subtle Stats */}
+        <HStack 
+          position="absolute" 
+          top={4} 
+          right={4} 
+          spacing={6} 
+          zIndex={20}
+          bg="rgba(0,0,0,0.3)"
+          backdropFilter="blur(10px)"
+          px={4}
+          py={2}
+          borderRadius="full"
+          border="1px solid rgba(138, 43, 226, 0.2)"
+        >
+          <HStack spacing={1}>
+            <Text fontSize="lg" color="purple.300" fontWeight="bold">
+              {parsedCreatures.filter(c => c.estaViva).length}
+            </Text>
+            <Text fontSize="xs" color="gray.400">forms</Text>
+          </HStack>
+          <HStack spacing={1}>
+            <Text fontSize="lg" color="purple.300" fontWeight="bold">
+              {parsedCreatures.reduce((sum, c) => sum + parseFloat(c.puntosEvolucion), 0).toFixed(0)}
+            </Text>
+            <Text fontSize="xs" color="gray.400">anima</Text>
+          </HStack>
+        </HStack>
+        
+        {/* Simplified Creature Info Panel */}
+        {selectedCreature && (
+          <MotionBox
+            position="absolute"
+            right={4}
+            top="50%"
+            transform="translateY(-50%)"
+            w="280px"
+            bg="rgba(0,0,0,0.8)"
+            backdropFilter="blur(15px)"
+            borderRadius="lg"
+            p={4}
+            border="1px solid rgba(138, 43, 226, 0.4)"
+            zIndex={30}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 50 }}
+          >
+            {parsedCreatures
+              .filter(creature => creature.id === selectedCreature)
+              .map((creature) => (
+                <VStack key={creature.id} align="stretch" spacing={4}>
                   {/* Header */}
                   <Flex justify="space-between" align="center">
-                    <Text fontWeight="bold" fontSize="lg">
-                      Life Form #{creature.id}
+                    <Text fontWeight="bold" fontSize="lg" color="purple.200">
+                      Form #{creature.id}
                     </Text>
-                    <HStack spacing={1}>
-                      <Icon as={FiHeart} color={creature.estaViva ? "green.500" : "red.500"} />
-                      <Badge colorScheme={creature.estaViva ? "green" : "red"}>
-                        {creature.estaViva ? "Alive" : "Dead"}
-                      </Badge>
-                    </HStack>
+                    <Badge colorScheme={creature.estaViva ? "green" : "red"} variant="solid">
+                      {creature.estaViva ? "🟢 Alive" : "💀 Dead"}
+                    </Badge>
                   </Flex>
 
-                  {/* Basic Stats */}
-                  <SimpleGrid columns={2} spacing={2}>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Age</Text>
-                      <Text fontSize="sm" fontWeight="bold">
-                        {parseFloat(creature.edadDiasCompletos).toFixed(1)} days
+                  {/* Essential Stats Only */}
+                  <SimpleGrid columns={2} spacing={3}>
+                    <VStack spacing={0}>
+                      <Text fontSize="xl" fontWeight="bold" color="yellow.300">
+                        {parseFloat(creature.edadDiasCompletos).toFixed(1)}
                       </Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Anima Essence</Text>
-                      <Text fontSize="sm" fontWeight="bold" color="purple.500">
+                      <Text fontSize="xs" color="gray.400">days old</Text>
+                    </VStack>
+                    <VStack spacing={0}>
+                      <Text fontSize="xl" fontWeight="bold" color="purple.300">
                         {parseFloat(creature.puntosEvolucion).toFixed(1)}
                       </Text>
-                    </Box>
+                      <Text fontSize="xs" color="gray.400">anima</Text>
+                    </VStack>
                   </SimpleGrid>
 
-                  {/* Visual Traits */}
-                  {creature.visual && (
-                    <Box>
-                      <Text fontSize="xs" color="gray.500" mb={1}>Visual Traits</Text>
-                      <HStack wrap="wrap" spacing={1}>
-                        <Badge 
-                          colorScheme="red" 
-                          variant="solid"
-                          style={{ 
-                            backgroundColor: `rgb(${Math.floor((creature.visual.colorR || 0) * 255)}, ${Math.floor((creature.visual.colorG || 0) * 255)}, ${Math.floor((creature.visual.colorB || 0) * 255)})`,
-                            color: 'white'
-                          }}
-                        >
-                          Color
-                        </Badge>
-                        <Badge colorScheme="blue">
-                          {FORM_TYPES[Math.floor((creature.visual.formaPrincipal || 1) - 1)] || 'Unknown'}
-                        </Badge>
-                        <Badge colorScheme="green">
-                          Size: {(creature.visual.tamanoBase || 1).toFixed(1)}x
-                        </Badge>
-                        <Badge colorScheme="orange">
-                          Apps: {Math.floor(creature.visual.numApendices || 0)}
-                        </Badge>
-                      </HStack>
-                    </Box>
-                  )}
+                  {/* Key Actions */}
+                  <Button
+                    colorScheme="pink" 
+                    variant="solid"
+                    size="sm"
+                    leftIcon={<Icon as={FiHeart} />}
+                    onClick={() => {
+                      console.log(`Mitosis for creature ${selectedCreature}`);
+                    }}
+                    w="full"
+                  >
+                    Initiate Mitosis
+                  </Button>
 
-                  {/* Advanced Visual Features */}
+                  {/* Only Non-Visual Info */}
                   {creature.advanced && (
-                    <VStack align="stretch" spacing={2}>
+                    <VStack spacing={3} align="stretch">
+                      {/* Activity State */}
                       <Box>
-                        <Text fontSize="xs" color="gray.500" mb={1}>🎨 Visual Effects</Text>
-                        <HStack wrap="wrap" spacing={1}>
-                          {creature.advanced.tipoPatron > 0 && (
-                            <Badge colorScheme="purple" title={`Density: ${(creature.advanced.densidadPatron * 100).toFixed(0)}%`}>
-                              {PATTERN_TYPES[creature.advanced.tipoPatron] || 'Pattern'}
-                            </Badge>
-                          )}
-                          {creature.advanced.tipoAura > 0 && (
-                            <Badge colorScheme="cyan" title={`Intensity: ${(creature.advanced.intensidadAura * 100).toFixed(0)}%`}>
-                              {AURA_TYPES[creature.advanced.tipoAura] || 'Aura'}
-                            </Badge>
-                          )}
-                          {creature.advanced.emiteLuz && (
-                            <Badge colorScheme="yellow">✨ Bioluminescent</Badge>
-                          )}
-                          {creature.advanced.efectoElemental > 0 && (
-                            <Badge colorScheme="teal">
-                              {ELEMENTAL_EFFECTS[creature.advanced.efectoElemental] || 'Elemental'}
-                            </Badge>
-                          )}
-                        </HStack>
+                        <Text fontSize="xs" color="gray.400" mb={1}>Activity Cycle</Text>
+                        <Text fontSize="sm" color="yellow.200">
+                          {(creature.advanced.ritmoCircadiano || 0.5) < 0.25 ? '🌙 Nocturnal' : 
+                           (creature.advanced.ritmoCircadiano || 0.5) < 0.75 ? '☀️ Diurnal' : '🌅 Crepuscular'}
+                        </Text>
                       </Box>
 
-                      <Box>
-                        <Text fontSize="xs" color="gray.500" mb={1}>👁️ Physical Features</Text>
-                        <HStack wrap="wrap" spacing={1}>
-                          <Badge colorScheme="gray" title={`Size: ${creature.advanced.tamanoOjos?.toFixed(1)}x`}>
-                            {EYE_TYPES[creature.advanced.tipoOjos] || 'Round'} Eyes
-                          </Badge>
-                          <Badge colorScheme="orange">
-                            {MOUTH_TYPES[creature.advanced.tipoBoca] || 'Small'} Mouth
-                          </Badge>
-                          <Badge colorScheme="green">
-                            {TEXTURE_TYPES[creature.advanced.texturaPiel] || 'Smooth'} Skin
-                          </Badge>
-                          <Badge colorScheme="blue" title={`Brightness: ${((creature.advanced.brilloSuperficie || 0) * 100).toFixed(0)}%`}>
-                            ✨ {((creature.advanced.brilloSuperficie || 0) * 100).toFixed(0)}% Shine
-                          </Badge>
-                        </HStack>
-                      </Box>
-
-                      {/* Evolution Marks */}
-                      {creature.advanced.marcasEvolucion && creature.advanced.marcasEvolucion.length > 0 && (
+                      {/* Personality & Chat Status */}
+                      {creature.personality && (
                         <Box>
-                          <Text fontSize="xs" color="gray.500" mb={1}>🏆 Evolution Marks</Text>
-                          <HStack wrap="wrap" spacing={1}>
-                            {creature.advanced.marcasEvolucion.map((mark: number, index: number) => (
-                              <Badge key={index} colorScheme="gold" variant="solid">
-                                {EVOLUTION_MARKS[mark] || `Mark ${mark}`}
-                              </Badge>
-                            ))}
-                          </HStack>
+                          <Text fontSize="xs" color="gray.400" mb={1}>Personality & Chat</Text>
+                          <VStack spacing={1} align="stretch">
+                            <Text fontSize="xs" color="blue.300">
+                              🧠 {getCommunicationLevel(creature.personality)} level
+                            </Text>
+                            <Text fontSize="xs" color="cyan.300">
+                              💭 {getPersonalityDescription(creature.personality)}
+                            </Text>
+                            <Text fontSize="xs" color="green.300">
+                              😊 {getEmotionalState(creature.personality)}
+                            </Text>
+                            {openRouterService && (
+                              <Text fontSize="xs" color="purple.300">
+                                🤖 AI chat enabled
+                              </Text>
+                            )}
+                          </VStack>
                         </Box>
                       )}
 
-                      {/* Circadian Rhythm */}
-                      <Box>
-                        <Text fontSize="xs" color="gray.500" mb={1}>🌅 Circadian Cycle</Text>
-                        <Progress 
-                          value={(creature.advanced.ritmoCircadiano || 0.5) * 100} 
-                          colorScheme="yellow" 
-                          size="sm" 
-                          borderRadius="full"
-                        />
-                        <Text fontSize="xs" color="gray.400" mt={1}>
-                          {(creature.advanced.ritmoCircadiano || 0.5) < 0.25 ? '🌙 Night' : 
-                           (creature.advanced.ritmoCircadiano || 0.5) < 0.75 ? '☀️ Day' : '🌅 Dawn/Dusk'}
-                        </Text>
-                      </Box>
-                    </VStack>
-                  )}
-
-                  {/* Health & Energy Bars */}
-                  {creature.advanced && (
-                    <VStack spacing={1} align="stretch">
-                      <Box>
-                        <Flex justify="space-between" align="center" mb={1}>
-                          <Text fontSize="xs" color="gray.500">Health</Text>
-                          <Text fontSize="xs" color="gray.500">
+                      {/* Health & Energy - Compact */}
+                      <VStack spacing={2} align="stretch">
+                        <HStack justify="space-between">
+                          <Text fontSize="xs" color="gray.400">Health</Text>
+                          <Text fontSize="xs" color="red.300">
                             {Math.floor((creature.advanced.nivelSalud || 1) * 100)}%
                           </Text>
-                        </Flex>
+                        </HStack>
                         <Progress 
                           value={(creature.advanced.nivelSalud || 1) * 100} 
                           colorScheme="red" 
                           size="sm" 
                           borderRadius="full"
                         />
-                      </Box>
-                      <Box>
-                        <Flex justify="space-between" align="center" mb={1}>
-                          <Text fontSize="xs" color="gray.500">Energy</Text>
-                          <Text fontSize="xs" color="gray.500">
+                        
+                        <HStack justify="space-between">
+                          <Text fontSize="xs" color="gray.400">Energy</Text>
+                          <Text fontSize="xs" color="blue.300">
                             {Math.floor((creature.advanced.nivelEnergia || 1) * 100)}%
                           </Text>
-                        </Flex>
+                        </HStack>
                         <Progress 
                           value={(creature.advanced.nivelEnergia || 1) * 100} 
                           colorScheme="blue" 
                           size="sm" 
                           borderRadius="full"
                         />
-                      </Box>
+                      </VStack>
+
+                      {/* Evolution Achievements Only */}
+                      {creature.advanced.marcasEvolucion && creature.advanced.marcasEvolucion.length > 0 && (
+                        <Box>
+                          <Text fontSize="xs" color="gray.400" mb={1}>Achievements</Text>
+                          <VStack align="stretch" spacing={1}>
+                            {creature.advanced.marcasEvolucion.slice(0, 3).map((mark: number, index: number) => (
+                              <Text key={index} fontSize="xs" color="gold">
+                                {EVOLUTION_MARKS[mark] || `Mark ${mark}`}
+                              </Text>
+                            ))}
+                            {creature.advanced.marcasEvolucion.length > 3 && (
+                              <Text fontSize="xs" color="gray.500">
+                                +{creature.advanced.marcasEvolucion.length - 3} more...
+                              </Text>
+                            )}
+                          </VStack>
+                        </Box>
+                      )}
                     </VStack>
                   )}
                 </VStack>
-              </CardBody>
-            </MotionCard>
-          ))}
-        </AnimatePresence>
-      </SimpleGrid>
-    </VStack>
-  );
-} 
+              ))}
+          </MotionBox>
+        )}
+      </Box>
+    </Box>
+    );
+  } 

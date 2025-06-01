@@ -38,6 +38,7 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
     access(all) event InitialSeedChanged(creatureID: UInt64, oldSeed: UInt64, newSeed: UInt64, changeCount: UInt64, epCost: UFix64)
     access(all) event MitosisOccurred(parentID: UInt64, childID: UInt64, epCost: UFix64)
     access(all) event SexualReproductionOccurred(parent1ID: UInt64, parent2ID: UInt64, childID: UInt64)
+    access(all) event SexualReproductionFailed(parent1ID: UInt64, parent2ID: UInt64, reason: String, successChance: UFix64, randomRoll: UFix64)
     access(all) event ModuleRegistered(moduleType: String, contractAddress: Address, contractName: String)
     access(all) event ReproductionOpportunityDetected(creature1ID: UInt64, creature2ID: UInt64, compatibilityScore: UFix64, windowExpires: UFix64)
     
@@ -818,8 +819,8 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                     return nil // No mutual candidates
                 }
                 
-                // Probabilidad simplificada (sin acceso a módulo específico)
-                let successChance: UFix64 = 1.0 // 100% success rate for testing
+                // Probabilidad de reproducción sexual realista
+                let successChance: UFix64 = 0.6 // 60% success rate
                 
                 // Generar número aleatorio para determinar éxito
                 let currentBlock = getCurrentBlock()
@@ -827,7 +828,14 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                 let randomValue = UFix64(randomSeed % 1000) / 999.0
                 
                 if randomValue > successChance {
-                    // Reproducción falló, limpiar candidatos
+                    // Reproducción falló, emitir evento y limpiar candidatos
+                    emit SexualReproductionFailed(
+                        parent1ID: self.id,
+                        parent2ID: partner.id,
+                        reason: "random_chance_failed",
+                        successChance: successChance,
+                        randomRoll: randomValue
+                    )
                     myReproTrait.clearReproductionCandidates(reason: "reproduction_failed")
                     partnerReproTrait.clearReproductionCandidates(reason: "reproduction_failed")
                     return nil

@@ -211,7 +211,10 @@ access(all) contract ReproductionModuleV2: TraitModule {
             var totalDistance: UFix64 = 0.0
             var i = 0
             while i < self.geneticMarkers.length && i < partner.geneticMarkers.length {
-                let diff = self.abs(self.geneticMarkers[i] - partner.geneticMarkers[i])
+                // Safe difference calculation to avoid underflow
+                let diff: UFix64 = self.geneticMarkers[i] > partner.geneticMarkers[i]
+                    ? self.geneticMarkers[i] - partner.geneticMarkers[i]
+                    : partner.geneticMarkers[i] - self.geneticMarkers[i]
                 totalDistance = totalDistance + (diff * diff)
                 i = i + 1
             }
@@ -578,7 +581,7 @@ access(all) contract ReproductionModuleV2: TraitModule {
     }
     
     init() {
-        // Initialize genetic constants
+        // Initialize genetic constants - fixed underflow issues
         self.GENETIC_MARKERS_COUNT = 10
         self.OPTIMAL_GENETIC_DISTANCE = 2.0
         self.MUTATION_CHANCE = 100 // 1 in 100 chance

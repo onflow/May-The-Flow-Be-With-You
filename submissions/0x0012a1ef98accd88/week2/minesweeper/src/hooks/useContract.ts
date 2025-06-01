@@ -14,12 +14,12 @@ export function useSaveScore() {
             hash,
         });
 
-    const saveScore = async (timeTaken: number) => {
+    const saveScore = async (timeTaken: number, level: number) => {
         writeContract({
             address: MINESWEEPER_CONTRACT_ADDRESS,
             abi: MINESWEEPER_CONTRACT_ABI,
             functionName: 'addRecord',
-            args: [BigInt(timeTaken)],
+            args: [BigInt(timeTaken), level],
         });
     };
 

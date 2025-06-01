@@ -6,9 +6,9 @@ declare global {
     }
 }
 
-export const FLOW_TESTNET_RPC = 'https://testnet.evm.nodes.onflow.org';
+export const FLOW_TESTNET_RPC = 'https://mainnet.evm.nodes.onflow.org';
 
-export const MINESWEEPER_CONTRACT_ADDRESS = '0x2EF339935B5210d9bBBbfB15B85884Df59F430bD';
+export const MINESWEEPER_CONTRACT_ADDRESS = '0xE683CC2E0942c38F522691965355881A8459Cbff';
 
 export const MINESWEEPER_CONTRACT_ABI = [
     {
@@ -17,6 +17,11 @@ export const MINESWEEPER_CONTRACT_ABI = [
                 "internalType": "uint256",
                 "name": "timeTaken",
                 "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "level",
+                "type": "uint8"
             }
         ],
         "name": "addRecord",
@@ -363,6 +368,11 @@ export const MINESWEEPER_CONTRACT_ABI = [
                         "internalType": "uint256",
                         "name": "timeTaken",
                         "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "level",
+                        "type": "uint8"
                     }
                 ],
                 "internalType": "struct MineSweeper.Record[]",
@@ -489,36 +499,6 @@ export const getRandomNumber = async (): Promise<number> => {
     }
 };
 
-export const addRecord = async (timeTaken: number): Promise<void> => {
-    try {
-        if (!window.ethereum) {
-            throw new Error('Please install MetaMask to use this feature');
-        }
-
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const userAddress = await signer.getAddress();
-
-        if (!userAddress) {
-            throw new Error('Please connect your wallet first');
-        }
-
-        const contract = new ethers.Contract(
-            MINESWEEPER_CONTRACT_ADDRESS,
-            MINESWEEPER_CONTRACT_ABI,
-            signer
-        );
-
-        const tx = await contract.addRecord(timeTaken);
-        await tx.wait();
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            throw new Error(error.message);
-        }
-        throw new Error('Failed to add record');
-    }
-};
-
 export const mint = async (uri: string): Promise<void> => {
     if (!contract) {
         await initializeProviderWithSigner();
@@ -534,33 +514,5 @@ export const mint = async (uri: string): Promise<void> => {
             throw new Error(error.message || 'Failed to mint NFT');
         }
         throw new Error('Failed to mint NFT');
-    }
-};
-
-interface Record {
-    player: string;
-    timestamp: number;
-    timeTaken: number;
-}
-
-export const getRecords = async (): Promise<Record[]> => {
-    if (!contract) {
-        initializeReadOnlyProvider();
-    }
-    if (!contract) throw new Error('Contract not initialized');
-
-    try {
-        const records = await contract.getRecords();
-        return records.map((record: any) => ({
-            player: record.player,
-            timestamp: Number(record.timestamp),
-            timeTaken: Number(record.timeTaken)
-        }));
-    } catch (error: unknown) {
-        console.error('Error in getRecords:', error);
-        if (error instanceof Error) {
-            throw new Error(error.message || 'Failed to get records');
-        }
-        throw new Error('Failed to get records');
     }
 };

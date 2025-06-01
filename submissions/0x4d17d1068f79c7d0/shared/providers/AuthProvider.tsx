@@ -355,12 +355,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       setError(null);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+
       if (error) throw error;
-      // User state will be updated by the auth change listener
+
+      console.log("✅ Email signin successful:", data);
+
+      // Always set loading to false after successful signin
+      setLoading(false);
     } catch (error: any) {
       console.error("Email sign in error:", error);
       setError(error.message || "Failed to sign in with email");
@@ -377,15 +382,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       setError(null);
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
+
       if (error) throw error;
-      // User state will be updated by the auth change listener
+
+      console.log("✅ Email signup successful:", data);
+
+      // Since email confirmations are disabled, user should be immediately available
+      if (data.user && data.session) {
+        console.log("🔄 User signed up and logged in immediately");
+        // The auth state change listener will handle setting the user
+      } else {
+        console.log("📧 User signed up, waiting for auth state change");
+      }
+
+      // Always set loading to false after successful signup
+      setLoading(false);
     } catch (error: any) {
       console.error("Email sign up error:", error);
       setError(error.message || "Failed to sign up with email");

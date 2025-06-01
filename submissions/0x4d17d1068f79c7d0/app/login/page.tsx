@@ -140,9 +140,13 @@ export default function LoginPage() {
                 )}
                 <button
                   type="submit"
-                  className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium"
+                  disabled={loading}
+                  className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isSignUp ? "Sign Up" : "Sign In"}
+                  {loading && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  )}
+                  {loading ? "Processing..." : isSignUp ? "Sign Up" : "Sign In"}
                 </button>
                 <button
                   type="button"

@@ -132,7 +132,7 @@ export function MemoryPalaceSetup({
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 lg:space-y-8">
       {/* Progress Stats */}
       {totalRounds > 0 && (
         <div className="text-center">
@@ -166,10 +166,10 @@ export function MemoryPalaceSetup({
 
       {/* Difficulty Selection */}
       <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-gray-800 text-center">
+        <h3 className="text-lg sm:text-xl font-semibold text-gray-800 text-center">
           🎯 Choose Your Challenge Level
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="mobile-grid">
           {difficultyLevels.map((level) => (
             <button
               key={level.value}
@@ -273,7 +273,7 @@ export function MemoryPalaceSetup({
         >
           🎮 Your Configuration
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
           <div>
             <span className="font-medium">Difficulty:</span>{" "}
             {selectedDifficulty.icon} {selectedDifficulty.label}

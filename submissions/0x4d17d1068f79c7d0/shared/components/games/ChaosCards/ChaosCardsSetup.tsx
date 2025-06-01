@@ -29,7 +29,7 @@ export function ChaosCardsSetup({
   // Check if difficulty has progressed beyond baseline
   const hasProgressed = difficulty > baselineDifficulty;
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
       {/* Progress Info */}
       {totalRounds > 0 && (
         <div
@@ -67,15 +67,17 @@ export function ChaosCardsSetup({
       )}
 
       <div className="text-center space-y-4">
-        <h3 className="text-xl font-semibold mb-4">Setup Your Game</h3>
+        <h3 className="text-lg sm:text-xl font-semibold mb-4">
+          Setup Your Game
+        </h3>
 
         {/* Difficulty Selection */}
-        <div className="flex items-center justify-center gap-4">
-          <label className="text-sm font-medium">
+        <div className="space-y-3">
+          <label className="block text-sm sm:text-base font-medium">
             Starting Difficulty:
             {hasProgressed && (
               <span
-                className="text-xs ml-1"
+                className="block sm:inline text-xs ml-0 sm:ml-1 mt-1 sm:mt-0"
                 style={{ color: theme.colors.primary }}
               >
                 (Currently: {difficulty} cards)
@@ -85,7 +87,7 @@ export function ChaosCardsSetup({
           <select
             value={baselineDifficulty}
             onChange={(e) => onDifficultyChange(parseInt(e.target.value))}
-            className="px-3 py-1 border rounded"
+            className="w-full sm:w-auto px-3 py-2 border rounded-lg text-sm sm:text-base touch-target"
           >
             <option value={5}>5 (Easy - Miller's Rule)</option>
             <option value={6}>6 (Medium)</option>
@@ -99,7 +101,7 @@ export function ChaosCardsSetup({
         <button
           onClick={onStartGame}
           disabled={isLoading}
-          className="px-6 py-3 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+          className="w-full sm:w-auto px-6 py-3 text-white rounded-lg font-medium transition-colors disabled:opacity-50 text-sm sm:text-base touch-target"
           style={{ backgroundColor: theme.colors.primary }}
         >
           {isLoading ? "Starting..." : `🎴 Start ${gameInfo.name}`}
@@ -108,17 +110,20 @@ export function ChaosCardsSetup({
 
       {/* Game Instructions */}
       <div
-        className="mt-6 p-4 rounded-lg border"
+        className="mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg border"
         style={{
           backgroundColor: theme.colors.background + "80",
           borderColor: theme.colors.primary + "40",
         }}
       >
-        <h4 className="font-semibold mb-2" style={{ color: theme.colors.text }}>
+        <h4
+          className="font-semibold mb-2 text-sm sm:text-base"
+          style={{ color: theme.colors.text }}
+        >
           {gameInfo.description}
         </h4>
         <ol
-          className="text-sm space-y-1"
+          className="text-xs sm:text-sm space-y-1 sm:space-y-2"
           style={{ color: theme.colors.text + "80" }}
         >
           <li>

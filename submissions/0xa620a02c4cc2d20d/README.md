@@ -46,8 +46,8 @@ The project will introduce new ideas aligned with each weekly theme:
 
 - Week 1 – Randomness Revolution: ❌ Missed
 - Week 2 – ✅ Ace Card Guessing Game using Flow's VRF beacon
-- Week 3 –
-- Week 4 –
+- Week 3 – ❌ Missed
+- Week 4 – ✅ Blockchain Quiz with AI-Generated Questions
 
 ## Weekly Progress
 Check each weekly folder for daily submissions and updates:
@@ -58,6 +58,39 @@ Check each weekly folder for daily submissions and updates:
 - Blockchain-powered random number generation
 - Beautiful animations and effects
 - Responsive design
+
+🔁 Week 4: Blockchain Quiz with AI-Generated Questions
+- Smart Contract: Solidity contract for storing quiz scores on Flow testnet
+- Backend: FastAPI server with OpenAI integration for generating questions
+- Frontend: React application with TypeScript and ethers.js
+- Features:
+  - AI-generated quiz questions using OpenAI
+  - Score tracking on Flow blockchain
+  - Real-time score updates
+  - Modern, responsive UI
+  - TypeScript for type safety
+  - Vite for fast development
+
+## Technical Stack
+### Week 4 Components
+- **Smart Contract**
+  - Solidity contract deployed on Flow testnet
+  - Stores user scores and timestamps
+  - Emits events for score updates
+  - Contract Address: `0x91502a85Ad74ba94499145477dccA19b3E1D6124`
+
+- **Backend**
+  - FastAPI server
+  - OpenAI integration for question generation
+  - RESTful API endpoints
+  - Environment variable configuration
+
+- **Frontend**
+  - React with TypeScript
+  - Vite for build tooling
+  - ethers.js for blockchain interaction
+  - Modern UI components
+  - Responsive design
 
 ## License
 MIT License

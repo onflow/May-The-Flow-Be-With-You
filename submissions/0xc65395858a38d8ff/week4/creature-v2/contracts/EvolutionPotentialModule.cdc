@@ -317,8 +317,13 @@ access(all) contract EvolutionPotentialModule: TraitModule {
         // 2. Lifespan inheritance with longevity genes
         let avgLifespan = (p1.max_lifespan_dias_base + p2.max_lifespan_dias_base) / 2.0
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
-        let lifespanVariation = (UFix64(seedState % 100) / 100.0 - 0.5) * 0.1 // ±5%
-        var childLifespan = avgLifespan + (avgLifespan * lifespanVariation)
+        
+        // Fix underflow: use simple variation without negative operations
+        let randomPercent = UFix64(seedState % 100) / 100.0 // 0.0-0.99
+        
+        // Simple variation: 95% to 105% of average lifespan
+        let variationFactor = 0.95 + (randomPercent * 0.1) // 0.95 to 1.05
+        var childLifespan = avgLifespan * variationFactor
         
         // 3. Longevity gene check (rare)
         if seedState % 200 == 0 { // 0.5% chance

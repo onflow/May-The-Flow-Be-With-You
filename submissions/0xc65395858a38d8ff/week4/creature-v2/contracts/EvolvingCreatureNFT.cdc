@@ -819,7 +819,7 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                 }
                 
                 // Probabilidad simplificada (sin acceso a módulo específico)
-                let successChance: UFix64 = 0.6 // 60% base success rate
+                let successChance: UFix64 = 1.0 // 100% success rate for testing
                 
                 // Generar número aleatorio para determinar éxito
                 let currentBlock = getCurrentBlock()
@@ -835,8 +835,9 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                 
                 // === CREAR DESCENDENCIA ===
                 
-                // Generar seed único para el hijo
-                let childSeed = randomSeed ^ UInt64(currentBlock.timestamp * 1000.0)
+                // Generar seed único para el hijo (safe from overflow)
+                let timestampSafe = UInt64(currentBlock.timestamp) % 1000000 // Prevent overflow
+                let childSeed = randomSeed ^ (timestampSafe * 1000)
                 
                 // Crear traits del hijo usando reproducción sexual de cada módulo
                 let childTraits: @{String: {TraitModule.Trait}} <- {}
@@ -846,8 +847,8 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                     if let factory = EvolvingCreatureNFT.getModuleFactory(moduleType: moduleType) {
                         if let myTrait = &self.traits[moduleType] as &{TraitModule.Trait}? {
                             if let partnerTrait = partner.traits[moduleType] as &{TraitModule.Trait}? {
-                                // Usar semilla específica para cada módulo
-                                let moduleSeed = childSeed ^ UInt64(i * 1000)
+                                // Usar semilla específica para cada módulo (safe from overflow)
+                                let moduleSeed = childSeed ^ (UInt64(i) * 1000)
                                 let childTrait <- factory.createChildTrait(
                                     parent1: myTrait, 
                                     parent2: partnerTrait, 
@@ -913,14 +914,7 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("missing NFT")
             
             // Remove from active creatures if exists
-            var i = 0
-            while i < self.activeCreatureIDs.length {
-                if self.activeCreatureIDs[i] == withdrawID {
-                    self.activeCreatureIDs.remove(at: i)
-                    break
-                }
-                i = i + 1
-            }
+            self.removeFromActiveCreatures(id: withdrawID)
             
             emit Withdraw(id: token.id, from: self.owner?.address)
             return <-token
@@ -985,23 +979,71 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
         access(all) view fun getActiveCreatureCount(): UInt64 {
             return UInt64(self.activeCreatureIDs.length)
         }
+
+        // Helper method to remove creature from active list
+        access(self) fun removeFromActiveCreatures(id: UInt64) {
+            var i = 0
+            while i < self.activeCreatureIDs.length {
+                if self.activeCreatureIDs[i] == id {
+                    self.activeCreatureIDs.remove(at: i)
+                    break
+                }
+                i = i + 1
+            }
+        }
+
+        // Cleanup method to remove dead creatures from active list
+        access(all) fun cleanupDeadCreatures(): UInt64 {
+            var removedCount: UInt64 = 0
+            var i = 0
+            
+            while i < self.activeCreatureIDs.length {
+                let creatureID = self.activeCreatureIDs[i]
+                if let creature = self.borrowEvolvingCreatureNFT(id: creatureID) {
+                    if !creature.estaViva {
+                        self.activeCreatureIDs.remove(at: i)
+                        removedCount = removedCount + 1
+                        // Don't increment i since we removed an element
+                    } else {
+                        i = i + 1
+                    }
+                } else {
+                    // Creature doesn't exist, remove from active list
+                    self.activeCreatureIDs.remove(at: i)
+                    removedCount = removedCount + 1
+                    // Don't increment i since we removed an element
+                }
+            }
+            
+            return removedCount
+        }
         
         // Evolution for specific creature (updated for time-based simulation)
         access(all) fun evolveCreature(id: UInt64, simulatedSecondsPerDay: UFix64) {
             if let creatureRef = self.borrowEvolvingCreatureNFTForUpdate(id: id) {
+                let wasAlive = creatureRef.estaViva
                 creatureRef.evolve(simulatedSecondsPerDay: simulatedSecondsPerDay)
                 
-                // After evolution, evaluate reproduction opportunities with other creatures
-                let otherCreatures: [&NFT] = []
-                for otherID in self.getIDs() {
-                    if otherID != id {
-                        if let otherCreature = self.borrowEvolvingCreatureNFT(id: otherID) {
-                            otherCreatures.append(otherCreature)
-                        }
-                    }
+                // If creature died during evolution, remove from active list
+                if wasAlive && !creatureRef.estaViva {
+                    self.removeFromActiveCreatures(id: id)
                 }
                 
-                creatureRef.evaluateReproductionOpportunities(otherCreatures: otherCreatures)
+                // After evolution, evaluate reproduction opportunities with other creatures (only if alive)
+                if creatureRef.estaViva {
+                    let otherCreatures: [&NFT] = []
+                    for otherID in self.getIDs() {
+                        if otherID != id {
+                            if let otherCreature = self.borrowEvolvingCreatureNFT(id: otherID) {
+                                if otherCreature.estaViva { // Only include living creatures
+                                    otherCreatures.append(otherCreature)
+                                }
+                            }
+                        }
+                    }
+                    
+                    creatureRef.evaluateReproductionOpportunities(otherCreatures: otherCreatures)
+                }
             }
         }
         

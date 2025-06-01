@@ -443,8 +443,10 @@ access(all) contract VisualTraitsModule: TraitModule {
         // 2. Size inheritance with hybrid vigor potential
         let avgSize = (p1.tamanoBase + p2.tamanoBase) / 2.0
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
-        let sizeVariation = (UFix64(seedState % 100) / 100.0 - 0.5) * 0.2 // ±10%
-        var childSize = VisualTraitsModule.clampValue(avgSize + sizeVariation, "tamanoBase")
+        // Safe size variation without underflow
+        let randomPercent = UFix64(seedState % 100) / 100.0 // 0.0-0.99
+        let sizeVariationFactor = 0.9 + (randomPercent * 0.2) // 0.9 to 1.1 (±10%)
+        var childSize = VisualTraitsModule.clampValue(avgSize * sizeVariationFactor, "tamanoBase")
         
         // 3. Form inheritance (discrete traits with Mendelian genetics)
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
@@ -464,8 +466,10 @@ access(all) contract VisualTraitsModule: TraitModule {
         // 4. Appendices inheritance (quantitative trait)
         let avgApendices = (p1.numApendices + p2.numApendices) / 2.0
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
-        let appendicesVariation = (UFix64(seedState % 100) / 100.0 - 0.5) * 1.0 // ±0.5
-        var childApendices = VisualTraitsModule.clampValue(avgApendices + appendicesVariation, "numApendices")
+        // Safe appendices variation without underflow
+        let appRandomPercent = UFix64(seedState % 100) / 100.0 // 0.0-0.99
+        let appVariationFactor = 0.875 + (appRandomPercent * 0.25) // 0.875 to 1.125 (±12.5%)
+        var childApendices = VisualTraitsModule.clampValue(avgApendices * appVariationFactor, "numApendices")
         
         // 5. Movement inheritance with occasional novelty
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
@@ -489,24 +493,21 @@ access(all) contract VisualTraitsModule: TraitModule {
         if seedState % 100 == 0 {
             let mutationStrength: UFix64 = 0.05
             let traitToMutate = seedState % 7
+            // Safe mutation factor without underflow
+            let mutationRandom = UFix64(seedState % 100) / 100.0 // 0.0-0.99
+            let mutationFactor = 0.95 + (mutationRandom * 0.1) // 0.95 to 1.05
             
             switch traitToMutate {
-                case 0: childColorR = VisualTraitsModule.clampValue(childColorR + (mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)), "colorR")
-                case 1: childColorG = VisualTraitsModule.clampValue(childColorG + (mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)), "colorG")
-                case 2: childColorB = VisualTraitsModule.clampValue(childColorB + (mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)), "colorB")
-                case 3: // Size mutation
-                    let sizeMutation = mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)
-                    childSize = VisualTraitsModule.clampValue(childSize + sizeMutation, "tamanoBase")
+                case 0: childColorR = VisualTraitsModule.clampValue(childColorR * mutationFactor, "colorR")
+                case 1: childColorG = VisualTraitsModule.clampValue(childColorG * mutationFactor, "colorG")
+                case 2: childColorB = VisualTraitsModule.clampValue(childColorB * mutationFactor, "colorB")
+                case 3: childSize = VisualTraitsModule.clampValue(childSize * mutationFactor, "tamanoBase")
                 case 4: // Form mutation (rare)
                     if seedState % 1000 == 0 { // Very rare
                         childForm = VisualTraitsModule.clampValue(childForm + 0.5, "formaPrincipal")
                     }
-                case 5: // Appendices mutation
-                    let appMutation = mutationStrength * 10.0 * (UFix64(seedState % 100) / 100.0 - 0.5)
-                    childApendices = VisualTraitsModule.clampValue(childApendices + appMutation, "numApendices")
-                case 6: // Movement mutation
-                    let movMutation = mutationStrength * 2.0 * (UFix64(seedState % 100) / 100.0 - 0.5)
-                    childMovement = VisualTraitsModule.clampValue(childMovement + movMutation, "patronMovimiento")
+                case 5: childApendices = VisualTraitsModule.clampValue(childApendices * mutationFactor, "numApendices")
+                case 6: childMovement = VisualTraitsModule.clampValue(childMovement * mutationFactor, "patronMovimiento")
             }
         }
         

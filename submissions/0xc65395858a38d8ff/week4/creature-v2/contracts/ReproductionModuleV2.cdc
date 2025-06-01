@@ -224,7 +224,13 @@ access(all) contract ReproductionModuleV2: TraitModule {
             
             // Optimal distance for maximum hybrid vigor
             let optimalDistance = ReproductionModuleV2.OPTIMAL_GENETIC_DISTANCE
-            let distanceFromOptimal = self.abs(geneticDistance - optimalDistance)
+            
+            // Calculate distance from optimal safely (avoid underflow)
+            let distanceFromOptimal: UFix64 = geneticDistance > optimalDistance 
+                ? geneticDistance - optimalDistance 
+                : optimalDistance > geneticDistance 
+                    ? optimalDistance - geneticDistance 
+                    : 0.0
             
             // Vigor peaks at optimal distance, declines with extreme distances
             let vigorBonus = 0.5 * (1.0 - self.min(1.0, distanceFromOptimal / optimalDistance))
@@ -470,11 +476,10 @@ access(all) contract ReproductionModuleV2: TraitModule {
                 if isPositiveMutation {
                     childMarkers[i] = self.clamp(childMarkers[i] + mutationMagnitude, 0.0, 1.0)
                 } else {
-                    if childMarkers[i] > mutationMagnitude {
-                        childMarkers[i] = childMarkers[i] - mutationMagnitude
-                    } else {
-                        childMarkers[i] = 0.0
-                    }
+                    // Safe subtraction to avoid underflow
+                    childMarkers[i] = childMarkers[i] > mutationMagnitude 
+                        ? childMarkers[i] - mutationMagnitude 
+                        : 0.0
                 }
                 
                 // Possible dominance flip
@@ -524,11 +529,10 @@ access(all) contract ReproductionModuleV2: TraitModule {
                 if isPositiveMutation {
                     childMarkers[i] = self.clamp(childMarkers[i] + mutationMagnitude, 0.0, 1.0)
                 } else {
-                    if childMarkers[i] > mutationMagnitude {
-                        childMarkers[i] = childMarkers[i] - mutationMagnitude
-                    } else {
-                        childMarkers[i] = 0.0
-                    }
+                    // Safe subtraction to avoid underflow
+                    childMarkers[i] = childMarkers[i] > mutationMagnitude 
+                        ? childMarkers[i] - mutationMagnitude 
+                        : 0.0
                 }
             }
             

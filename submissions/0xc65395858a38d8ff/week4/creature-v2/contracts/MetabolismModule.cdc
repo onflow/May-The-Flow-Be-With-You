@@ -333,8 +333,10 @@ access(all) contract MetabolismModule: TraitModule {
         if seedState % 10 == 0 {
             childFertility = self.min(0.9, avgFertility * 1.15) // 15% boost, max 0.9
         } else {
-            let fertilityVariation = (UFix64(seedState % 100) / 100.0 - 0.5) * 0.1 // ±5%
-            childFertility = avgFertility * (1.0 + fertilityVariation)
+            // Safe fertility variation without underflow
+            let randomPercent = UFix64(seedState % 100) / 100.0 // 0.0-0.99
+            let variationFactor = 0.95 + (randomPercent * 0.1) // 0.95 to 1.05
+            childFertility = avgFertility * variationFactor
         }
         
         // Clamp values to valid ranges

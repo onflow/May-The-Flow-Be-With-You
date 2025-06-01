@@ -654,11 +654,12 @@ access(all) contract CombatStatsModule: TraitModule {
         // === ADVANCED COMBAT GENETICS ===
         var seedState = seed
         
-        // 1. Health inheritance with hybrid vigor
+        // 1. Health inheritance with hybrid vigor - SAFE VERSION
         let avgHealth = (p1.puntosSaludMax + p2.puntosSaludMax) / 2.0
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
-        let healthVariation = (UFix64(seedState % 100) / 100.0 - 0.5) * 0.15 // ±7.5%
-        var childHealth = avgHealth + (avgHealth * healthVariation)
+        let randomFactor = UFix64(seedState % 100) / 100.0 // 0.0-1.0
+        let variationFactor = 0.925 + (randomFactor * 0.15) // 0.925-1.075 (±7.5%)
+        var childHealth = avgHealth * variationFactor
         
         // 2. Attack inheritance with specialization potential
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
@@ -673,11 +674,12 @@ access(all) contract CombatStatsModule: TraitModule {
             childAttack = CombatStatsModule.min(p1.ataqueBase, p2.ataqueBase) * 1.1
         }
         
-        // 3. Defense inheritance with parental balance
+        // 3. Defense inheritance with parental balance - SAFE VERSION
         let avgDefense = (p1.defensaBase + p2.defensaBase) / 2.0
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
-        let defenseVariation = (UFix64(seedState % 100) / 100.0 - 0.5) * 0.12 // ±6%
-        var childDefense = avgDefense + (avgDefense * defenseVariation)
+        let defenseRandomFactor = UFix64(seedState % 100) / 100.0 // 0.0-1.0
+        let defenseVariationFactor = 0.94 + (defenseRandomFactor * 0.12) // 0.94-1.06 (±6%)
+        var childDefense = avgDefense * defenseVariationFactor
         
         // 4. Agility inheritance with speed genes
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
@@ -704,25 +706,29 @@ access(all) contract CombatStatsModule: TraitModule {
             childAgility = childAgility * synergyBonus
         }
         
-        // 6. Apply combat mutations (2% chance per stat)
+        // 6. Apply combat mutations (2% chance per stat) - SAFE VERSION
         seedState = (seedState * 1664525 + 1013904223) % 4294967296
         if seedState % 50 == 0 { // 2% chance
             let mutationStrength: UFix64 = 0.08 // 8% mutation
             let statToMutate = seedState % 4
             
             switch statToMutate {
-                case 0: // Health mutation
-                    let healthMutation = mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)
-                    childHealth = childHealth * (1.0 + healthMutation)
-                case 1: // Attack mutation
-                    let attackMutation = mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)
-                    childAttack = childAttack * (1.0 + attackMutation)
-                case 2: // Defense mutation
-                    let defenseMutation = mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)
-                    childDefense = childDefense * (1.0 + defenseMutation)
-                case 3: // Agility mutation
-                    let agilityMutation = mutationStrength * (UFix64(seedState % 100) / 100.0 - 0.5)
-                    childAgility = childAgility * (1.0 + agilityMutation)
+                case 0: // Health mutation - safe version
+                    let randomFactor = UFix64(seedState % 100) / 100.0 // 0.0-1.0
+                    let mutationFactor = 0.92 + (randomFactor * 0.16) // 0.92-1.08 (±8%)
+                    childHealth = childHealth * mutationFactor
+                case 1: // Attack mutation - safe version
+                    let randomFactor = UFix64(seedState % 100) / 100.0
+                    let mutationFactor = 0.92 + (randomFactor * 0.16)
+                    childAttack = childAttack * mutationFactor
+                case 2: // Defense mutation - safe version
+                    let randomFactor = UFix64(seedState % 100) / 100.0
+                    let mutationFactor = 0.92 + (randomFactor * 0.16)
+                    childDefense = childDefense * mutationFactor
+                case 3: // Agility mutation - safe version
+                    let randomFactor = UFix64(seedState % 100) / 100.0
+                    let mutationFactor = 0.92 + (randomFactor * 0.16)
+                    childAgility = childAgility * mutationFactor
             }
         }
         

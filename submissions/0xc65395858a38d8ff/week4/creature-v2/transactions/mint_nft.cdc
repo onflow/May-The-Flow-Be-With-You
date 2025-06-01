@@ -1,11 +1,7 @@
-// Mint NFT Transaction with Modules
+// Mint NFT Transaction with ALL Registered Modules (Dynamic)
 import "EvolvingCreatureNFT"
 import "NonFungibleToken"
 import "TraitModule"
-import "VisualTraitsModule"
-import "CombatStatsModule"
-import "EvolutionPotentialModule"
-import "MetabolismModule"
 
 transaction(recipient: Address) {
     prepare(acct: auth(Storage, Capabilities) &Account) {
@@ -22,20 +18,29 @@ transaction(recipient: Address) {
             if recipientCap.check() {
                 let collection = recipientCap.borrow()!
                 
-                // Create initial traits manually
+                // Create initial traits dynamically from ALL registered modules
                 let initialTraits: @{String: {TraitModule.Trait}} <- {}
+                let registeredModules = EvolvingCreatureNFT.getRegisteredModules()
                 
-                // Create visual traits
-                initialTraits["visual"] <-! VisualTraitsModule.createDefaultTrait()
+                var modulesList = ""
+                var i = 0
+                while i < registeredModules.length {
+                    if i > 0 { modulesList = modulesList.concat(", ") }
+                    modulesList = modulesList.concat(registeredModules[i])
+                    i = i + 1
+                }
+                log("Creating traits for modules: [".concat(modulesList).concat("]"))
                 
-                // Create combat stats
-                initialTraits["combat"] <-! CombatStatsModule.createDefaultTrait()
-                
-                // Create evolution potential
-                initialTraits["evolution"] <-! EvolutionPotentialModule.createDefaultTrait()
-                
-                // Create metabolism
-                initialTraits["metabolism"] <-! MetabolismModule.createDefaultTrait()
+                // Create default trait for each registered module
+                for moduleType in registeredModules {
+                    if let factory = EvolvingCreatureNFT.getModuleFactory(moduleType: moduleType) {
+                        let defaultTrait <- factory.createDefaultTrait()
+                        initialTraits[moduleType] <-! defaultTrait
+                        log("Created default trait for module: ".concat(moduleType))
+                    } else {
+                        log("WARNING: No factory found for module: ".concat(moduleType))
+                    }
+                }
                 
                 // Mint new NFT with traits
                 let nft <- minter.mintNFT(

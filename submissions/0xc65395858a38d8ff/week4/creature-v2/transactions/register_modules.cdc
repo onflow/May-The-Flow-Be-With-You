@@ -27,6 +27,14 @@ transaction() {
         EvolvingCreatureNFT.registerModule(moduleType: "reproduction", contractAddress: contractAddress, contractName: "ReproductionModuleV2")
         log("Reproduction module registered")
         
+        // Register Advanced Visual Traits Module
+        EvolvingCreatureNFT.registerModule(moduleType: "advanced_visual", contractAddress: contractAddress, contractName: "AdvancedVisualTraitsModule")
+        log("Advanced visual traits module registered")
+        
+        // Register Personality Module V2
+        EvolvingCreatureNFT.registerModule(moduleType: "personality", contractAddress: contractAddress, contractName: "PersonalityModuleV2")
+        log("Personality module V2 registered")
+        
         log("All modules registered successfully!")
     }
 } 

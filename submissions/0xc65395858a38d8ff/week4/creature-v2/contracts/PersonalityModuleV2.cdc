@@ -1,9 +1,9 @@
-// PersonalityModule.cdc
+// PersonalityModuleV2.cdc
 // Advanced personality and communication system for digital creatures
 
 import "TraitModule"
 
-access(all) contract PersonalityModule: TraitModule {
+access(all) contract PersonalityModuleV2: TraitModule {
     
     // === PERSONALITY CONSTANTS ===
     access(all) let COMMUNICATION_LEVELS: {String: UInt8}
@@ -210,42 +210,40 @@ access(all) contract PersonalityModule: TraitModule {
         // === PERSONALITY ANALYSIS FUNCTIONS ===
         
         access(all) view fun getPersonalityDescription(): String {
-            var traits: [String] = []
-            
-            // Analyze temperament
+            // Analyze temperament (highest priority)
             if self.temperamento > 0.7 {
-                traits.append("Extrovert")
+                return "Extrovert"
             } else if self.temperamento < 0.3 {
-                traits.append("Shy")
+                return "Shy"
             }
             
             // Analyze aggressiveness
             if self.agresividad > 0.7 {
-                traits.append("Aggressive")
+                return "Aggressive"
             } else if self.agresividad < 0.3 {
-                traits.append("Peaceful")
+                return "Peaceful"
             }
             
             // Analyze curiosity
             if self.curiosidad > 0.7 {
-                traits.append("Curious")
+                return "Curious"
             } else if self.curiosidad < 0.3 {
-                traits.append("Bored")
+                return "Bored"
             }
             
             // Analyze creativity
             if self.creatividad > 0.7 {
-                traits.append("Artistic")
+                return "Artistic"
             }
             
             // Analyze empathy
             if self.empatia > 0.7 {
-                traits.append("Caring")
+                return "Caring"
             } else if self.empatia < 0.3 {
-                traits.append("Selfish")
+                return "Selfish"
             }
             
-            return traits.length > 0 ? traits[0] : "Neutral"
+            return "Neutral"
         }
         
         access(all) view fun getEmotionalStateDisplay(): String {
@@ -303,7 +301,7 @@ access(all) contract PersonalityModule: TraitModule {
         
         access(all) view fun getNivelComunicacion(): String {
             // Calculate mental development
-            let vocabulary_factor = UFix64(self.vocabulario_size) / UFix64(PersonalityModule.MAX_VOCABULARY_SIZE)
+            let vocabulary_factor = UFix64(self.vocabulario_size) / UFix64(PersonalityModuleV2.MAX_VOCABULARY_SIZE)
             let intelligence_factor = self.inteligencia_base
             let linguistic_factor = self.complejidad_linguistica
             
@@ -324,39 +322,28 @@ access(all) contract PersonalityModule: TraitModule {
         
         access(all) view fun shouldSendSpontaneousMessage(): Bool {
             // Base chance from frequency setting
-            var chance = self.frecuencia_chat * 0.1 // 0-10% base
+            let baseChance = self.frecuencia_chat * 0.1 // 0-10% base
             
-            // Emotional modifiers (safely calculated)
-            if self.felicidad > 0.8 {
-                chance = chance * 1.5 // Very happy creatures talk more
-            }
-            if self.estres > 0.7 {
-                chance = chance * 1.3 // Stressed creatures seek attention
-            }
-            if self.energia_social > 0.6 {
-                chance = chance * 1.2 // Social creatures talk more
-            }
-            if self.excitacion > 0.8 {
-                chance = chance * 1.4 // Excited creatures can't help talking
-            }
+            // Calculate all modifiers
+            var multiplier: UFix64 = 1.0
+            
+            // Emotional modifiers
+            if self.felicidad > 0.8 { multiplier = multiplier * 1.5 }
+            if self.estres > 0.7 { multiplier = multiplier * 1.3 }
+            if self.energia_social > 0.6 { multiplier = multiplier * 1.2 }
+            if self.excitacion > 0.8 { multiplier = multiplier * 1.4 }
             
             // Personality modifiers
-            if self.temperamento < 0.3 {
-                chance = chance * 0.5 // Shy creatures talk less
-            }
-            if self.curiosidad > 0.7 {
-                chance = chance * 1.1 // Curious creatures ask questions
-            }
+            if self.temperamento < 0.3 { multiplier = multiplier * 0.5 }
+            if self.curiosidad > 0.7 { multiplier = multiplier * 1.1 }
             
-            // Age modifier - babies babble more randomly
-            if self.edad_mental < 0.3 {
-                chance = chance * 2.0 // Young creatures vocalize more
-            }
+            // Age modifier
+            if self.edad_mental < 0.3 { multiplier = multiplier * 2.0 }
             
-            // Clamp to reasonable range
-            chance = self.min(0.5, chance) // Max 50% chance
+            // Calculate final chance
+            let finalChance = baseChance * multiplier < 0.5 ? baseChance * multiplier : 0.5 // Max 50% chance
             
-            return chance > 0.05 // At least 5% threshold
+            return finalChance > 0.05 // At least 5% threshold
         }
         
         // === UTILITY FUNCTIONS ===
@@ -369,14 +356,17 @@ access(all) contract PersonalityModule: TraitModule {
             return a > b ? a : b
         }
         
+        access(self) fun minUInt64(_ a: UInt64, _ b: UInt64): UInt64 {
+            return a < b ? a : b
+        }
+        
         access(self) fun clamp(_ value: UFix64, _ minVal: UFix64, _ maxVal: UFix64): UFix64 {
             return self.min(maxVal, self.max(minVal, value))
         }
-    }
-    
-    // === EVOLUTION FUNCTIONS ===
-    
-    access(all) fun evolve(seeds: [UInt64]): String {
+        
+        // === EVOLUTION FUNCTIONS ===
+        
+        access(all) fun evolve(seeds: [UInt64]): String {
         if seeds.length < 3 { return self.getDisplayName() }
         
         // Update current timestamp
@@ -416,16 +406,16 @@ access(all) contract PersonalityModule: TraitModule {
     
     access(self) fun evolveIntelligence(_ seed: UInt64) {
         // Base intelligence growth
-        let growth = PersonalityModule.INTELLIGENCE_GROWTH_RATE * self.curiosidad // Curious creatures learn faster
+        let growth = PersonalityModuleV2.INTELLIGENCE_GROWTH_RATE * self.curiosidad // Curious creatures learn faster
         self.inteligencia_base = self.min(1.0, self.inteligencia_base + growth)
         
         // Vocabulary growth based on intelligence and curiosity
-        let vocabGrowth = UInt64(self.curiosidad * PersonalityModule.VOCABULARY_GROWTH_RATE * 100.0)
+        let vocabGrowth = UInt64(self.curiosidad * PersonalityModuleV2.VOCABULARY_GROWTH_RATE * 100.0)
         self.vocabulario_size = self.vocabulario_size + vocabGrowth
-        self.vocabulario_size = self.min(self.vocabulario_size, PersonalityModule.MAX_VOCABULARY_SIZE)
+        self.vocabulario_size = self.minUInt64(self.vocabulario_size, PersonalityModuleV2.MAX_VOCABULARY_SIZE)
         
         // Linguistic complexity grows slowly
-        let lingGrowth = PersonalityModule.LINGUISTIC_GROWTH_RATE * self.inteligencia_base
+        let lingGrowth = PersonalityModuleV2.LINGUISTIC_GROWTH_RATE * self.inteligencia_base
         self.complejidad_linguistica = self.min(1.0, self.complejidad_linguistica + lingGrowth)
         
         // Mental age develops
@@ -434,14 +424,14 @@ access(all) contract PersonalityModule: TraitModule {
     }
     
     access(self) fun evolveIntelligenceAccumulative(_ seed: UInt64, _ factor: UFix64) {
-        let growth = PersonalityModule.INTELLIGENCE_GROWTH_RATE * self.curiosidad * factor
+        let growth = PersonalityModuleV2.INTELLIGENCE_GROWTH_RATE * self.curiosidad * factor
         self.inteligencia_base = self.min(1.0, self.inteligencia_base + growth)
         
-        let vocabGrowth = UInt64(self.curiosidad * PersonalityModule.VOCABULARY_GROWTH_RATE * 100.0 * factor)
+        let vocabGrowth = UInt64(self.curiosidad * PersonalityModuleV2.VOCABULARY_GROWTH_RATE * 100.0 * factor)
         self.vocabulario_size = self.vocabulario_size + vocabGrowth
-        self.vocabulario_size = self.min(self.vocabulario_size, PersonalityModule.MAX_VOCABULARY_SIZE)
+        self.vocabulario_size = self.minUInt64(self.vocabulario_size, PersonalityModuleV2.MAX_VOCABULARY_SIZE)
         
-        let lingGrowth = PersonalityModule.LINGUISTIC_GROWTH_RATE * self.inteligencia_base * factor
+        let lingGrowth = PersonalityModuleV2.LINGUISTIC_GROWTH_RATE * self.inteligencia_base * factor
         self.complejidad_linguistica = self.min(1.0, self.complejidad_linguistica + lingGrowth)
         
         let mentalGrowth = 0.001 * (1.0 + self.inteligencia_base) * factor
@@ -453,7 +443,7 @@ access(all) contract PersonalityModule: TraitModule {
     access(self) fun evolveEmotionalState(_ seed: UInt64) {
         // Natural stress decay
         if self.estres > 0.0 {
-            let stressDecay = PersonalityModule.STRESS_DECAY_RATE
+            let stressDecay = PersonalityModuleV2.STRESS_DECAY_RATE
             self.estres = self.estres > stressDecay ? self.estres - stressDecay : 0.0
         }
         
@@ -482,7 +472,7 @@ access(all) contract PersonalityModule: TraitModule {
     access(self) fun evolveEmotionalStateAccumulative(_ seed: UInt64, _ factor: UFix64) {
         // Accelerated emotional changes
         if self.estres > 0.0 {
-            let stressDecay = PersonalityModule.STRESS_DECAY_RATE * factor
+            let stressDecay = PersonalityModuleV2.STRESS_DECAY_RATE * factor
             self.estres = self.estres > stressDecay ? self.estres - stressDecay : 0.0
         }
         
@@ -640,7 +630,7 @@ access(all) contract PersonalityModule: TraitModule {
         self.memoria_interacciones.append(memory)
         
         // Limit memory to prevent infinite growth
-        while self.memoria_interacciones.length > PersonalityModule.MEMORY_LIMIT {
+        while self.memoria_interacciones.length > PersonalityModuleV2.MEMORY_LIMIT {
             self.memoria_interacciones.removeFirst()
         }
     }
@@ -757,38 +747,59 @@ access(all) contract PersonalityModule: TraitModule {
         return description.length > 2 ? description.slice(from: 0, upTo: description.length - 2) : "neutral"
     }
     
-    access(all) view fun getDetailedEmotionalState(): String {
-        var emotions: [String] = []
-        
-        if self.felicidad > 0.8 { emotions.append("very happy") }
-        else if self.felicidad > 0.6 { emotions.append("happy") }
-        else if self.felicidad < 0.3 { emotions.append("sad") }
-        else if self.felicidad < 0.5 { emotions.append("somewhat unhappy") }
-        
-        if self.estres > 0.7 { emotions.append("highly stressed") }
-        else if self.estres > 0.4 { emotions.append("stressed") }
-        
-        if self.excitacion > 0.8 { emotions.append("very excited") }
-        else if self.excitacion > 0.6 { emotions.append("excited") }
-        
-        if self.confianza > 0.8 { emotions.append("very confident") }
-        else if self.confianza < 0.3 { emotions.append("insecure") }
-        
-        if self.nostalgia > 0.6 { emotions.append("nostalgic") }
-        if self.melancolia > 0.6 { emotions.append("melancholic") }
-        
-        if emotions.length == 0 { emotions.append("emotionally stable") }
-        
-        var result = ""
-        var i = 0
-        while i < emotions.length {
-            if i > 0 { result = result.concat(", ") }
-            result = result.concat(emotions[i])
-            i = i + 1
+            access(all) view fun getDetailedEmotionalState(): String {
+            var result = ""
+            var hasEmotion = false
+            
+            if self.felicidad > 0.8 { 
+                result = hasEmotion ? result.concat(", very happy") : "very happy"
+                hasEmotion = true
+            } else if self.felicidad > 0.6 { 
+                result = hasEmotion ? result.concat(", happy") : "happy"
+                hasEmotion = true
+            } else if self.felicidad < 0.3 { 
+                result = hasEmotion ? result.concat(", sad") : "sad"
+                hasEmotion = true
+            } else if self.felicidad < 0.5 { 
+                result = hasEmotion ? result.concat(", somewhat unhappy") : "somewhat unhappy"
+                hasEmotion = true
+            }
+            
+            if self.estres > 0.7 { 
+                result = hasEmotion ? result.concat(", highly stressed") : "highly stressed"
+                hasEmotion = true
+            } else if self.estres > 0.4 { 
+                result = hasEmotion ? result.concat(", stressed") : "stressed"
+                hasEmotion = true
+            }
+            
+            if self.excitacion > 0.8 { 
+                result = hasEmotion ? result.concat(", very excited") : "very excited"
+                hasEmotion = true
+            } else if self.excitacion > 0.6 { 
+                result = hasEmotion ? result.concat(", excited") : "excited"
+                hasEmotion = true
+            }
+            
+            if self.confianza > 0.8 { 
+                result = hasEmotion ? result.concat(", very confident") : "very confident"
+                hasEmotion = true
+            } else if self.confianza < 0.3 { 
+                result = hasEmotion ? result.concat(", insecure") : "insecure"
+                hasEmotion = true
+            }
+            
+            if self.nostalgia > 0.6 { 
+                result = hasEmotion ? result.concat(", nostalgic") : "nostalgic"
+                hasEmotion = true
+            }
+            if self.melancolia > 0.6 { 
+                result = hasEmotion ? result.concat(", melancholic") : "melancholic"
+                hasEmotion = true
+            }
+            
+            return hasEmotion ? result : "emotionally stable"
         }
-        
-        return result
-    }
     
     access(all) view fun getMemoryContext(): String {
         if self.memoria_interacciones.length == 0 {
@@ -980,6 +991,37 @@ access(all) contract PersonalityModule: TraitModule {
         return instructions
     }
     
+    // === REPRODUCTION INTERFACE IMPLEMENTATION (Dummy) ===
+    // PersonalityModule doesn't handle reproduction, but needs to implement interface
+    
+    access(all) fun addReproductionCandidate(partnerID: UInt64, compatibilityScore: UFix64): Bool {
+        // Personality module doesn't manage reproduction candidates
+        return false
+    }
+    
+    access(all) fun clearReproductionCandidates(reason: String): Bool {
+        // Personality module doesn't manage reproduction candidates
+        return false
+    }
+    
+    access(all) view fun isReproductionReady(): Bool {
+        // Personality module doesn't manage reproduction state
+        return false
+    }
+    
+    access(all) view fun canReproduceWith(partnerID: UInt64): Bool {
+        // Personality module doesn't manage reproduction compatibility
+        return false
+    }
+    
+    access(all) view fun getReproductionCandidates(): [UInt64] {
+        // Personality module doesn't store reproduction candidates
+        return []
+    }
+        
+    // End of PersonalityTrait resource
+    }
+    
     // === STATIC HELPER FUNCTIONS ===
     
     access(all) view fun formatPersonalityTrait(_ value: UFix64): String {
@@ -1000,7 +1042,7 @@ access(all) contract PersonalityModule: TraitModule {
     
     access(all) view fun formatIntelligence(_ intelligence: UFix64, _ vocabulary: UInt64): String {
         let vocabLevel = vocabulary > 1000 ? "Rich" : vocabulary > 500 ? "Good" : "Basic"
-        let intLevel = PersonalityModule.formatPersonalityTrait(intelligence)
+        let intLevel = PersonalityModuleV2.formatPersonalityTrait(intelligence)
         return intLevel.concat(" Intelligence, ").concat(vocabLevel).concat(" Vocabulary")
     }
     
@@ -1017,7 +1059,7 @@ access(all) contract PersonalityModule: TraitModule {
             empatia: 0.6,         // Default slightly empathetic
             // Basic intelligence
             inteligencia_base: 0.4,
-            vocabulario_size: PersonalityModule.BASE_VOCABULARY_SIZE,
+            vocabulario_size: PersonalityModuleV2.BASE_VOCABULARY_SIZE,
             complejidad_linguistica: 0.1,
             // Neutral emotional state
             felicidad: 0.5,
@@ -1057,7 +1099,7 @@ access(all) contract PersonalityModule: TraitModule {
         let inteligencia_base = 0.2 + (UFix64(randomSeed % 600) / 999.0)
         
         // Vocabulary based on intelligence
-        let vocabulario_size = PersonalityModule.BASE_VOCABULARY_SIZE + UInt64(inteligencia_base * 200.0)
+        let vocabulario_size = PersonalityModuleV2.BASE_VOCABULARY_SIZE + UInt64(inteligencia_base * 200.0)
         
         // Starting linguistic complexity (very low)
         randomSeed = (randomSeed * 1664525 + 1013904223) % 4294967296
@@ -1148,7 +1190,7 @@ access(all) contract PersonalityModule: TraitModule {
         let inteligencia_base = self.clamp(avgIntelligence + hybridBonus, 0.1, 1.0)
         
         // Starting vocabulary based on intelligence
-        let vocabulario_size = PersonalityModule.BASE_VOCABULARY_SIZE + UInt64(inteligencia_base * 100.0)
+        let vocabulario_size = PersonalityModuleV2.BASE_VOCABULARY_SIZE + UInt64(inteligencia_base * 100.0)
         
         // === EMOTIONAL STATE INHERITANCE ===
         
@@ -1165,8 +1207,8 @@ access(all) contract PersonalityModule: TraitModule {
         // === FAMILY DATA ===
         
         let padres_ids = [
-            0, // Would need actual creature IDs - placeholder
-            0
+            0 as UInt64, // Would need actual creature IDs - placeholder
+            0 as UInt64
         ]
         let generacion = self.max(p1.generacion, p2.generacion) + 1
         
@@ -1219,7 +1261,7 @@ access(all) contract PersonalityModule: TraitModule {
         inteligencia_base = self.applySmallMutation(inteligencia_base, randomSeed)
         
         // Copy most attributes but reset some
-        let vocabulario_size = PersonalityModule.BASE_VOCABULARY_SIZE + UInt64(inteligencia_base * 50.0)
+        let vocabulario_size = PersonalityModuleV2.BASE_VOCABULARY_SIZE + UInt64(inteligencia_base * 50.0)
         
         // Emotional state resets to neutral for new individual
         let felicidad = 0.4 + (UFix64(randomSeed % 200) / 999.0) // 0.4-0.6
@@ -1227,7 +1269,7 @@ access(all) contract PersonalityModule: TraitModule {
         let estres = UFix64(randomSeed % 100) / 999.0 * 0.2 // 0.0-0.2
         
         let padres_ids = [
-            0 // Would need actual creature ID - placeholder
+            0 as UInt64 // Would need actual creature ID - placeholder
         ]
         
         return <- create PersonalityTrait(
@@ -1364,10 +1406,10 @@ access(all) contract PersonalityModule: TraitModule {
         self.EXPERIENCE_TYPES = {
             "social_interaction": 1.0,
             "combat_won": 2.0,
-            "combat_lost": -1.0,
+            "combat_lost": 0.0,        // Negative handled in code logic
             "evolution_success": 1.5,
             "reproduction_success": 2.0,
-            "user_abandoned": -2.0,
+            "user_abandoned": 0.0,     // Negative handled in code logic
             "user_returned": 1.5
         }
         

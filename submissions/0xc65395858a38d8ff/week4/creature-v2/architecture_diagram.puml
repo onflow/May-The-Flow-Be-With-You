@@ -1,0 +1,154 @@
+@startuml EvolvingCreatureArchitecture
+
+!theme cerulean-outline
+allowmixing
+title Evolving Creature NFT - Modular Architecture v2
+
+package "Core Contracts" {
+  interface TraitModule {
+    +Trait: Resource Interface
+    +createDefaultTrait()
+    +createTraitWithSeed()
+    +createChildTrait()
+    +createMitosisChild()
+  }
+
+  class EvolvingCreatureNFT <<main>> {
+    +NFT: Resource
+    +Collection: Resource
+    +traits: @{String: {TraitModule.Trait}}
+    +registeredModules: {String: ModuleInfo}
+    --
+    +evolve()
+    +breed()
+    +ensureTraitExists()
+    +registerModule()
+    +getModuleFactory()
+  }
+}
+
+package "Trait Modules" {
+  class VisualTraitsModule {
+    +color, size, pattern
+    +rarity calculations
+    +visual evolution
+  }
+  
+  class AdvancedVisualTraitsModule {
+    +texture, luminosity, opacity
+    +animation states
+    +environmental adaptation
+  }
+
+  class CombatStatsModule {
+    +attack, defense, speed
+    +combat simulation
+    +skill progression
+  }
+
+  class MetabolismModule {
+    +energy, hunger, health
+    +aging simulation
+    +lifespan management
+  }
+
+  class EvolutionPotentialModule {
+    +mutation rates
+    +adaptation potential
+    +evolution triggers
+  }
+
+  class ReproductionModuleV2 {
+    +genetic markers[10]
+    +fertility genes
+    +compatibility analysis
+    +hybrid vigor calculation
+  }
+
+  class PersonalityModuleV2 {
+    +temperament traits[6]
+    +emotional states[6]
+    +intelligence system
+    +communication levels
+    +LLM prompt generation
+  }
+}
+
+package "User Interactions" {
+  rectangle "Transactions" {
+    component "mint_nft"
+    component "evolve_creature"
+    component "sexual_reproduction"
+    component "perform_mitosis"
+  }
+
+  rectangle "Scripts" {
+    component "get_personality_prompts"
+    component "analyze_compatibility"
+    component "list_active_creatures"
+  }
+}
+
+cloud "External Systems" {
+  component "LLM Services" as LLM
+  database "Flow Blockchain" as Flow
+}
+
+' Inheritance relationships
+TraitModule <|-- VisualTraitsModule
+TraitModule <|-- AdvancedVisualTraitsModule
+TraitModule <|-- CombatStatsModule
+TraitModule <|-- MetabolismModule
+TraitModule <|-- EvolutionPotentialModule
+TraitModule <|-- ReproductionModuleV2
+TraitModule <|-- PersonalityModuleV2
+
+' Main contract relationships
+EvolvingCreatureNFT --> TraitModule : uses
+EvolvingCreatureNFT --> VisualTraitsModule : registers
+EvolvingCreatureNFT --> AdvancedVisualTraitsModule : registers
+EvolvingCreatureNFT --> CombatStatsModule : registers
+EvolvingCreatureNFT --> MetabolismModule : registers
+EvolvingCreatureNFT --> EvolutionPotentialModule : registers
+EvolvingCreatureNFT --> ReproductionModuleV2 : registers
+EvolvingCreatureNFT --> PersonalityModuleV2 : registers
+
+' User interaction flows
+mint_nft --> EvolvingCreatureNFT
+evolve_creature --> EvolvingCreatureNFT
+sexual_reproduction --> ReproductionModuleV2
+perform_mitosis --> ReproductionModuleV2
+
+get_personality_prompts --> PersonalityModuleV2
+analyze_compatibility --> ReproductionModuleV2
+list_active_creatures --> MetabolismModule
+
+' External integrations
+PersonalityModuleV2 --> LLM : generates prompts
+EvolvingCreatureNFT --> Flow : persists state
+
+note right of EvolvingCreatureNFT
+  **Lazy Initialization**
+  - Traits created on first access
+  - Backwards compatible
+  - Dynamic module loading
+end note
+
+note right of PersonalityModuleV2
+  **AI Integration**
+  - 6 core personality traits
+  - 6 emotional states
+  - Communication levels
+  - Memory system
+  - LLM prompt generation
+end note
+
+note right of ReproductionModuleV2
+  **Advanced Genetics**
+  - 10 genetic markers
+  - Mendelian inheritance
+  - Hybrid vigor calculation
+  - Compatibility scoring
+end note
+
+@enduml 

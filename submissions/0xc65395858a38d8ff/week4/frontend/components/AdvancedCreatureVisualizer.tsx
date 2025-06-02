@@ -206,6 +206,8 @@ const getCommunicationLevel = (personality: any): string => {
   return 'adult';
 };
 
+
+
 // Check if creature should send spontaneous message (based on contract logic)
 const shouldSendSpontaneousMessage = (personality: any): boolean => {
   if (!personality) {
@@ -649,11 +651,63 @@ Response:`;
   };
 
   const getEmotionalState = (personality: any): string => {
-    if (personality.felicidad > 0.8) return 'very happy';
-    if (personality.estres > 0.7) return 'stressed';
-    if (personality.felicidad < 0.3) return 'sad';
-    return 'calm';
+  if (personality.felicidad > 0.8) return 'very happy';
+  if (personality.estres > 0.7) return 'stressed';
+  if (personality.felicidad < 0.3) return 'sad';
+  return 'calm';
+};
+
+// Get communication style explanation for user
+const getCommunicationExplanation = (personality: any): string => {
+  const level = getCommunicationLevel(personality);
+  switch (level) {
+    case 'bebe':
+      return 'Uses baby babble and simple sounds like "guu guu", "mmmm", "baba". Expresses emotions through sounds rather than words.';
+    case 'toddler':
+      return 'Speaks in 1-3 words like "happy!", "want play", "you nice". Uses simple vocabulary and exclamation marks for excitement.';
+    case 'child':
+      return 'Uses simple 3-5 word sentences with basic grammar. Shows curiosity with simple questions like "What is that?" or "Can we play?"';
+    case 'teen':
+      return 'Communicates with normal sentences but shows teenage personality. More emotional and expressive, with developing complexity.';
+    case 'adult':
+      return 'Communicates with full complexity using sophisticated vocabulary. Can express abstract concepts and deep philosophical thoughts.';
+    default:
+      return 'Communication style varies based on development level.';
+  }
+};
+
+// Get communication tips based on personality and emotional state
+const getCommunicationTip = (personality: any): string => {
+  const level = getCommunicationLevel(personality);
+  const emotionalState = getEmotionalState(personality);
+  const personalityDesc = getPersonalityDescription(personality);
+  
+  // Tips based on communication level
+  const levelTips: Record<string, string> = {
+    'bebe': 'Use simple sounds and emotions in your messages. They respond to tone more than words.',
+    'toddler': 'Ask simple questions like "happy?" or "play?" Use short, positive words.',
+    'child': 'Ask about their interests and feelings. They love learning new things!',
+    'teen': 'Be patient with mood swings. They can discuss more complex topics now.',
+    'adult': 'Engage in deep conversations. They appreciate philosophical discussions.'
   };
+  
+  // Modify tip based on emotional state
+  let tip = levelTips[level] || 'Adjust your communication to their development level.';
+  
+  if (emotionalState.includes('stressed')) {
+    tip = 'They seem stressed. Try gentle, comforting words.';
+  } else if (emotionalState.includes('sad')) {
+    tip = 'They appear sad. Show empathy and care in your messages.';
+  } else if (emotionalState.includes('happy')) {
+    tip = 'They\'re happy! Share their joy with enthusiastic messages.';
+  } else if (personalityDesc.includes('shy')) {
+    tip = 'They\'re shy. Be patient and gentle to help them open up.';
+  } else if (personalityDesc.includes('curious')) {
+    tip = 'They\'re very curious! Ask questions and share interesting facts.';
+  }
+  
+  return tip;
+};
 
   const generateCreatureChat = async (creature: any): Promise<string | null> => {
     if (!openRouterService || !creature.personality) return null;
@@ -3189,17 +3243,22 @@ Response:`;
                     <span>😊 {getEmotionalState(selectedCreatureChat.personality)}</span>
                   </div>
                   
-                  {/* Communication Style Explanation */}
-                  <div style={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-                    padding: '8px 12px', 
-                    borderRadius: '6px', 
-                    fontSize: '11px', 
-                    color: '#cbd5e0',
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
-                  }}>
-                    <strong>Communication Style:</strong> {getCommunicationExplanation(selectedCreatureChat.personality)}
-                  </div>
+                                     {/* Communication Style Explanation */}
+                   <div style={{ 
+                     backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                     padding: '8px 12px', 
+                     borderRadius: '6px', 
+                     fontSize: '11px', 
+                     color: '#cbd5e0',
+                     border: '1px solid rgba(255, 255, 255, 0.1)'
+                   }}>
+                     <div style={{ marginBottom: '4px' }}>
+                       <strong>Communication Style:</strong> {getCommunicationExplanation(selectedCreatureChat.personality)}
+                     </div>
+                     <div style={{ fontSize: '10px', color: '#a0aec0', fontStyle: 'italic' }}>
+                       💡 Tip: {getCommunicationTip(selectedCreatureChat.personality)}
+                     </div>
+                   </div>
                 </div>
               )}
             </div>

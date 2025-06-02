@@ -3,6 +3,8 @@
 import { Box, Button, ButtonGroup, Container, Heading, Text, VStack, Spinner, useToast, useColorModeValue, Code, Image, Flex, Spacer, Tag, HStack, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, FormControl, FormLabel, Input, useDisclosure } from '@chakra-ui/react';
 import { useEffect, useState, useRef } from 'react';
 import * as fcl from '@onflow/fcl';
+import '@/flow/config'; // Importar configuración de FCL
+import { config } from '@onflow/config';
 import Header from '@/components/Header';
 import NextLink from 'next/link';
 import AdvancedCreatureVisualizer from '@/components/AdvancedCreatureVisualizer';
@@ -214,9 +216,9 @@ import EvolvingCreatureNFT from ${CONTRACT_ADDRESS}
 
 transaction(creatureID: UInt64, simulatedSecondsPerDay: UFix64) {
     
-    prepare(acct: auth(BorrowValue) &Account) {
-        // Get reference to the collection
-        let collectionRef = acct.storage.borrow<&EvolvingCreatureNFT.Collection>(
+    prepare(acct: auth(Storage) &Account) {
+        // Get reference to the collection with proper permissions
+        let collectionRef = acct.storage.borrow<auth(Mutate, Insert, Remove) &EvolvingCreatureNFT.Collection>(
             from: EvolvingCreatureNFT.CollectionStoragePath
         ) ?? panic("Could not borrow collection reference")
         
@@ -303,6 +305,13 @@ export default function EnvironmentPage() {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [canvasWidth, setCanvasWidth] = useState(300);
   const [canvasHeight, setCanvasHeight] = useState(300);
+
+  // Debug FCL configuration
+  console.log("🔧 FCL Configuration:", {
+    accessNode: config().get("accessNode.api"),
+    evolvingCreatureNFT: config().get("0xEvolvingCreatureNFT"),
+    network: process.env.NEXT_PUBLIC_FLOW_NETWORK || "testnet"
+  });
 
   // Modal state
   const { isOpen: isMitosisModalOpen, onOpen: onOpenMitosisModal, onClose: onCloseMitosisModal } = useDisclosure();
@@ -438,46 +447,74 @@ export default function EnvironmentPage() {
   };
 
   const handleProcessEvolutionAllCreatures = async () => {
-    if (!user?.addr) {
-      toast({ title: "User Not Connected", description: "Please connect your wallet.", status: "warning" });
-      return;
-    }
-    if (creatures.length === 0) {
-      toast({ title: "No Creatures", description: "There are no active creatures to evolve.", status: "info" });
-      return;
-    }
-
-    setIsProcessingEvolution(true);
-    toast({ 
-        title: `Starting evolution for ${creatures.length} creature(s)...`,
-        description: "You will be asked to approve one transaction per creature.",
-        status: "info", 
-        duration: 3000 + creatures.length * 1500, 
-        isClosable: true 
-    });
-
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const creature of creatures) {
-      if (!creature.estaViva) { // Skip dead creatures, though script should only fetch alive ones
-          console.log(`Skipping evolution for dead creature #${creature.id}`);
-          continue;
+    try {
+      console.log("🔄 Process Evolution called");
+      console.log("📋 User:", user);
+      console.log("🐾 Creatures:", creatures);
+      
+      if (!user?.addr) {
+        console.log("❌ User not connected");
+        toast({ title: "User Not Connected", description: "Please connect your wallet.", status: "warning" });
+        return;
       }
+      if (creatures.length === 0) {
+        console.log("❌ No creatures to evolve");
+        toast({ title: "No Creatures", description: "There are no active creatures to evolve.", status: "info" });
+        return;
+      }
+
+      console.log("✅ Validation passed, setting processing state...");
+      setIsProcessingEvolution(true);
+      
+      console.log("✅ Showing initial toast...");
+      toast({ 
+          title: `Starting evolution for ${creatures.length} creature(s)...`,
+          description: "You will be asked to approve one transaction per creature.",
+          status: "info", 
+          duration: 3000 + creatures.length * 1500, 
+          isClosable: true 
+      });
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      console.log("✅ Starting creature loop...");
+      
+      // Process only the first creature for now to debug
+      const firstAliveCreature = creatures.find(c => c.estaViva);
+      if (!firstAliveCreature) {
+        console.log("❌ No alive creatures found");
+        toast({ title: "No Alive Creatures", description: "No alive creatures to evolve.", status: "info" });
+        return;
+      }
+
+      console.log(`✅ Processing creature #${firstAliveCreature.id}`);
+      
       let toastIdEvo: string | number = "";
       try {
+        console.log("✅ Creating toast for creature...");
         toastIdEvo = toast({
-          title: `Processing Evolution for Creature #${creature.id}`,
+          title: `Processing Evolution for Creature #${firstAliveCreature.id}`,
           description: 'Sending transaction...',
           status: 'loading',
           duration: null,
           isClosable: false,
         });
 
+        console.log(`🚀 About to send FCL transaction for creature ${firstAliveCreature.id}`);
+        console.log("📜 Transaction cadence:", PROCESS_EVOLUTION_TRANSACTION);
+        console.log("🔗 Contract Address:", CONTRACT_ADDRESS);
+        console.log("🔑 FCL authz:", fcl.authz);
+        console.log("🌐 FCL config check:", {
+          accessNode: config().get("accessNode.api"),
+          contract: config().get("0xEvolvingCreatureNFT")
+        });
+        
+        console.log("🚀 Calling fcl.mutate...");
         const transactionId = await fcl.mutate({
           cadence: PROCESS_EVOLUTION_TRANSACTION,
           args: (arg, t) => [
-            arg(creature.id.toString(), t.UInt64),
+            arg(firstAliveCreature.id.toString(), t.UInt64),
             arg("2000.0", t.UFix64)
           ],
           proposer: fcl.authz,
@@ -485,6 +522,8 @@ export default function EnvironmentPage() {
           authorizations: [fcl.authz],
           limit: 9999 
         });
+        
+        console.log(`✅ Transaction sent with ID: ${transactionId}`);
 
         toast.update(toastIdEvo, {
           description: `Transaction sent (${transactionId.substring(0,8)}...). Waiting for confirmation...`,
@@ -493,8 +532,8 @@ export default function EnvironmentPage() {
         await fcl.tx(transactionId).onceSealed();
 
         toast.update(toastIdEvo, {
-          title: `Evolution Successful for #${creature.id}!`, 
-          description: `Creature #${creature.id} has processed its evolution.`,
+          title: `Evolution Successful for #${firstAliveCreature.id}!`, 
+          description: `Creature #${firstAliveCreature.id} has processed its evolution.`,
           status: 'success',
           duration: 5000,
           isClosable: true,
@@ -502,18 +541,11 @@ export default function EnvironmentPage() {
         successCount++;
       } catch (error: any) {
         errorCount++;
-        console.error(`Error processing evolution for creature #${creature.id}:`, error);
+        console.error(`❌ Error processing evolution for creature #${firstAliveCreature.id}:`, error);
+        console.error("❌ Error stack:", error.stack);
         if (toastIdEvo) {
           toast.update(toastIdEvo, {
-            title: `Error Evolving #${creature.id}`,
-            description: error?.message || 'An unknown error occurred.',
-            status: 'error',
-            duration: 9000,
-            isClosable: true,
-          });
-        } else {
-          toast({
-            title: `Error Evolving #${creature.id}`,
+            title: `Error Evolving #${firstAliveCreature.id}`,
             description: error?.message || 'An unknown error occurred.',
             status: 'error',
             duration: 9000,
@@ -521,20 +553,34 @@ export default function EnvironmentPage() {
           });
         }
       }
-    }
 
-    toast({ 
-        title: "Global Evolution Process Concluded", 
-        description: `${successCount} creature(s) evolved. ${errorCount} error(s).`,
-        status: errorCount > 0 ? (successCount > 0 ? "warning" : "error") : "success",
-        duration: 7000,
-        isClosable: true
-    });
+      console.log("✅ Evolution process completed");
+      toast({ 
+          title: "Evolution Process Completed", 
+          description: `${successCount} creature(s) evolved. ${errorCount} error(s).`,
+          status: errorCount > 0 ? "error" : "success",
+          duration: 7000,
+          isClosable: true
+      });
 
-    if (successCount > 0 || errorCount > 0) { 
-      fetchCreatures(); 
+      if (successCount > 0 || errorCount > 0) { 
+        fetchCreatures(); 
+      }
+      
+    } catch (error: any) {
+      console.error("❌ CRITICAL ERROR in handleProcessEvolutionAllCreatures:", error);
+      console.error("❌ Error stack:", error.stack);
+      toast({
+        title: "Critical Error",
+        description: error?.message || 'A critical error occurred.',
+        status: 'error',
+        duration: 9000,
+        isClosable: true,
+      });
+    } finally {
+      console.log("✅ Setting processing state to false");
+      setIsProcessingEvolution(false);
     }
-    setIsProcessingEvolution(false);
   };
 
   const handlePerformMitosis = async () => {
@@ -713,6 +759,8 @@ export default function EnvironmentPage() {
                 <AdvancedCreatureVisualizer
                   creatures={creatures}
                   onRefresh={fetchCreatures}
+                  onMint={handleMintCreature}
+                  onProcessEvolution={handleProcessEvolutionAllCreatures}
                   isLoading={isLoadingCreatures}
                 />
 

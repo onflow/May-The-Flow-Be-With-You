@@ -55,7 +55,7 @@ config({
   "0xEvolutionPotentialModule": "0x2444e6b4d9327f09",
   "0xMetabolismModule": "0x2444e6b4d9327f09",
   "0xReproductionModuleV2": "0x2444e6b4d9327f09",
-  "0xPersonalityModuleV2": "0x2444e6b4d9327f09",
+  "0xPersonalityModuleV2": "0x2444e6b4d9327f09"
 
   // Si usas emulador, asegúrate de que estas coincidan con tu `flow.json`
   // "0xNonFungibleToken": "0xf8d6e0586b0a20c7", // Ejemplo para Emulador

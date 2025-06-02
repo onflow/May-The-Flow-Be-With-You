@@ -55,6 +55,8 @@ interface CreatureVisualData {
 interface AdvancedCreatureVisualizerProps {
   creatures: CreatureVisualData[];
   onRefresh?: () => void;
+  onMint?: () => void;
+  onProcessEvolution?: () => void;
   isLoading?: boolean;
 }
 
@@ -306,6 +308,8 @@ const EVOLUTION_MARKS: Record<number, string> = {
 export default function AdvancedCreatureVisualizer({ 
   creatures, 
   onRefresh, 
+  onMint, 
+  onProcessEvolution,
   isLoading = false 
 }: AdvancedCreatureVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -3066,7 +3070,7 @@ const getCommunicationTip = (personality: any): string => {
             variant="ghost"
             size="sm"
             leftIcon={<Icon as={FiZap} />}
-            onClick={onRefresh}
+            onClick={onProcessEvolution}
             isLoading={isLoading}
             loadingText="Processing..."
             bg="rgba(138, 43, 226, 0.1)"
@@ -3082,10 +3086,7 @@ const getCommunicationTip = (personality: any): string => {
             variant="ghost"
             size="sm"
             leftIcon={<Icon as={FiStar} />}
-            onClick={() => {
-              // TODO: Implement mint functionality
-              console.log('Mint new life form');
-            }}
+            onClick={onMint}
             bg="rgba(46, 160, 67, 0.1)"
             _hover={{ bg: "rgba(46, 160, 67, 0.2)" }}
             border="1px solid rgba(46, 160, 67, 0.3)"

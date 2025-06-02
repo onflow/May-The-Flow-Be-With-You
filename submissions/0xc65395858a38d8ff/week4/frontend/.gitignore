@@ -30,3 +30,4 @@ next-env.d.ts
 # Flow Emulator
 flow-emulator.log
 emulator-account.json 
+.vercel

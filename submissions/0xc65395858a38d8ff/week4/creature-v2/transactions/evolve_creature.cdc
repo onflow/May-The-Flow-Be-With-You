@@ -2,9 +2,9 @@ import EvolvingCreatureNFT from 0x2444e6b4d9327f09
 
 transaction(creatureID: UInt64, simulatedSecondsPerDay: UFix64) {
     
-    prepare(acct: auth(BorrowValue) &Account) {
-        // Get reference to the collection
-        let collectionRef = acct.storage.borrow<&EvolvingCreatureNFT.Collection>(
+    prepare(acct: auth(Storage) &Account) {
+        // Get reference to the collection with proper permissions for mutation
+        let collectionRef = acct.storage.borrow<auth(Mutate, Insert, Remove) &EvolvingCreatureNFT.Collection>(
             from: EvolvingCreatureNFT.CollectionStoragePath
         ) ?? panic("Could not borrow collection reference")
         

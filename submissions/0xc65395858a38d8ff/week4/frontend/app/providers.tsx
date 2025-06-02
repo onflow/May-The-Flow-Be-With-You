@@ -42,40 +42,76 @@ const theme = extendTheme({
       900: '#001d33',
     },
     primary: {
-        50: '#F0FFF4',  // Lightest green
-        100: '#C6F6D5', // Light green
-        200: '#9AE6B4', // Medium-light green
-        300: '#68D391', // Medium green
-        400: '#48BB78', // Green
-        500: '#38A169', // Darker green (base for many elements)
-        600: '#2F855A', // Dark green
-        700: '#276749', // Very dark green
-        800: '#22543D', // Deep forest green
-        900: '#1C4532', // Darkest green
+      50: '#E3F2FD',   // Very light blue
+      100: '#BBDEFB',  // Light blue  
+      200: '#90CAF9',  // Medium light blue
+      300: '#64B5F6',  // Medium blue
+      400: '#42A5F5',  // Medium dark blue
+      500: '#2196F3',  // Base blue (main brand color)
+      600: '#1976D2',  // Dark blue
+      700: '#1565C0',  // Very dark blue
+      800: '#0D47A1',  // Navy blue
+      900: '#0A1A3A',  // Darkest blue
     },
     secondary: {
-        50: '#FFF5EB',  // Lightest orange/amber
-        100: '#FEEBC8', // Light orange/amber
-        200: '#FBD38D', // Medium-light orange/amber
-        300: '#F6AD55', // Medium orange/amber
-        400: '#ED8936', // Orange/amber
-        500: '#DD6B20', // Darker orange/amber (base for accents)
-        600: '#C05621', // Dark orange/amber
-        700: '#9C4221', // Very dark orange/amber
-        800: '#7B341E', // Deep brown-orange
-        900: '#652B19', // Darkest brown-orange
+      50: '#FFF3E0',
+      100: '#FFE0B2',
+      200: '#FFCC80',
+      300: '#FFB74D',
+      400: '#FFA726',
+      500: '#FF9800',  // Orange
+      600: '#FB8C00',
+      700: '#F57C00',
+      800: '#EF6C00',
+      900: '#E65100',
     },
     accent: {
-        50: '#E6FFFA',  // Lightest teal/cyan
-        100: '#B2F5EA', // Light teal/cyan
-        200: '#81E6D9', // Medium-light teal/cyan
-        300: '#4FD1C5', // Medium teal/cyan
-        400: '#38B2AC', // Teal/cyan
-        500: '#319795', // Darker teal/cyan (base for highlights)
-        600: '#2C7A7B', // Dark teal/cyan
-        700: '#285E61', // Very dark teal/cyan
-        800: '#234E52', // Deep sea green
-        900: '#1D4044', // Darkest sea green
+      50: '#F3E5F5',
+      100: '#E1BEE7',
+      200: '#CE93D8',
+      300: '#BA68C8',
+      400: '#AB47BC',
+      500: '#9C27B0',  // Purple
+      600: '#8E24AA',
+      700: '#7B1FA2',
+      800: '#6A1B9A',
+      900: '#4A148C',
+    },
+    success: {
+      50: '#E8F5E8',
+      100: '#C8E6C9',
+      200: '#A5D6A7',
+      300: '#81C784',
+      400: '#66BB6A',
+      500: '#4CAF50',  // Green
+      600: '#43A047',
+      700: '#388E3C',
+      800: '#2E7D32',
+      900: '#1B5E20',
+    },
+    warning: {
+      50: '#FFF8E1',
+      100: '#FFECB3',
+      200: '#FFE082',
+      300: '#FFD54F',
+      400: '#FFCA28',
+      500: '#FFC107',  // Amber
+      600: '#FFB300',
+      700: '#FFA000',
+      800: '#FF8F00',
+      900: '#FF6F00',
+    },
+    error: {
+      50: '#FFEBEE',
+      100: '#FFCDD2',
+      200: '#EF9A9A',
+      300: '#E57373',
+      400: '#EF5350',
+      500: '#F44336',  // Red
+      600: '#E53935',
+      700: '#D32F2F',
+      800: '#C62828',
+      900: '#B71C1C',
     },
     neutral: {
         50: '#F7FAFC',  // Almost white
@@ -125,6 +161,22 @@ const theme = extendTheme({
       }
     }
     // You can add more component style overrides here
+  },
+  // Configure z-index for toasts to ensure they appear above everything
+  zIndices: {
+    hide: -1,
+    auto: 'auto',
+    base: 0,
+    docked: 10,
+    dropdown: 1000,
+    sticky: 1100,
+    banner: 1200,
+    overlay: 1300,
+    modal: 1400,
+    popover: 1500,
+    skipLink: 1600,
+    toast: 9999999,  // Very high z-index for toasts
+    tooltip: 1800,
   }
 });
 

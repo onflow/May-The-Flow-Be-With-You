@@ -520,7 +520,7 @@ export default function AdvancedCreatureVisualizer({
         const previousMessages = getCachedMessages(creatureId);
         const contextMessages = previousMessages.slice(-3); // Last 3 messages for context
         
-        // Use local generation with context
+        // Use local generation with context and social awareness
         const creatureWithContext = { ...creature, previousMessages: contextMessages };
         message = await generateCreatureChat(creatureWithContext);
       }
@@ -591,6 +591,118 @@ export default function AdvancedCreatureVisualizer({
     console.log(`✅ Initial message pool generation complete`);
   };
 
+  // Generate social context by analyzing nearby creatures
+  const generateSocialContext = (currentCreature: any): string => {
+    const physics = creaturePhysicsRef.current.get(currentCreature.id);
+    if (!physics) {
+      console.log(`🌍 No physics found for creature ${currentCreature.id}`);
+      return "ENVIRONMENT: You are in an unknown location.";
+    }
+    
+    // Find nearby creatures (within proximity radius)
+    const PROXIMITY_RADIUS = 150;
+    const nearbyCreatures = parsedCreatures.filter(other => {
+      if (other.id === currentCreature.id || !other.estaViva) return false;
+      
+      const otherPhysics = creaturePhysicsRef.current.get(other.id);
+      if (!otherPhysics) return false;
+      
+      const distance = Math.sqrt(
+        (physics.x - otherPhysics.x) ** 2 + 
+        (physics.y - otherPhysics.y) ** 2
+      );
+      return distance <= PROXIMITY_RADIUS;
+    });
+    
+    console.log(`🌍 Creature ${currentCreature.id} social context: ${nearbyCreatures.length} nearby creatures`);
+    
+    if (nearbyCreatures.length === 0) {
+      return "ENVIRONMENT: You are alone in this quiet area of Primordia, with only the cosmic energy streams for company.";
+    }
+    
+    let context = `ENVIRONMENT: There are ${nearbyCreatures.length} other creatures nearby in the primordial nebula:\n`;
+    
+    nearbyCreatures.forEach(creature => {
+      const otherPhysics = creaturePhysicsRef.current.get(creature.id);
+      const personality = creature.personality;
+      const level = personality ? getCommunicationLevel(personality) : 'unknown';
+      const emotion = personality ? getEmotionalState(personality) : 'unknown';
+      const activity = otherPhysics?.activityState || 'unknown';
+      
+      // Add activity descriptions that make sense
+      let activityDesc = activity;
+      switch (activity) {
+        case 'active': activityDesc = 'moving around energetically'; break;
+        case 'resting': activityDesc = 'resting peacefully'; break;
+        case 'observing': activityDesc = 'looking around thoughtfully'; break;
+        case 'sleeping': activityDesc = 'sleeping quietly'; break;
+        case 'drowsy': activityDesc = 'looking tired and drowsy'; break;
+        default: activityDesc = 'doing something interesting';
+      }
+      
+      context += `- ${creature.name} (#${creature.id}): ${level} communication level, feeling ${emotion}, currently ${activityDesc}\n`;
+      console.log(`🌍   Nearby: ${creature.name} (#${creature.id}) - ${level}, ${emotion}, ${activityDesc}`);
+    });
+    
+    // Add general environment description based on total creatures
+    const totalAlive = parsedCreatures.filter(c => c.estaViva).length;
+    if (totalAlive > 8) {
+      context += "\nThe area feels vibrant and busy with many life forms present.";
+    } else if (totalAlive > 4) {
+      context += "\nThe environment has a moderate amount of activity.";
+    } else {
+      context += "\nThe environment feels quiet and sparse.";
+    }
+    
+    console.log(`🌍 Final social context for ${currentCreature.id}:`, context);
+    
+    return context;
+  };
+
+  // Generate chat response prompt when user sends a message
+  const generateChatResponsePrompt = (creature: any, userMessage: string): string => {
+    const personality = creature.personality;
+    if (!personality) return '';
+
+    const personalityDesc = getPersonalityDescription(personality);
+    const emotionalState = getEmotionalState(personality);
+    const communicationLevel = getCommunicationLevel(personality);
+    const socialContext = generateSocialContext(creature);
+    
+    // Get current time context
+    const now = new Date();
+    const currentHour = now.getHours();
+    const timeOfDay = currentHour < 6 ? 'night' : 
+                     currentHour < 12 ? 'morning' : 
+                     currentHour < 18 ? 'afternoon' : 'evening';
+
+    return `You are a ${creature.name}, a mystical life form from Primordia, realm of the Genesis Shapers. 
+
+PERSONALITY: ${personalityDesc}
+CURRENT EMOTIONAL STATE: ${emotionalState}
+COMMUNICATION LEVEL: ${communicationLevel}
+AGE: ${creature.edadDiasCompletos} simulated days old
+TIME: ${timeOfDay}
+ANIMA ESSENCE: ${creature.puntosEvolucion} points
+
+You exist in the primordial nebula where creation energy flows like living rivers. You can sense the Echoes of the First Forging around you.
+
+${socialContext}
+
+COMMUNICATION STYLE for ${communicationLevel}:
+- bebe: Single words, sounds like "goo", "bah", "happy"
+- toddler: 1-3 words, simple concepts like "me happy", "play now" 
+- child: Short sentences, curious, asks simple questions
+- teen: More complex thoughts, sometimes moody or excited
+- adult: Full sentences, philosophical, can discuss complex ideas
+
+USER SAID: "${userMessage}"
+
+Respond to the user appropriately based on your personality, current mood, communication level, and the environment around you. You might reference other creatures nearby if it fits your personality. Stay authentic to your development level and emotional state.
+
+Response:`;
+  };
+
   const generateChatPrompt = (creature: any, previousMessages: string[] = []): string => {
     const personality = creature.personality;
     if (!personality) return '';
@@ -598,6 +710,7 @@ export default function AdvancedCreatureVisualizer({
     const personalityDesc = getPersonalityDescription(personality);
     const emotionalState = getEmotionalState(personality);
     const communicationLevel = getCommunicationLevel(personality);
+    const socialContext = generateSocialContext(creature);
     
     // Get current time context
     const now = new Date();
@@ -621,6 +734,8 @@ ANIMA ESSENCE: ${creature.puntosEvolucion} points
 
 You exist in the primordial nebula where creation energy flows like living rivers. You can sense the Echoes of the First Forging around you.
 
+${socialContext}
+
 COMMUNICATION STYLE for ${communicationLevel}:
 - bebe: Single words, sounds like "goo", "bah", "happy"
 - toddler: 2-3 words, simple concepts like "me happy", "play now" 
@@ -630,7 +745,7 @@ COMMUNICATION STYLE for ${communicationLevel}:
 
 ${contextString}
 
-Generate ONE short message (under 50 characters) that you might spontaneously say right now. Be authentic to your personality and age. Avoid repeating exactly what you've said before.
+Generate ONE short message (under 50 characters) that you might spontaneously say right now. Be authentic to your personality and age. Consider the other creatures around you and react to them if it fits your personality. Avoid repeating exactly what you've said before.
 
 Response:`;
   };
@@ -2466,7 +2581,10 @@ const getCommunicationTip = (personality: any): string => {
     emotionalImpact: string,
     intensity: number
   }> => {
+    console.log(`🔍 Starting experience analysis for message: "${message}"`);
+    
     if (!openRouterService) {
+      console.log(`⚠️ No OpenRouter service, using fallback analysis`);
       return { 
         experienceType: 'social_interaction', 
         context: `User said: "${message}"`,
@@ -2497,7 +2615,9 @@ const getCommunicationTip = (personality: any): string => {
     - Intensity measures how emotionally impactful this would be for a creature`;
 
     try {
+      console.log(`🤖 Sending analysis prompt to LLM...`);
       const response = await openRouterService.chat(analysisPrompt);
+      console.log(`📄 LLM analysis response:`, response);
       
       // Parse the structured response
       const lines = response.split('\n');
@@ -2506,29 +2626,53 @@ const getCommunicationTip = (personality: any): string => {
       const emotionalImpact = lines.find(l => l.includes('EMOTIONAL_IMPACT:'))?.split(':')[1]?.trim() || 'neutral';
       const intensity = parseFloat(lines.find(l => l.includes('INTENSITY:'))?.split(':')[1]?.trim() || '0.5');
 
-      console.log(`🎭 Experience analysis: ${experienceType}, impact: ${emotionalImpact}, intensity: ${intensity}`);
-      console.log(`📝 Context: ${context}`);
-      
-      return { 
+      const result = { 
         experienceType, 
         context, 
         emotionalImpact, 
         intensity: Math.max(0, Math.min(1, intensity)) 
       };
+
+      console.log(`🎭 Experience analysis complete:`, result);
+      console.log(`📝 Will save to blockchain as: Type="${experienceType}", Context="${context}"`);
+      
+      return result;
     } catch (error) {
       console.error('❌ Failed to analyze experience:', error);
-      return { 
+      const fallback = { 
         experienceType: 'social_interaction', 
         context: `User said: "${message}"`,
         emotionalImpact: 'neutral',
         intensity: 0.5 
       };
+      console.log(`🔄 Using fallback analysis:`, fallback);
+      return fallback;
     }
   };
 
   // Update creature experience in contract based on interaction
   const updateCreatureExperience = async (creatureId: number, experienceType: string, context: string) => {
     try {
+      console.log(`🔄 Attempting to update experience for creature ${creatureId}`);
+      console.log(`📝 Experience Type: ${experienceType}`);
+      console.log(`📝 Context: ${context}`);
+      
+      // Check if user is connected
+      const user = await fcl.currentUser.snapshot();
+      if (!user || !user.addr) {
+        console.error(`❌ User not connected, cannot update experience`);
+        toast({
+          title: "Connection Required",
+          description: "Please connect your wallet to save creature experiences",
+          status: "warning",
+          duration: 4000,
+          isClosable: true,
+        });
+        return;
+      }
+      
+      console.log(`👤 User connected: ${user.addr}`);
+
       const UPDATE_EXPERIENCE = `
         import EvolvingCreatureNFT from 0x2444e6b4d9327f09
         import PersonalityModuleV2 from 0x2444e6b4d9327f09
@@ -2537,25 +2681,42 @@ const getCommunicationTip = (personality: any): string => {
             let collection: &EvolvingCreatureNFT.Collection
             
             prepare(signer: &Account) {
-                self.collection = signer.capabilities.borrow<&EvolvingCreatureNFT.Collection>(EvolvingCreatureNFT.CollectionStoragePath)
-                    ?? panic("Could not borrow collection reference")
+                // Use account.storage.borrow with StoragePath (correct approach)
+                self.collection = signer.storage.borrow<&EvolvingCreatureNFT.Collection>(from: EvolvingCreatureNFT.CollectionStoragePath)
+                    ?? panic("Could not borrow collection reference from storage")
+                
+                log("Collection borrowed successfully from storage")
             }
             
             execute {
+                log("Starting experience update for creature ID: ".concat(creatureID.toString()))
+                
                 if let creature = self.collection.borrowEvolvingCreatureNFT(id: creatureID) {
+                    log("Creature found, checking for personality trait...")
+                    
                     if creature.traits.containsKey("personality") {
+                        log("Personality trait exists, attempting to add experience...")
+                        
                         if let personalityTrait = creature.traits["personality"] as! &PersonalityModuleV2.PersonalityTrait? {
                             personalityTrait.addExperience(experienceType, context)
                             personalityTrait.updateUserInteraction(self.collection.owner!.address)
-                            log("Experience added: ".concat(experienceType).concat(" - ").concat(context))
+                            log("✅ Experience added successfully: ".concat(experienceType).concat(" - ").concat(context))
+                        } else {
+                            log("❌ Could not cast personality trait")
                         }
+                    } else {
+                        log("❌ Personality trait not found in creature")
                     }
+                } else {
+                    log("❌ Creature not found with ID: ".concat(creatureID.toString()))
                 }
             }
         }
       `;
 
-      await fcl.mutate({
+      console.log(`🚀 Sending transaction...`);
+
+      const txId = await fcl.mutate({
         cadence: UPDATE_EXPERIENCE,
         args: (arg: any, t: any) => [
           arg(creatureId.toString(), t.UInt64),
@@ -2568,9 +2729,57 @@ const getCommunicationTip = (personality: any): string => {
         limit: 1000
       });
 
-      console.log(`✅ Updated experience for creature ${creatureId}: ${experienceType} - ${context}`);
-    } catch (error) {
+      console.log(`⏳ Transaction sent, waiting for seal... TX ID: ${txId}`);
+
+      // Wait for transaction to be sealed
+      const result = await fcl.tx(txId).onceSealed();
+      console.log(`🎯 Transaction sealed:`, result);
+
+      if (result.status === 4) {
+        console.log(`✅ Experience successfully added to creature ${creatureId}: ${experienceType} - ${context}`);
+        toast({
+          title: "Experience Saved",
+          description: `${selectedCreatureChat?.name} will remember this interaction`,
+          status: "success",
+          duration: 2000,
+          isClosable: true,
+        });
+      } else {
+        console.error(`❌ Transaction failed with status: ${result.status}`);
+        console.error(`💥 Events:`, result.events);
+        throw new Error(`Transaction failed with status ${result.status}`);
+      }
+
+    } catch (error: any) {
       console.error(`❌ Failed to update creature experience:`, error);
+      console.error(`💥 Error details:`, error.message || error);
+      
+      // Show user-friendly error
+      if (error.message && error.message.includes('Could not borrow collection reference')) {
+        toast({
+          title: "Collection Not Found",
+          description: "You don't seem to own any creatures in this collection",
+          status: "error",
+          duration: 4000,
+          isClosable: true,
+        });
+      } else if (error.message && error.message.includes('Creature not found')) {
+        toast({
+          title: "Creature Not Found",
+          description: `Creature #${creatureId} not found in your collection`,
+          status: "error",
+          duration: 4000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: "Experience Save Failed",
+          description: "Could not save interaction to blockchain. The chat still works locally.",
+          status: "warning",
+          duration: 4000,
+          isClosable: true,
+        });
+      }
     }
   };
 
@@ -2582,7 +2791,9 @@ const getCommunicationTip = (personality: any): string => {
 
     try {
       // Analyze experience type using LLM
+      console.log(`🧠 Analyzing user message: "${userMessage.trim()}"`);
       const experienceAnalysis = await analyzeExperience(userMessage);
+      console.log(`🎭 Analysis result:`, experienceAnalysis);
 
       // Add user message to chat
       const userChatMessage = {
@@ -2598,6 +2809,7 @@ const getCommunicationTip = (personality: any): string => {
       setUserMessage('');
 
       // Update experience in contract using LLM-determined type
+      console.log(`💾 Attempting to save experience to blockchain...`);
       await updateCreatureExperience(selectedCreatureChat.id, experienceAnalysis.experienceType, experienceAnalysis.context);
 
       // Show appropriate feedback based on experience type
@@ -2657,8 +2869,8 @@ const getCommunicationTip = (personality: any): string => {
         );
         creatureResponse = await openRouterService.chat(responsePrompt);
       } else {
-        // Fallback to local generation
-        const prompt = generateChatPrompt(selectedCreatureChat, [userMessage.trim()]);
+        // Fallback to local generation with social context
+        const prompt = generateChatResponsePrompt(selectedCreatureChat, userMessage.trim());
         creatureResponse = await openRouterService.chat(prompt);
       }
 

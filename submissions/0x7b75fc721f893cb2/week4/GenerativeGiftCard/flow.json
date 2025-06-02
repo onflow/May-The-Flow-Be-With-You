@@ -1,0 +1,81 @@
+{
+	"contracts": {
+		"Counter": {
+			"source": "cadence_counter/contracts/Counter.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"GiftCard": {
+			"source": "cadence/contracts/GiftCard.cdc",
+			"aliases": {
+				"testing": "0000000000000009"
+			}
+		}
+	},
+	"dependencies": {
+		"NumberFormatter": {
+			"source": "testnet://8a4dce54554b225d.NumberFormatter",
+			"hash": "dc7043832da46dbcc8242a53fa95b37f020bc374df42586a62703b2651979fb9",
+			"aliases": {
+				"testnet": "8a4dce54554b225d"
+			}
+		},
+		"FlowToken": {
+			"source": "mainnet://1654653399040a61.FlowToken",
+			"hash": "cefb25fd19d9fc80ce02896267eb6157a6b0df7b1935caa8641421fe34c0e67a",
+			"aliases": {
+				"emulator": "0ae53cb6e3f42a79",
+				"mainnet": "1654653399040a61",
+				"testnet": "7e60df042a9c0868"
+			}
+		},
+		"FungibleToken": {
+			"source": "mainnet://f233dcee88fe0abe.FungibleToken",
+			"hash": "050328d01c6cde307fbe14960632666848d9b7ea4fef03ca8c0bbfb0f2884068",
+			"aliases": {
+				"emulator": "ee82856bf20e2aa6",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
+			}
+		}
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testing": "127.0.0.1:3569",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": {
+				"type": "file",
+				"location": "emulator-account.pkey"
+			}
+		},
+		"gungz-testnet": {
+			"address": "2196c8fac03820bf",
+			"key": {
+				"type": "file",
+				"location": "gungz-testnet.pkey"
+			}
+		},
+		"test-account": {
+			"address": "179b6b1cb6755e31",
+			"key": "9e5aa09fc579f3dc03f0f1c71d45898998bcca4834030c0ddd519567c75c29bd"
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"test-account": [
+				"GiftCard"
+			]
+		},
+		"testnet": {
+			"gungz-testnet": [
+				"GiftCard"
+			]
+		}
+	}
+}

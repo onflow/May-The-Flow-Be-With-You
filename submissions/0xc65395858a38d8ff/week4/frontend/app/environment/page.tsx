@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Button, ButtonGroup, Container, Heading, Text, VStack, Spinner, useToast, useColorModeValue, Code, Image, Flex, Spacer, Tag, HStack, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, FormControl, FormLabel, Input, useDisclosure } from '@chakra-ui/react';
+import { Box, Button, ButtonGroup, Container, Heading, Text, VStack, Spinner, useToast, useColorModeValue, Code, Image, Flex, Spacer, Tag, HStack, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, FormControl, FormLabel, Input, useDisclosure, Badge, IconButton } from '@chakra-ui/react';
 import { useEffect, useState, useRef } from 'react';
 import * as fcl from '@onflow/fcl';
 import '@/flow/config'; // Importar configuración de FCL
@@ -311,6 +311,16 @@ export default function EnvironmentPage() {
     duration: number;
     timestamp: number;
   }>>([]);
+  
+  // Evolution Chronicles Modal State
+  const [evolutionChronicles, setEvolutionChronicles] = useState<Array<{
+    creatureIndex: number;
+    creatureName: string;
+    narrative: string;
+    changes: string;
+  }>>([]);
+  const [showChroniclesModal, setShowChroniclesModal] = useState(false);
+  const [currentChronicleIndex, setCurrentChronicleIndex] = useState(0);
   const toast = useToast();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [canvasWidth, setCanvasWidth] = useState(300);
@@ -368,9 +378,11 @@ export default function EnvironmentPage() {
     title: string, 
     description: string, 
     status: 'info' | 'success' | 'warning' | 'error' | 'loading' = 'info',
-    duration: number = 8000
+    duration: number = 0, // Default to 0 (manual close only)
+    autoRemove: boolean = false // Explicit control over auto-removal
   ) => {
-    const id = Date.now().toString();
+    // Generate unique ID with random component to avoid duplicates
+    const id = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
     const notification = {
       id,
       title,
@@ -382,8 +394,8 @@ export default function EnvironmentPage() {
     
     setCustomNotifications(prev => [...prev, notification]);
     
-    // Auto-remove after duration (unless it's a loading notification)
-    if (status !== 'loading' && duration > 0) {
+    // Auto-remove only if explicitly requested
+    if (autoRemove && duration > 0) {
       setTimeout(() => {
         setCustomNotifications(prev => prev.filter(n => n.id !== id));
       }, duration);
@@ -413,6 +425,35 @@ export default function EnvironmentPage() {
     setCustomNotifications(prev => prev.filter(n => n.id !== id));
   };
 
+  // Interpret evolution changes mystically but informatively
+  const interpretEvolutionChanges = (ageDelta: number, epDelta: number): string => {
+    const changes: string[] = [];
+    
+    // Interpret age progression with actual numbers but mystical language
+    if (ageDelta > 0.5) {
+      changes.push(`matured ${ageDelta.toFixed(1)} cosmic cycles, gaining profound wisdom`);
+    } else if (ageDelta > 0.1) {
+      changes.push(`aged ${ageDelta.toFixed(1)} ethereal days, growing in experience`);
+    } else {
+      changes.push(`touched by ${ageDelta.toFixed(2)} whispers of time`);
+    }
+    
+    // Interpret evolution points with actual numbers but mystical language
+    if (epDelta > 5.0) {
+      changes.push(`their anima essence surged by ${epDelta.toFixed(1)} powerful resonances`);
+    } else if (epDelta > 2.0) {
+      changes.push(`channeled ${epDelta.toFixed(1)} streams of evolutionary force`);
+    } else if (epDelta > 0.5) {
+      changes.push(`absorbed ${epDelta.toFixed(1)} currents of cosmic growth`);
+    } else if (epDelta < 0) {
+      changes.push(`released ${Math.abs(epDelta).toFixed(1)} energies back to the cosmos`);
+    } else {
+      changes.push(`maintained harmonious balance, gathering ${epDelta.toFixed(1)} essence`);
+    }
+    
+    return changes.join(', ');
+  };
+
   // Generate epic evolution narrative using LLM
   const generateEvolutionNarrative = async (
     creature: CreatureUIDataFrontend, 
@@ -429,27 +470,29 @@ export default function EnvironmentPage() {
       const ageDelta = afterState.age - beforeState.age;
       const epDelta = afterState.evolutionPoints - beforeState.evolutionPoints;
       
-      // Extract some trait information for context
-      const visualTraits = creature.traitValues?.visual || '';
-      const advancedTraits = creature.traitValues?.advanced_visual || '';
+      // Interpret changes mystically instead of showing raw numbers
+      const mysticalChanges = interpretEvolutionChanges(ageDelta, epDelta);
+      const currentTraits = interpretCreatureTraits(creature);
       
       const prompt = `You are the Chronicle Keeper of Primordia, inscribing the sacred evolution tales. Write a mystical narrative describing how this creature transformed through cosmic energies.
 
 CREATURE: ${creature.name}
-TRANSFORMATION: Aged ${ageDelta.toFixed(2)} days, gained ${epDelta.toFixed(1)} anima essence
-ESSENCE: ${visualTraits ? visualTraits.substring(0, 80) : 'mysterious energies'}
+TRANSFORMATION: ${mysticalChanges}
+CURRENT ESSENCE: ${currentTraits}
 
 WRITING RULES:
-- Write EXACTLY 2-3 sentences in flowing narrative prose
+- Write EXACTLY 1-2 sentences in flowing narrative prose
 - Use mystical, poetic language befitting cosmic lore
-- NO markdown formatting (**bold**, etc.)
-- NO numbered lists or bullet points  
-- NO technical terms - only magical/mystical language
-- Include 1-2 relevant emojis naturally in the text
-- Focus on transformation, cosmic forces, and mystical evolution
-- Mention the creature's name naturally in the narrative
+- ABSOLUTELY NO markdown formatting: no **bold**, no *italics*, no _underlines_, no # headers, no [links]
+- NO numbered lists, bullet points, or special formatting
+- NO technical terms or numbers - only magical/mystical language
+- Include 1 relevant emoji naturally in the text
+- Focus on transformation and cosmic forces
+- Mention the creature's name naturally
+- Write PLAIN TEXT ONLY - no special characters for formatting
+- Keep it concise and immersive
 
-Write as if inscribing sacred text in an ancient tome. Make it feel magical and immersive.
+Write as if inscribing sacred text in an ancient tome. Make it feel magical and brief.
 
 Chronicle:`;
 
@@ -463,6 +506,90 @@ Chronicle:`;
     }
   };
 
+  // Interpret creature traits into mystical but informative descriptions
+  const interpretCreatureTraits = (creature: CreatureUIDataFrontend): string => {
+    const descriptions: string[] = [];
+    
+    // Interpret visual traits with specific values
+    if (creature.traitValues?.visual) {
+      const visual = creature.traitValues.visual;
+      if (visual.includes('Size:')) {
+        const sizeMatch = visual.match(/Size:([0-9.]+)/);
+        if (sizeMatch) {
+          const size = parseFloat(sizeMatch[1]);
+          if (size < 1.0) descriptions.push(`diminutive form (${size.toFixed(1)} essence)`);
+          else if (size < 1.5) descriptions.push(`modest stature (${size.toFixed(1)} essence)`);
+          else if (size < 2.0) descriptions.push(`balanced proportions (${size.toFixed(1)} essence)`);
+          else if (size < 2.5) descriptions.push(`impressive magnitude (${size.toFixed(1)} essence)`);
+          else descriptions.push(`colossal presence (${size.toFixed(1)} essence)`);
+        }
+      }
+      
+      if (visual.includes('Form:')) {
+        const formMatch = visual.match(/Form:([0-9.]+)/);
+        if (formMatch) {
+          const form = parseFloat(formMatch[1]);
+          if (form < 1.5) descriptions.push(`agile spirit (${form.toFixed(1)} form essence)`);
+          else if (form < 2.5) descriptions.push(`guardian strength (${form.toFixed(1)} form essence)`);
+          else descriptions.push(`warrior ferocity (${form.toFixed(1)} form essence)`);
+        }
+      }
+      
+      // Add color interpretation
+      if (visual.includes('R:') && visual.includes('G:') && visual.includes('B:')) {
+        const rMatch = visual.match(/R:([0-9.]+)/);
+        const gMatch = visual.match(/G:([0-9.]+)/);
+        const bMatch = visual.match(/B:([0-9.]+)/);
+        if (rMatch && gMatch && bMatch) {
+          const r = parseFloat(rMatch[1]);
+          const g = parseFloat(gMatch[1]);
+          const b = parseFloat(bMatch[1]);
+          const dominant = Math.max(r, g, b);
+          if (r === dominant && r > 0.6) descriptions.push(`crimson aura radiating power`);
+          else if (g === dominant && g > 0.6) descriptions.push(`emerald essence of nature`);
+          else if (b === dominant && b > 0.6) descriptions.push(`sapphire depths of wisdom`);
+          else descriptions.push(`balanced chromatic harmonies`);
+        }
+      }
+    }
+    
+    // Interpret personality traits with values
+    if (creature.traitValues?.personality) {
+      const personality = creature.traitValues.personality;
+      if (personality.includes('TEMP:')) {
+        const tempMatch = personality.match(/TEMP:([0-9.]+)/);
+        if (tempMatch) {
+          const temp = parseFloat(tempMatch[1]);
+          if (temp < 0.3) descriptions.push(`introspective nature (${(temp*100).toFixed(0)}% temperament)`);
+          else if (temp > 0.7) descriptions.push(`charismatic presence (${(temp*100).toFixed(0)}% temperament)`);
+          else descriptions.push(`balanced social spirit (${(temp*100).toFixed(0)}% temperament)`);
+        }
+      }
+      
+      if (personality.includes('CUR:')) {
+        const curMatch = personality.match(/CUR:([0-9.]+)/);
+        if (curMatch) {
+          const curiosity = parseFloat(curMatch[1]);
+          if (curiosity > 0.7) descriptions.push(`insatiable curiosity (${(curiosity*100).toFixed(0)}% explorer spirit)`);
+          else if (curiosity < 0.3) descriptions.push(`contemplative wisdom (${(curiosity*100).toFixed(0)}% exploration)`);
+          else descriptions.push(`moderate inquisitiveness (${(curiosity*100).toFixed(0)}% curiosity)`);
+        }
+      }
+      
+      if (personality.includes('INT:')) {
+        const intMatch = personality.match(/INT:([0-9.]+)/);
+        if (intMatch) {
+          const intelligence = parseFloat(intMatch[1]);
+          if (intelligence > 0.8) descriptions.push(`brilliant intellect (${(intelligence*100).toFixed(0)}% cognitive power)`);
+          else if (intelligence > 0.6) descriptions.push(`sharp mind (${(intelligence*100).toFixed(0)}% intelligence)`);
+          else descriptions.push(`developing intellect (${(intelligence*100).toFixed(0)}% mental capacity)`);
+        }
+      }
+    }
+    
+    return descriptions.length > 0 ? descriptions.join(', ') : 'mysterious cosmic energies';
+  };
+
   // Generate epic birth narrative for new creatures using LLM
   const generateBirthNarrative = async (newCreature: CreatureUIDataFrontend): Promise<string> => {
     if (!openRouterService) {
@@ -470,43 +597,42 @@ Chronicle:`;
     }
 
     try {
-      // Extract trait information for the birth story
-      const visualTraits = newCreature.traitValues?.visual || '';
-      const advancedTraits = newCreature.traitValues?.advanced_visual || '';
-      const personalityTraits = newCreature.traitValues?.personality || '';
-      const reproductionTraits = newCreature.traitValues?.reproduction || '';
+      // Interpret traits mystically instead of showing raw numbers
+      const mysticalTraits = interpretCreatureTraits(newCreature);
+      const traitCount = Object.keys(newCreature.traitValues || {}).length;
+      const modulesList = newCreature.registeredModules.join(', ') || 'primordial essence';
       
-      const traitsList = Object.entries(newCreature.traitValues || {})
-        .filter(([key, value]) => value && value.length > 0)
-        .map(([key, value]) => `${key}: ${value?.substring(0, 80)}`)
-        .join(', ');
-
       const prompt = `You are the Chronicle Keeper of Primordia, inscribing the sacred birth tales. Write a mystical narrative describing the emergence of a new cosmic entity from the primordial energies.
 
 NEWBORN: ${newCreature.name}
 COSMIC SIGNATURE: ${newCreature.initialSeed}
 DESTINY: ${newCreature.lifespanTotalSimulatedDays} days of existence
-MANIFESTED ESSENCE: ${traitsList || 'pure potential energy'}
+ESSENCE STREAMS: ${traitCount} streams of power (${modulesList})
+MYSTICAL TRAITS: ${mysticalTraits}
 
 WRITING RULES:
-- Write EXACTLY 2-3 sentences in flowing narrative prose
+- Write EXACTLY 1-2 sentences in flowing narrative prose
 - Use mystical, poetic language of cosmic creation
-- NO markdown formatting (**bold**, etc.)
-- NO numbered lists or technical terms
-- Include 1-2 relevant emojis naturally in the text
-- Focus on emergence, cosmic birth, and destiny
-- Mention the creature's name naturally in the narrative
+- ABSOLUTELY NO markdown formatting: no **bold**, no *italics*, no _underlines_, no # headers, no [links]
+- NO numbered lists, bullet points, or special formatting
+- NO technical terms or numbers - only magical/mystical language
+- Include 1 relevant emoji naturally in the text
+- Focus on emergence, cosmic birth, and mystical traits
+- Mention the creature's name naturally
 - Describe the birth as a cosmic event of significance
+- Write PLAIN TEXT ONLY - no special characters for formatting
+- Keep it concise and immersive
 
 Write as if inscribing the moment of creation in sacred chronicles. Make it feel like witnessing the birth of a legend.
 
 Birth Chronicle:`;
 
       const narrative = await openRouterService.chat(prompt);
-      return narrative || `🌟 From the swirling vortex of creation, ${newCreature.name} manifests into existence, bearing the cosmic signature ${newCreature.initialSeed} and destined to walk the realms for ${newCreature.lifespanTotalSimulatedDays} cycles of life.`;
+      return narrative || `🌟 From the swirling vortex of creation, ${newCreature.name} manifests into existence with ${traitCount} streams of cosmic power flowing through their being, bearing the eternal signature ${newCreature.initialSeed} and destined to walk the realms for ${newCreature.lifespanTotalSimulatedDays} cycles of primordial life.`;
     } catch (error) {
       console.error('Failed to generate birth narrative:', error);
-      return `✨ Through the ancient rites of creation, ${newCreature.name} awakens in the cosmic realm, their essence marked by the eternal signature ${newCreature.initialSeed}, ready to embrace their destined path.`;
+      const traitCount = Object.keys(newCreature.traitValues || {}).length;
+      return `✨ Through the ancient rites of creation, ${newCreature.name} awakens in the cosmic realm with ${traitCount} streams of essence flowing through their being, their soul marked by the eternal signature ${newCreature.initialSeed}, ready to embrace their destined path through the mystical realms of Primordia.`;
     }
   };
 
@@ -566,20 +692,26 @@ Birth Chronicle:`;
 
   const handleMintCreature = async () => {
     if (!user?.addr) {
-      toast({ title: "User Not Connected", description: "Please connect your wallet.", status: "warning" });
+              showEpicNotification(
+          "🌟 Cosmic Connection Required", 
+          "The Genesis Shapers await your presence. Connect your ethereal wallet to birth new life.", 
+          "warning",
+          8000,
+          true // Auto-remove warning
+        );
       return;
     }
     setIsLoadingMint(true);
-    let toastId: string | number = ""; 
+    let notificationId: string = ""; 
 
     try {
-      toastId = toast({
-        title: 'Processing Mint',
-        description: 'Sending transaction to mint your creature...',
-        status: 'info',
-        duration: null, 
-        isClosable: false,
-      });
+      notificationId = showEpicNotification(
+        '🌟 Invoking the Rites of Creation',
+        'The cosmic forge awakens... channeling primordial energies for manifestation.',
+        'loading',
+        0,
+        false
+      );
 
       const transactionId = await fcl.mutate({
         cadence: MINT_NFT_WITH_PAYMENT_TRANSACTION,
@@ -590,19 +722,19 @@ Birth Chronicle:`;
         limit: 9999
       });
 
-      toast.update(toastId, {
-        description: `Transaction sent: ${transactionId}. Waiting for confirmation...`,
+      updateEpicNotification(notificationId, {
+        title: '⚡ Cosmic Energies Converging',
+        description: `The ritual echoes through the ethereal realm... awaiting the blessing of the cosmic guardians.`,
       });
 
       await fcl.tx(transactionId).onceSealed();
 
       // Show immediate success
-      toast.update(toastId, {
-        title: '🌟 Creature Born!',
-        description: 'A new cosmic entity has emerged from the primordial energies! Discovering their traits...',
+      updateEpicNotification(notificationId, {
+        title: '🌟 A New Soul Awakens!',
+        description: 'From the swirling vortex of creation, a cosmic entity emerges... the Chronicle Keeper prepares their sacred scroll.',
         status: 'success',
-        duration: 8000,
-        isClosable: true,
+        duration: 0, // Manual close only
       });
 
       // Refresh creatures to get the new creature's data
@@ -632,31 +764,28 @@ Birth Chronicle:`;
               seedChangeCount: "0",
             };
 
-            // Generate epic birth narrative (non-blocking)
+            // Generate epic birth narrative (non-blocking) - SINGLE notification only
             console.log("🎭 Generating epic birth narrative...");
             generateBirthNarrative(newCreature).then(birthNarrative => {
               console.log("📜 Generated birth narrative:", birthNarrative);
-              // Show epic birth chronicle
-              toast({
+              // Replace the success notification with the complete epic birth chronicle
+              updateEpicNotification(notificationId, {
                 title: `📜 Birth Chronicle of ${newCreature.name}`,
                 description: birthNarrative,
                 status: 'info',
-                duration: 15000,
-                isClosable: true,
-              });
-
-              // Also show traits summary
-              const traitsCount = Object.keys(newCreature.traitValues || {}).length;
-              const modulesText = newCreature.registeredModules.join(', ');
-              toast({
-                title: `🧬 Traits Manifested`,
-                description: `${newCreature.name} emerged with ${traitsCount} trait modules: ${modulesText}`,
-                status: 'success',
-                duration: 10000,
-                isClosable: true,
+                duration: 0, // Manual close only
               });
             }).catch(error => {
               console.error("Failed to generate birth narrative:", error);
+              // Show fallback birth chronicle with traits included
+              const traitsCount = Object.keys(newCreature.traitValues || {}).length;
+              const modulesText = newCreature.registeredModules.join(', ');
+              updateEpicNotification(notificationId, {
+                title: `📜 Birth Chronicle of ${newCreature.name}`,
+                description: `The ancient scrolls whisper of ${newCreature.name}'s emergence from the cosmic void, their essence blessed with ${traitsCount} streams of power: ${modulesText}. Thus begins their journey through the realms of Primordia.`,
+                status: 'info',
+                duration: 0,
+              });
             });
           }
         }
@@ -666,22 +795,20 @@ Birth Chronicle:`;
 
     } catch (error: any) {
       console.error("Error minting creature:", error);
-      if (toastId) { 
-        toast.update(toastId, {
-          title: 'Error Minting Creature',
-          description: error?.message || 'An unknown error occurred.',
+      if (notificationId) { 
+        updateEpicNotification(notificationId, {
+          title: '⚡ Cosmic Disturbance',
+          description: 'The celestial energies have been disrupted. The ritual must be attempted again when the cosmic winds are favorable.',
           status: 'error',
           duration: 9000,
-          isClosable: true,
         });
       } else {
-        toast({
-          title: 'Error Minting Creature',
-          description: error?.message || 'An unknown error occurred.',
-          status: 'error',
-          duration: 9000,
-          isClosable: true,
-        });
+        showEpicNotification(
+          '⚡ Cosmic Disturbance',
+          'The celestial energies have been disrupted. The ritual must be attempted again when the cosmic winds are favorable.',
+          'error',
+          9000
+        );
       }
     } finally {
       setIsLoadingMint(false);
@@ -694,19 +821,19 @@ Birth Chronicle:`;
       console.log("📋 User:", user);
       console.log("🐾 Creatures:", creatures);
       
-      if (!user?.addr) {
+    if (!user?.addr) {
         console.log("❌ User not connected");
-        toast({ title: "User Not Connected", description: "Please connect your wallet.", status: "warning" });
-        return;
-      }
-      if (creatures.length === 0) {
+      toast({ title: "User Not Connected", description: "Please connect your wallet.", status: "warning" });
+      return;
+    }
+    if (creatures.length === 0) {
         console.log("❌ No creatures to evolve");
-        toast({ title: "No Creatures", description: "There are no active creatures to evolve.", status: "info" });
-        return;
-      }
+      toast({ title: "No Creatures", description: "There are no active creatures to evolve.", status: "info" });
+      return;
+    }
 
       console.log("✅ Validation passed, setting processing state...");
-      setIsProcessingEvolution(true);
+    setIsProcessingEvolution(true);
       
       // Filter alive creatures first
       const aliveCreatures = creatures.filter(c => c.estaViva);
@@ -716,21 +843,14 @@ Birth Chronicle:`;
         '🧬 Initiating Primordial Evolution Protocol',
         `Preparing to evolve ${aliveCreatures.length} creatures through the cosmic energies of Primordia. Each creature will require wallet approval to process their evolution.`,
         'info',
-        5000
+        8000,
+        true // Auto-remove this intro message
       );
 
-      let successCount = 0;
-      let errorCount = 0;
+    let successCount = 0;
+    let errorCount = 0;
 
       console.log("✅ Starting creature loop for ALL creatures...");
-      
-              // Debug notification to confirm visibility
-        showEpicNotification(
-          "🔍 DEBUG: Evolution Starting",
-          `Found ${aliveCreatures.length} alive creatures. UI systems active.`,
-          "info",
-          3000
-        );
       
       if (aliveCreatures.length === 0) {
         console.log("❌ No alive creatures found");
@@ -745,6 +865,15 @@ Birth Chronicle:`;
 
       console.log(`✅ Processing ${aliveCreatures.length} alive creatures`);
 
+      // Clear previous chronicles
+      setEvolutionChronicles([]);
+      const newChronicles: Array<{
+        creatureIndex: number;
+        creatureName: string;
+        narrative: string;
+        changes: string;
+      }> = [];
+
       // Process each creature with enhanced UI feedback
       for (let i = 0; i < aliveCreatures.length; i++) {
         const creature = aliveCreatures[i];
@@ -757,38 +886,47 @@ Birth Chronicle:`;
           name: creature.name
         };
         
-        let toastIdEvo: string | number = "";
+        let toastIdEvo: string = "";
         try {
           console.log("✅ Creating enhanced notification for creature...");
           toastIdEvo = showEpicNotification(
             `🧬 Evolution ${i + 1}/${aliveCreatures.length}: ${creature.name}`,
             `Processing creature #${creature.id}... Wallet approval needed.`,
             'loading',
-            0  // No auto-remove for loading notifications
+            0,  // No duration for loading
+            false // No auto-remove for loading notifications
           );
 
           console.log(`🚀 About to send FCL transaction for creature ${creature.id}`);
-          
-          const transactionId = await fcl.mutate({
-            cadence: PROCESS_EVOLUTION_TRANSACTION,
-            args: (arg, t) => [
-              arg(creature.id.toString(), t.UInt64),
-              arg("2000.0", t.UFix64)
-            ],
-            proposer: fcl.authz,
-            payer: fcl.authz,
-            authorizations: [fcl.authz],
-            limit: 9999 
-          });
-          
+
+        const transactionId = await fcl.mutate({
+          cadence: PROCESS_EVOLUTION_TRANSACTION,
+          args: (arg, t) => [
+            arg(creature.id.toString(), t.UInt64),
+            arg("2000.0", t.UFix64)
+          ],
+          proposer: fcl.authz,
+          payer: fcl.authz,
+          authorizations: [fcl.authz],
+          limit: 9999 
+        });
+
           console.log(`✅ Transaction sent with ID: ${transactionId}`);
 
           updateEpicNotification(toastIdEvo, {
             title: `⏳ Evolution ${i + 1}/${aliveCreatures.length}: ${creature.name}`,
             description: `Transaction sent (${transactionId.substring(0,8)}...). Waiting for blockchain confirmation...`,
-          });
+        });
 
-          await fcl.tx(transactionId).onceSealed();
+        await fcl.tx(transactionId).onceSealed();
+
+          // Show simple completion toast (auto-remove)
+          updateEpicNotification(toastIdEvo, {
+            title: `✅ ${creature.name} Evolved!`,
+            description: `Chronicle ${i + 1}/${aliveCreatures.length} completed. Generating epic narrative...`,
+          status: 'success',
+            duration: 4000, // Auto-remove
+          });
 
           // Refresh creatures to get updated state
           await fetchCreatures();
@@ -806,80 +944,90 @@ Birth Chronicle:`;
             name: updatedCreature.name
           } : null;
 
-          // Show immediate success first
-          updateEpicNotification(toastIdEvo, {
-            title: `✨ Evolution Complete: ${creature.name}!`, 
-            description: `The cosmic energies have transformed ${creature.name}. The Chronicle Keeper inscribes their tale...`,
-            status: 'success',
-            duration: 8000,
-          });
-
-          // Generate epic evolution narrative with LLM (non-blocking)
+          // Generate epic evolution narrative and save for modal (non-blocking)
           if (afterState) {
             console.log("🎭 Generating epic evolution narrative...");
-            console.log("🔧 OpenRouter service available:", !!openRouterService);
             console.log("📊 Before state:", beforeState);
             console.log("📊 After state:", afterState);
             
+            const ageDelta = afterState.age - beforeState.age;
+            const epDelta = afterState.evolutionPoints - beforeState.evolutionPoints;
+            const mysticalChanges = interpretEvolutionChanges(ageDelta, epDelta);
+            
+            // Save chronicle IMMEDIATELY (don't wait for AI generation)
+            newChronicles.push({
+              creatureIndex: i + 1,
+              creatureName: creature.name,
+              narrative: `Chronicle for ${creature.name} is being inscribed by the cosmic scribes...`, // Placeholder
+              changes: mysticalChanges
+            });
+            
+            // Generate AI narrative asynchronously and update later
             generateEvolutionNarrative(creature, beforeState, afterState).then(evolutionNarrative => {
               console.log("📜 Generated narrative:", evolutionNarrative);
-              console.log("🚀 About to show narrative toast...");
               
-              // Show epic narrative notification
-              const narrativeNotificationId = showEpicNotification(
-                `📜 Chronicle of ${creature.name}`,
-                evolutionNarrative,
-                'info',
-                12000
-              );
+              // Update the chronicle with the real narrative
+              const chronicleIndex = newChronicles.findIndex(c => c.creatureName === creature.name && c.creatureIndex === i + 1);
+              if (chronicleIndex >= 0) {
+                newChronicles[chronicleIndex].narrative = evolutionNarrative;
+                setEvolutionChronicles([...newChronicles]); // Update state
+              }
               
-              console.log("✅ Narrative notification created with ID:", narrativeNotificationId);
+              console.log("✅ Chronicle updated with AI narrative");
             }).catch(error => {
               console.error("❌ Failed to generate narrative:", error);
-              console.error("💥 Error details:", error.message || error);
               
-              // Show fallback notification
-              showEpicNotification(
-                `📜 Evolution Chronicle`,
-                `The cosmic winds whisper of ${creature.name}'s transformation through the ethereal realms of Primordia.`,
-                'info',
-                8000
-              );
+              // Update with fallback narrative
+              const chronicleIndex = newChronicles.findIndex(c => c.creatureName === creature.name && c.creatureIndex === i + 1);
+              if (chronicleIndex >= 0) {
+                newChronicles[chronicleIndex].narrative = `The cosmic winds whisper of ${creature.name}'s transformation through the ethereal realms of Primordia.`;
+                setEvolutionChronicles([...newChronicles]); // Update state
+              }
             });
           } else {
             console.log("❌ No afterState available for narrative generation");
+            
+            // Still save a chronicle even without afterState
+            newChronicles.push({
+              creatureIndex: i + 1,
+              creatureName: creature.name,
+              narrative: `${creature.name} underwent a mystical transformation, though the details remain shrouded in cosmic mystery.`,
+              changes: "unknown cosmic forces at work"
+            });
           }
-          successCount++;
+        successCount++;
           
           // Small delay between creatures for better UX
           if (i < aliveCreatures.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
           
-        } catch (error: any) {
-          errorCount++;
+      } catch (error: any) {
+        errorCount++;
           console.error(`❌ Error processing evolution for creature #${creature.id}:`, error);
-          if (toastIdEvo) {
-            toast.update(toastIdEvo, {
+        if (toastIdEvo) {
+            updateEpicNotification(toastIdEvo, {
               title: `❌ Evolution Failed: ${creature.name}`,
-              description: error?.message || 'An unknown error occurred.',
-              status: 'error',
-              duration: 9000,
-              isClosable: true,
-            });
-          }
+            description: error?.message || 'An unknown error occurred.',
+            status: 'error',
+              duration: 8000, // Auto-remove errors too
+          });
         }
       }
+    }
 
       console.log("✅ Evolution process completed");
       
-      // Epic completion summary
+      // Set chronicles and show modal if we have any narratives
+      setEvolutionChronicles(newChronicles);
+      
+      // Epic completion summary (auto-remove)
       let completionTitle = "🌟 Evolution Complete!";
       let completionDescription = `${successCount} creature(s) evolved. ${errorCount} error(s).`;
       
       if (successCount > 0 && errorCount === 0) {
         completionTitle = "✨ Primordial Evolution Mastered!";
-        completionDescription = `All ${successCount} creatures have successfully evolved through the cosmic energies of Primordia!`;
+        completionDescription = `All ${successCount} creatures have successfully evolved! Click to read their chronicles.`;
       } else if (successCount > 0 && errorCount > 0) {
         completionTitle = "⚡ Partial Evolution Success";
         completionDescription = `${successCount} creatures evolved successfully, but ${errorCount} faced cosmic turbulence.`;
@@ -893,12 +1041,44 @@ Birth Chronicle:`;
         completionTitle, 
         completionDescription,
         completionStatus,
-        10000
+        8000, // Auto-remove
+        true
       );
 
-      if (successCount > 0 || errorCount > 0) { 
-        fetchCreatures(); 
+      // Show chronicles modal if we have any successful evolutions
+      console.log("🔍 Chronicles to show:", newChronicles.length);
+      console.log("📖 Chronicles data:", newChronicles);
+      
+      if (newChronicles.length > 0) {
+        // Debug notification
+        showEpicNotification(
+          '📜 Chronicles Ready!',
+          `${newChronicles.length} epic chronicles generated. Opening modal...`,
+          'info',
+          3000,
+          true
+        );
+        
+        setTimeout(() => {
+          console.log("🚀 Opening chronicles modal...");
+          setCurrentChronicleIndex(0);
+          setShowChroniclesModal(true);
+          console.log("✅ Modal state set to true");
+        }, 1500); // Small delay to let completion toast show first
+      } else {
+        // Debug if no chronicles
+        showEpicNotification(
+          '⚠️ No Chronicles Generated',
+          'No evolution narratives were created.',
+          'warning',
+          5000,
+          true
+        );
       }
+
+    if (successCount > 0 || errorCount > 0) { 
+      fetchCreatures(); 
+    }
       
     } catch (error: any) {
       console.error("❌ CRITICAL ERROR in handleProcessEvolutionAllCreatures:", error);
@@ -912,7 +1092,7 @@ Birth Chronicle:`;
       });
     } finally {
       console.log("✅ Setting processing state to false");
-      setIsProcessingEvolution(false);
+    setIsProcessingEvolution(false);
     }
   };
 
@@ -1019,6 +1199,219 @@ Birth Chronicle:`;
   return (
     <Box minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')} color={textColor}>
       <Header />
+      
+      {/* Evolution Chronicles Modal - OUTSIDE Container for absolute positioning */}
+      <div style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        width: '100vw', 
+        height: '100vh', 
+        zIndex: 99999999999,
+        pointerEvents: showChroniclesModal ? 'auto' : 'none',
+        display: showChroniclesModal ? 'flex' : 'none',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)'
+      }}>
+        {/* Manual Modal Implementation */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          border: '4px solid #3182ce',
+          maxWidth: '600px',
+          width: '90%',
+          maxHeight: '80vh',
+          overflow: 'auto',
+          zIndex: 99999999999
+        }}>
+          {/* Header */}
+          <div style={{
+            backgroundColor: '#3182ce',
+            color: 'white',
+            padding: '20px',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            <h2 style={{ margin: 0, fontSize: '24px' }}>📜 Chronicles of Primordia</h2>
+            <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>
+              {evolutionChronicles.length} chronicles ready
+            </p>
+            <button 
+              onClick={() => setShowChroniclesModal(false)}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                fontSize: '24px',
+                cursor: 'pointer'
+              }}
+            >
+              ×
+            </button>
+          </div>
+          
+          {/* Body */}
+          <div style={{ padding: '20px', minHeight: '300px' }}>
+            {/* Debug Info */}
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#fef08a',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              border: '2px solid orange'
+            }}>
+              <p style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: 'black' }}>
+                🔍 DEBUG INFO
+              </p>
+              <p style={{ margin: '5px 0', fontSize: '16px', color: 'black' }}>
+                Chronicles Array Length: {evolutionChronicles.length}
+              </p>
+              <p style={{ margin: '5px 0', fontSize: '16px', color: 'black' }}>
+                Current Index: {currentChronicleIndex}
+              </p>
+              <p style={{ margin: '5px 0', fontSize: '16px', color: 'black' }}>
+                Modal State: {showChroniclesModal ? 'OPEN' : 'CLOSED'}
+              </p>
+              {evolutionChronicles.length > 0 && (
+                <p style={{ margin: '10px 0 0 0', fontSize: '14px', color: 'black' }}>
+                  Available: {evolutionChronicles.map(c => c.creatureName).join(', ')}
+                </p>
+              )}
+            </div>
+            
+            {evolutionChronicles.length > 0 ? (
+              <div>
+                {evolutionChronicles[currentChronicleIndex] ? (
+                  <div>
+                    <div style={{ 
+                      textAlign: 'center', 
+                      padding: '12px', 
+                      backgroundColor: '#e9d5ff', 
+                      borderRadius: '8px',
+                      marginBottom: '16px'
+                    }}>
+                      <h3 style={{ margin: 0, fontSize: '20px', color: '#7c3aed' }}>
+                        {evolutionChronicles[currentChronicleIndex].creatureName}
+                      </h3>
+                      <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6b7280' }}>
+                        Evolution #{evolutionChronicles[currentChronicleIndex].creatureIndex}
+                      </p>
+                    </div>
+                    
+                    <div style={{ 
+                      backgroundColor: '#dbeafe', 
+                      padding: '16px', 
+                      borderRadius: '8px',
+                      border: '2px solid blue',
+                      marginBottom: '16px'
+                    }}>
+                      <p style={{ 
+                        margin: 0, 
+                        fontSize: '16px', 
+                        lineHeight: '1.8',
+                        fontStyle: 'italic',
+                        color: '#1e40af'
+                      }}>
+                        {evolutionChronicles[currentChronicleIndex].narrative}
+                      </p>
+                    </div>
+                    
+                    <div style={{ 
+                      backgroundColor: '#faf5ff', 
+                      padding: '12px', 
+                      borderRadius: '8px',
+                      border: '2px solid purple'
+                    }}>
+                      <p style={{ 
+                        margin: 0, 
+                        fontSize: '14px', 
+                        color: '#7c3aed',
+                        fontWeight: 'bold'
+                      }}>
+                        🌟 {evolutionChronicles[currentChronicleIndex].changes}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ color: 'red', textAlign: 'center' }}>
+                    No chronicle at index {currentChronicleIndex}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p style={{ color: 'red', textAlign: 'center', padding: '16px' }}>
+                No chronicles available!
+              </p>
+            )}
+          </div>
+          
+          {/* Footer */}
+          <div style={{ 
+            backgroundColor: '#f9fafb', 
+            padding: '16px', 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderTop: '1px solid #e5e7eb'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                disabled={currentChronicleIndex === 0}
+                onClick={() => setCurrentChronicleIndex(prev => Math.max(0, prev - 1))}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #3b82f6',
+                  backgroundColor: currentChronicleIndex === 0 ? '#e5e7eb' : 'white',
+                  color: currentChronicleIndex === 0 ? '#9ca3af' : '#3b82f6',
+                  borderRadius: '4px',
+                  cursor: currentChronicleIndex === 0 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                ← Previous
+              </button>
+              <span style={{ fontSize: '14px', color: '#6b7280' }}>
+                {currentChronicleIndex + 1} of {evolutionChronicles.length}
+              </span>
+              <button
+                disabled={currentChronicleIndex >= evolutionChronicles.length - 1}
+                onClick={() => setCurrentChronicleIndex(prev => Math.min(evolutionChronicles.length - 1, prev + 1))}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #3b82f6',
+                  backgroundColor: currentChronicleIndex >= evolutionChronicles.length - 1 ? '#e5e7eb' : 'white',
+                  color: currentChronicleIndex >= evolutionChronicles.length - 1 ? '#9ca3af' : '#3b82f6',
+                  borderRadius: '4px',
+                  cursor: currentChronicleIndex >= evolutionChronicles.length - 1 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Next →
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => setShowChroniclesModal(false)}
+              style={{
+                padding: '8px 16px',
+                fontSize: '14px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Close Chronicles
+            </button>
+          </div>
+        </div>
+      </div>
       
       <Container maxW="container.xl" py={8}>
         <VStack spacing={8} align="stretch">
@@ -1149,6 +1542,8 @@ Birth Chronicle:`;
                     </ModalFooter>
                   </ModalContent>
                 </Modal>
+
+
               </VStack>
             )}
           </MotionBox>
@@ -1160,10 +1555,10 @@ Birth Chronicle:`;
         style={{
           position: 'fixed',
           bottom: '20px',
-          right: '20px',
+          left: '20px',
           zIndex: 999999999,
           pointerEvents: 'none',
-          maxWidth: '380px',
+          maxWidth: '400px',
           display: 'flex',
           flexDirection: 'column-reverse', // Newest notifications appear at bottom
           gap: '12px'
@@ -1258,7 +1653,7 @@ Birth Chronicle:`;
       <style jsx>{`
         @keyframes slideIn {
           from {
-            transform: translateY(100%) translateX(20px);
+            transform: translateY(100%) translateX(-20px);
             opacity: 0;
             scale: 0.8;
           }

@@ -18,9 +18,7 @@ import {
   Button,
   ButtonGroup,
   Tag,
-  Input,
-  FormControl,
-  FormLabel,
+
   useToast,
   Spinner,
   Modal,
@@ -345,8 +343,6 @@ export default function AdvancedCreatureVisualizer({
 
   // Chat system state
   const chatBubblesRef = useRef<ChatBubble[]>([]);
-  const [openRouterApiKey, setOpenRouterApiKey] = useState<string>('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(false);
   const [openRouterService, setOpenRouterService] = useState<OpenRouterService | null>(null);
   const chatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastChatTimeRef = useRef<Map<number, number>>(new Map());
@@ -383,14 +379,15 @@ export default function AdvancedCreatureVisualizer({
     });
   }, [creatures]);
 
-  // Initialize OpenRouter service when API key is provided
+  // Initialize OpenRouter service from environment variable
   useEffect(() => {
-    if (openRouterApiKey.trim()) {
+    const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
+    
+    if (apiKey && apiKey.trim()) {
       try {
-        const service = new OpenRouterService(openRouterApiKey);
+        const service = new OpenRouterService(apiKey);
         setOpenRouterService(service);
-        setShowApiKeyInput(false);
-        console.log('🤖 AI Service initialized successfully');
+        console.log('🤖 AI Service initialized successfully from environment');
         toast({
           title: "AI Service Connected",
           description: "Generating initial messages for all creatures...",
@@ -408,8 +405,17 @@ export default function AdvancedCreatureVisualizer({
           isClosable: true,
         });
       }
+    } else {
+      console.warn('⚠️ OpenRouter API key not found in environment variables');
+      toast({
+        title: "AI Service Not Available",
+        description: "NEXT_PUBLIC_OPENROUTER_API_KEY environment variable not set",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
     }
-  }, [openRouterApiKey, toast]);
+  }, [toast]);
 
   // Generate initial messages when service is ready
   useEffect(() => {
@@ -3061,7 +3067,7 @@ const getCommunicationTip = (personality: any): string => {
             variant="ghost"
             size="sm"
             leftIcon={<Icon as={FiMessageCircle} />}
-            onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+            isDisabled={true}
             bg="rgba(59, 130, 246, 0.1)"
             _hover={{ bg: "rgba(59, 130, 246, 0.2)" }}
             border="1px solid rgba(59, 130, 246, 0.3)"
@@ -3074,7 +3080,7 @@ const getCommunicationTip = (personality: any): string => {
                 `🔄 Generating...` : 
                 '🎯 AI Ready'
               ) : 
-              '🤖 Enable Chat'
+              '🤖 AI Not Available'
             }
           </Button>
           
@@ -3101,67 +3107,7 @@ const getCommunicationTip = (personality: any): string => {
           )}
         </HStack>
 
-        {/* API Key Input Panel */}
-        <AnimatePresence>
-          {showApiKeyInput && (
-            <MotionBox
-              position="absolute"
-              top={16}
-              left={20}
-              w="400px"
-              bg="rgba(0,0,0,0.9)"
-              backdropFilter="blur(15px)"
-              borderRadius="lg"
-              p={4}
-              border="1px solid rgba(59, 130, 246, 0.4)"
-              zIndex={25}
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <VStack spacing={3} align="stretch">
-                <Text fontSize="sm" color="blue.200" fontWeight="bold">
-                  🤖 AI Chat System
-                </Text>
-                <Text fontSize="xs" color="gray.400">
-                  Creatures will express their personalities through AI-generated messages based on their traits
-                </Text>
-                <FormControl>
-                  <FormLabel fontSize="xs" color="gray.300">OpenRouter API Key</FormLabel>
-                  <Input
-                    size="sm"
-                    type="password"
-                    placeholder="sk-or-..."
-                    value={openRouterApiKey}
-                    onChange={(e) => setOpenRouterApiKey(e.target.value)}
-                    bg="rgba(255,255,255,0.1)"
-                    border="1px solid rgba(59, 130, 246, 0.3)"
-                    _hover={{ borderColor: "rgba(59, 130, 246, 0.5)" }}
-                    _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.4)" }}
-                    color="white"
-                  />
-                </FormControl>
-                <HStack justify="space-between">
-                  <Text fontSize="xs" color="gray.500">
-                    Get your key at openrouter.ai
-                  </Text>
-                  <Button
-                    size="xs"
-                    colorScheme="blue"
-                    onClick={() => setShowApiKeyInput(false)}
-                  >
-                    Close
-                  </Button>
-                </HStack>
-                {openRouterService && (
-                  <Text fontSize="xs" color="green.400" textAlign="center">
-                    ✅ AI service connected! Creatures will now chat when resting.
-                  </Text>
-                )}
-              </VStack>
-            </MotionBox>
-          )}
-        </AnimatePresence>
+
         
         {/* Subtle Stats */}
         <VStack 

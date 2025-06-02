@@ -766,10 +766,15 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                 }
             }
             
-            // Calcular esperanza de vida del hijo basada en EP gastado (como CreatureNFTV6)
-            let baseLifespan = self.lifespanTotalSimulatedDays * EvolvingCreatureNFT.MITOSIS_LIFESPAN_BASE_FACTOR
-            let lifespanEpBonus = epCost * EvolvingCreatureNFT.MITOSIS_LIFESPAN_EP_BONUS_FACTOR
-            let childLifespan = baseLifespan + lifespanEpBonus
+            // NUEVO SISTEMA: EP gastado = esperanza de vida directa
+            // 10 EP mínimo = 1 día, cada EP adicional = +0.5 días
+            let minimumEP: UFix64 = 10.0
+            let minimumLifespan: UFix64 = 1.0  // 1 día mínimo
+            let epBonus = (epCost - minimumEP) * 0.5  // Cada EP extra = +0.5 días
+            let childLifespan = minimumLifespan + epBonus
+            
+            // Asegurar rango razonable (1-15 días máximo)
+            let finalChildLifespan = childLifespan > 15.0 ? 15.0 : childLifespan
             
             // Crear nueva criatura
             EvolvingCreatureNFT.totalSupply = EvolvingCreatureNFT.totalSupply + 1
@@ -778,10 +783,10 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
             let newCreature <- create NFT(
                 id: newID,
                 name: "Child of ".concat(self.name),
-                description: "Born from mitosis of creature #".concat(self.id.toString()),
+                description: "Born from mitosis of creature #".concat(self.id.toString()).concat(" with ").concat(epCost.toString()).concat(" EP investment"),
                 thumbnail: self.thumbnail,
                 birthBlockHeight: currentBlock.height,
-                lifespanDays: childLifespan,
+                lifespanDays: finalChildLifespan,
                 initialTraits: <- childTraits
             )
             
@@ -868,9 +873,29 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                     }
                 }
                 
-                // Calcular esperanza de vida del hijo (promedio de padres)
+                // NUEVO SISTEMA: Esperanza de vida depende de los padres
+                // Base: promedio de padres, modificado por salud y EP
                 let avgLifespan = (self.lifespanTotalSimulatedDays + partner.lifespanTotalSimulatedDays) / 2.0
-                let childLifespan = avgLifespan * 1.1 // 10% hybrid vigor bonus
+                
+                // Factor de salud de padres (basado en EP actuales vs máximo posible)
+                let myHealthFactor = self.puntosEvolucion / 50.0  // Normalizar EP (asumiendo ~50 EP como saludable)
+                let partnerHealthFactor = partner.puntosEvolucion / 50.0
+                let avgHealthFactor = (myHealthFactor + partnerHealthFactor) / 2.0
+                
+                // Factor de edad de padres (criaturas jóvenes dan hijos más saludables)
+                let myAgeFactor = 1.0 - (self.edadDiasCompletos / self.lifespanTotalSimulatedDays)  // 1.0 = joven, 0.0 = viejo
+                let partnerAgeFactor = 1.0 - (partner.edadDiasCompletos / partner.lifespanTotalSimulatedDays)
+                let avgAgeFactor = (myAgeFactor + partnerAgeFactor) / 2.0
+                
+                // Calcular esperanza de vida final
+                let healthBonus = avgHealthFactor > 1.0 ? (avgHealthFactor - 1.0) * 2.0 : 0.0  // Máximo +2 días por salud
+                let ageBonus = avgAgeFactor * 3.0  // Máximo +3 días por juventud
+                let hybridVigor = 1.0  // Bonus fijo por reproducción sexual
+                
+                let childLifespan = avgLifespan + healthBonus + ageBonus + hybridVigor
+                
+                // Asegurar rango razonable (2-12 días para sexual)
+                let finalChildLifespan = childLifespan > 12.0 ? 12.0 : (childLifespan < 2.0 ? 2.0 : childLifespan)
                 
                 // Crear nueva criatura
                 EvolvingCreatureNFT.totalSupply = EvolvingCreatureNFT.totalSupply + 1
@@ -879,10 +904,10 @@ access(all) contract EvolvingCreatureNFT: NonFungibleToken {
                 let newCreature <- create NFT(
                     id: newID,
                     name: "Hybrid of ".concat(self.name).concat(" & ").concat(partner.name),
-                    description: "Born from sexual reproduction between creatures #".concat(self.id.toString()).concat(" and #").concat(partner.id.toString()),
+                    description: "Born from sexual reproduction between creatures #".concat(self.id.toString()).concat(" and #").concat(partner.id.toString()).concat(" (lifespan: ").concat(finalChildLifespan.toString()).concat(" days)"),
                     thumbnail: self.thumbnail,
                     birthBlockHeight: currentBlock.height,
-                    lifespanDays: childLifespan,
+                    lifespanDays: finalChildLifespan,
                     initialTraits: <- childTraits
                 )
                 

@@ -196,7 +196,7 @@ transaction(recipient: Address) {
                     name: "Evolving Creature",
                     description: "A unique evolving digital creature",
                     thumbnail: "https://i.imgur.com/R3jYmPZ.png",
-                    lifespanDays: 5.0,
+                    lifespanDays: 7.0,
                     initialTraits: <- initialTraits
                 )
                 
@@ -321,6 +321,14 @@ export default function EnvironmentPage() {
   }>>([]);
   const [showChroniclesModal, setShowChroniclesModal] = useState(false);
   const [currentChronicleIndex, setCurrentChronicleIndex] = useState(0);
+  
+  // Birth Chronicle Modal State
+  const [birthChronicle, setBirthChronicle] = useState<{
+    creatureName: string;
+    narrative: string;
+    creatureData: string;
+  } | null>(null);
+  const [showBirthModal, setShowBirthModal] = useState(false);
   const toast = useToast();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [canvasWidth, setCanvasWidth] = useState(300);
@@ -764,27 +772,49 @@ Birth Chronicle:`;
               seedChangeCount: "0",
             };
 
-            // Generate epic birth narrative (non-blocking) - SINGLE notification only
+            // Generate epic birth narrative and show modal
             console.log("🎭 Generating epic birth narrative...");
+            
+            // Close the creation notification and show modal preparation
+            updateEpicNotification(notificationId, {
+              title: '📜 Chronicle Keeper Inscribing...',
+              description: 'The sacred birth scroll is being prepared. The modal will appear shortly.',
+              status: 'info',
+              duration: 3000, // Auto-remove
+            });
+            
+            // Prepare creature data for display
+            const traitsCount = Object.keys(newCreature.traitValues || {}).length;
+            const modulesText = newCreature.registeredModules.join(', ');
+            const creatureDataText = `Born with ${traitsCount} cosmic essence streams: ${modulesText}. Destiny spans ${newCreature.lifespanTotalSimulatedDays} days. Cosmic signature: ${newCreature.initialSeed}`;
+            
+            // Set initial birth chronicle with placeholder
+            setBirthChronicle({
+              creatureName: newCreature.name,
+              narrative: "The Chronicle Keeper inscribes the sacred birth scroll...",
+              creatureData: creatureDataText
+            });
+            
+            // Show birth modal immediately
+            setTimeout(() => {
+              setShowBirthModal(true);
+            }, 2000);
+            
+            // Generate AI narrative asynchronously and update modal
             generateBirthNarrative(newCreature).then(birthNarrative => {
               console.log("📜 Generated birth narrative:", birthNarrative);
-              // Replace the success notification with the complete epic birth chronicle
-              updateEpicNotification(notificationId, {
-                title: `📜 Birth Chronicle of ${newCreature.name}`,
-                description: birthNarrative,
-                status: 'info',
-                duration: 0, // Manual close only
+              setBirthChronicle({
+                creatureName: newCreature.name,
+                narrative: birthNarrative,
+                creatureData: creatureDataText
               });
             }).catch(error => {
               console.error("Failed to generate birth narrative:", error);
-              // Show fallback birth chronicle with traits included
-              const traitsCount = Object.keys(newCreature.traitValues || {}).length;
-              const modulesText = newCreature.registeredModules.join(', ');
-              updateEpicNotification(notificationId, {
-                title: `📜 Birth Chronicle of ${newCreature.name}`,
-                description: `The ancient scrolls whisper of ${newCreature.name}'s emergence from the cosmic void, their essence blessed with ${traitsCount} streams of power: ${modulesText}. Thus begins their journey through the realms of Primordia.`,
-                status: 'info',
-                duration: 0,
+              // Show fallback birth narrative
+              setBirthChronicle({
+                creatureName: newCreature.name,
+                narrative: `From the swirling vortex of creation, ${newCreature.name} awakens in the cosmic realm, their soul blessed with the eternal energies of Primordia. Thus begins their destined journey through the mystical realms.`,
+                creatureData: creatureDataText
               });
             });
           }
@@ -1381,6 +1411,148 @@ Birth Chronicle:`;
               }}
             >
               Close Chronicles
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Birth Chronicle Modal - OUTSIDE Container for absolute positioning */}
+      <div style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        width: '100vw', 
+        height: '100vh', 
+        zIndex: 99999999999,
+        pointerEvents: showBirthModal ? 'auto' : 'none',
+        display: showBirthModal ? 'flex' : 'none',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)'
+      }}>
+        {/* Manual Birth Modal Implementation */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          border: '4px solid #10b981',
+          maxWidth: '600px',
+          width: '90%',
+          maxHeight: '80vh',
+          overflow: 'auto',
+          zIndex: 99999999999
+        }}>
+          {/* Header */}
+          <div style={{
+            backgroundColor: '#10b981',
+            color: 'white',
+            padding: '20px',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            <h2 style={{ margin: 0, fontSize: '24px' }}>🌟 Birth Chronicle of Primordia</h2>
+            <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>
+              A new cosmic entity emerges
+            </p>
+            <button 
+              onClick={() => setShowBirthModal(false)}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                fontSize: '24px',
+                cursor: 'pointer'
+              }}
+            >
+              ×
+            </button>
+          </div>
+          
+          {/* Body */}
+          <div style={{ padding: '20px', minHeight: '300px' }}>
+            {birthChronicle ? (
+              <div>
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '12px', 
+                  backgroundColor: '#d1fae5', 
+                  borderRadius: '8px',
+                  marginBottom: '16px'
+                }}>
+                  <h3 style={{ margin: 0, fontSize: '20px', color: '#059669' }}>
+                    {birthChronicle.creatureName}
+                  </h3>
+                  <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6b7280' }}>
+                    Newly Born Cosmic Entity
+                  </p>
+                </div>
+                
+                <div style={{ 
+                  backgroundColor: '#ecfdf5', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  border: '2px solid #10b981',
+                  marginBottom: '16px'
+                }}>
+                  <p style={{ 
+                    margin: 0, 
+                    fontSize: '16px', 
+                    lineHeight: '1.8',
+                    fontStyle: 'italic',
+                    color: '#047857'
+                  }}>
+                    {birthChronicle.narrative}
+                  </p>
+                </div>
+                
+                <div style={{ 
+                  backgroundColor: '#f0fdf4', 
+                  padding: '12px', 
+                  borderRadius: '8px',
+                  border: '2px solid #22c55e'
+                }}>
+                  <p style={{ 
+                    margin: 0, 
+                    fontSize: '14px', 
+                    color: '#15803d',
+                    fontWeight: 'bold'
+                  }}>
+                    ✨ {birthChronicle.creatureData}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: 'red', textAlign: 'center', padding: '16px' }}>
+                No birth chronicle available!
+              </p>
+            )}
+          </div>
+          
+          {/* Footer */}
+          <div style={{ 
+            backgroundColor: '#f9fafb', 
+            padding: '16px', 
+            display: 'flex', 
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderTop: '1px solid #e5e7eb'
+          }}>
+            <button 
+              onClick={() => setShowBirthModal(false)}
+              style={{
+                padding: '8px 16px',
+                fontSize: '14px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Close Birth Chronicle
             </button>
           </div>
         </div>

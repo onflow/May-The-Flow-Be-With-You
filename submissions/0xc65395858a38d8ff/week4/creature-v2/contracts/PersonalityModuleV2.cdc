@@ -1420,9 +1420,9 @@ access(all) contract PersonalityModuleV2: TraitModule {
         self.RELATIONSHIP_DECAY_RATE = 0.001   // Daily relationship decay
         
         // === EVOLUTION RATES (daily growth) ===
-        self.INTELLIGENCE_GROWTH_RATE = 0.001  // 0.1% daily intelligence growth
-        self.VOCABULARY_GROWTH_RATE = 2.0      // 2 words per day (modified by intelligence)
-        self.LINGUISTIC_GROWTH_RATE = 0.0005   // 0.05% daily linguistic complexity
+        self.INTELLIGENCE_GROWTH_RATE = 0.02   // 2% daily intelligence growth (20x faster)
+        self.VOCABULARY_GROWTH_RATE = 20.0     // 20 words per day (10x faster) 
+        self.LINGUISTIC_GROWTH_RATE = 0.02     // 2% daily linguistic complexity (40x faster)
         self.STRESS_DECAY_RATE = 0.02          // 2% daily stress reduction
     }
 } 

@@ -8,10 +8,14 @@ import {
   walletActionProvider,
   WalletProvider,
   wethActionProvider,
+  CreateAction,
+  Network,
 } from "@coinbase/agentkit";
 import fs from "fs";
 import { createWalletClient, http } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { getRandomNumber } from "../../contracts/contracts";
+import { z } from "zod";
 
 /**
  * AgentKit Integration Route
@@ -44,6 +48,34 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 // Configure a file to persist a user's private key if none provided
 const WALLET_DATA_FILE = "wallet_data.txt";
+
+// Define the action schema
+const RandomNumberSchema = z.object({});
+
+class RandomNumberActionProvider extends ActionProvider<WalletProvider> {
+  constructor() {
+    super("random-number-provider", []);
+  }
+
+  @CreateAction({
+    name: "getRandomNumber",
+    description: "Get a random number between 0 and 1 from the Flow blockchain",
+    schema: RandomNumberSchema,
+  })
+  async getRandomNumberAction(walletProvider: WalletProvider, args: z.infer<typeof RandomNumberSchema>): Promise<string> {
+    try {
+      const randomNumber = await getRandomNumber();
+      return randomNumber.toString();
+    } catch (error) {
+      console.error("Error getting random number:", error);
+      throw new Error("Failed to get random number");
+    }
+  }
+
+  supportsNetwork = (network: Network) => true;
+}
+
+export const randomNumberActionProvider = () => new RandomNumberActionProvider();
 
 /**
  * Prepares the AgentKit and WalletProvider.
@@ -92,8 +124,8 @@ export async function prepareAgentkitAndWalletProvider(): Promise<{
         },
         name: "Custom Chain",
         nativeCurrency: {
-          name: "Ether",
-          symbol: "ETH",
+          name: "FLOW",
+          symbol: "FLOW",
           decimals: 18,
         },
       },
@@ -107,6 +139,7 @@ export async function prepareAgentkitAndWalletProvider(): Promise<{
       pythActionProvider(),
       walletActionProvider(),
       erc20ActionProvider(),
+      randomNumberActionProvider(),
     ];
     const canUseCdpApi = process.env.CDP_API_KEY_NAME && process.env.CDP_API_KEY_PRIVATE_KEY;
     if (canUseCdpApi) {

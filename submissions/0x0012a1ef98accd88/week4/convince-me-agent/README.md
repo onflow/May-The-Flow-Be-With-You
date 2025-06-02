@@ -1,67 +1,70 @@
-# Onchain Agent Powered by AgentKit
+# Convince Me Agent - Initial Submission
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with `create-onchain-agent`.  
+## Date: May 18, 2025
 
-It integrates [AgentKit](https://github.com/coinbase/agentkit) to provide AI-driven interactions with on-chain capabilities.
+## Overview  
+This is the initial submission for Week 4 of the Flow Hackathon under the **Randomness Revolution** theme.
 
-## Getting Started
+**Convince Me Agent** is an AI-powered agent built on the [Coinbase AgentKit](https://github.com/coinbase/agentkit) starter template that uses Flow EVM's Verifiable Random Function (VRF) to make decisions about sending FLOW tokens. The agent requires users to convince it of their worthiness before sending any funds, making the process both entertaining and fair through blockchain-verified randomness.
 
-First, install dependencies:
+The project is built using **Next.js** for the frontend and integrates with **Flow EVM** to handle transactions and randomness verification. All transactions are performed on the Flow testnet, allowing users to safely test their convincing skills without using real funds.
 
-```sh
+- 🤖 **Try Now:** [Vercel Production Link](https://convince-me-agent-tasneemtoolbas-projects.vercel.app/)  
+- 📜 **Smart Contract on FlowScan:** [View Contract](https://evm-testnet.flowscan.io/address/0xYourContractAddressHere)
+
+---
+
+## ✨ Key Features
+
+- ✅ **Verifiable randomness** for decision-making using Flow EVM's VRF
+- 🤖 **AI-powered** conversation using GPT-4
+- 💰 **Secure FLOW token transfers** on the Flow testnet
+- 🔒 **Wallet integration** with MetaMask support
+- 🎲 **Random amount generation** for token transfers
+- 📱 **Mobile-friendly** interface
+- 🔍 **Transaction verification** with Flowscan integration
+- 🎯 **Convincing mechanism** that tests users' persuasion skills
+- 🎮 **Interactive gameplay** where users must convince the agent to send them FLOW tokens
+- 🔄 **Random decision making** based on user's convincing argument and wallet address
+
+---
+
+## ⚙️ Installation & Development
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/tasneemtoolba/May-The-Flow-Be-With-You.git
+cd submissions/0x0012a1ef98accd88/week4/convince-me-agent
+```
+
+### 2. Install dependencies
+Use your preferred package manager:
+
+```bash
 npm install
 ```
 
-Then, configure your environment variables:
-
-```sh
-mv .env.local .env
-```
-
-Run the development server:
-
-```sh
+### 3. Start the development server
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the project.
+---
 
+## 🧰 Resources
 
-## Configuring Your Agent
-
-You can [modify your configuration](https://github.com/coinbase/agentkit/tree/main/typescript/agentkit#usage) of the agent. By default, your agentkit configuration occurs in the `/api/agent/prepare-agentkit.ts` file, and agent instantiation occurs in the `/api/agent/create-agent.ts` file.
-
-### 1. Select Your LLM  
-Modify the OpenAI model instantiation to use the model of your choice.
-
-### 2. Select Your Wallet Provider  
-AgentKit requires a **Wallet Provider** to interact with blockchain networks.
-
-### 3. Select Your Action Providers  
-Action Providers define what your agent can do. You can use built-in providers or create your own.
+- [Flow EVM Documentation](https://developers.flow.com)
+- [Coinbase AgentKit Documentation](https://docs.cdp.coinbase.com)
+- [LangChain Documentation](https://js.langchain.com/docs)
+- [Next.js Documentation](https://nextjs.org/docs)
 
 ---
 
-## Next Steps
+## 📷 Preview
 
-- Explore the AgentKit README: [AgentKit Documentation](https://github.com/coinbase/agentkit)
-- Learn more about available Wallet Providers & Action Providers.
-- Experiment with custom Action Providers for your specific use case.
+![Agent Preview](/public/twitter-image.png)
 
 ---
 
-## Learn More
-
-- [Learn more about CDP](https://docs.cdp.coinbase.com/)
-- [Learn more about AgentKit](https://docs.cdp.coinbase.com/agentkit/docs/welcome)
-- [Learn more about Next.js](https://nextjs.org/docs)
-- [Learn more about Tailwind CSS](https://tailwindcss.com/docs)
-
----
-
-## Contributing
-
-Interested in contributing to AgentKit? Follow the contribution guide:
-
-- [Contribution Guide](https://github.com/coinbase/agentkit/blob/main/CONTRIBUTING.md)
-- Join the discussion on [Discord](https://discord.gg/CDP)
+Built with ❤️ by [Tasneem Toolba](https://x.com/tasneemtoolba)

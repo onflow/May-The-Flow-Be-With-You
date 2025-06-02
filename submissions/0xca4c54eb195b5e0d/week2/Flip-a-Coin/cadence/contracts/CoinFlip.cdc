@@ -1,12 +1,11 @@
-pub contract CoinFlip {
-    // Event emitted when a coin flip occurs
-    pub event CoinFlipped(player: Address, result: Bool, timestamp: UFix64)
-    
-    // Struct to store flip history
-    pub struct FlipRecord {
-        pub let player: Address
-        pub let result: Bool
-        pub let timestamp: UFix64
+access(all) contract CoinFlip {
+
+    access(all) event CoinFlipped(player: Address, result: Bool, timestamp: UFix64)
+
+    access(all) struct FlipRecord {
+        access(all) let player: Address
+        access(all) let result: Bool
+        access(all) let timestamp: UFix64
 
         init(player: Address, result: Bool, timestamp: UFix64) {
             self.player = player
@@ -15,14 +14,13 @@ pub contract CoinFlip {
         }
     }
 
-    // Dictionary to store player statistics
-    pub var playerStats: {Address: PlayerStats}
-    
-    pub struct PlayerStats {
-        pub var totalFlips: UInt64
-        pub var wins: UInt64
-        pub var currentStreak: UInt64
-        pub var bestStreak: UInt64
+    access(all) var playerStats: {Address: PlayerStats}
+
+    access(all) struct PlayerStats {
+        access(all) var totalFlips: UInt64
+        access(all) var wins: UInt64
+        access(all) var currentStreak: UInt64
+        access(all) var bestStreak: UInt64
 
         init() {
             self.totalFlips = 0
@@ -32,25 +30,20 @@ pub contract CoinFlip {
         }
     }
 
-    // Initialize the contract
     init() {
         self.playerStats = {}
     }
 
-    // Flip the coin and return the result
-    pub fun flipCoin(player: Address): Bool {
-        // Generate a pseudo-random boolean
-        // Note: In production, you'd want to use a VRF for true randomness
+    access(all) fun flipCoin(player: Address): Bool {
         let result = unsafeRandom() % 2 == 0
-        
-        // Update player stats
+
         if !self.playerStats.containsKey(player) {
             self.playerStats[player] = PlayerStats()
         }
-        
+
         let stats = &self.playerStats[player] as &PlayerStats
         stats.totalFlips = stats.totalFlips + 1
-        
+
         if result {
             stats.wins = stats.wins + 1
             stats.currentStreak = stats.currentStreak + 1
@@ -61,14 +54,12 @@ pub contract CoinFlip {
             stats.currentStreak = 0
         }
 
-        // Emit the flip event
         emit CoinFlipped(player: player, result: result, timestamp: getCurrentBlock().timestamp)
-        
+
         return result
     }
 
-    // Get player statistics
-    pub fun getPlayerStats(player: Address): PlayerStats? {
+    access(all) view fun getPlayerStats(player: Address): PlayerStats? {
         return self.playerStats[player]
     }
-} 
+}

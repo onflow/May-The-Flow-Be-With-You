@@ -61,9 +61,16 @@ npm run dev
 
 ---
 
-## 📷 Preview
+## 📸 Screenshots
 
-![Agent Preview](/public/twitter-image.png)
+![Convince Me Agent Screenshot 1](pictures/Screenshot%202025-06-02%20at%2003.38.34.png)
+*Initial conversation with the agent*
+
+![Convince Me Agent Screenshot 2](pictures/Screenshot%202025-06-02%20at%2003.38.45.png)
+*Agent's response and decision making*
+
+![Convince Me Agent Screenshot 3](pictures/Screenshot%202025-06-02%20at%2003.38.53.png)
+*Transaction confirmation and success*
 
 ---
 

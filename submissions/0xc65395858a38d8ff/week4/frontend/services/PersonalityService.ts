@@ -28,9 +28,9 @@ export class PersonalityService {
       console.log(`🧠 [PersonalityService] Getting personality prompts for creature ${creatureID} from contract...`);
       
       const GET_CREATURE_PERSONALITY_PROMPTS = `
-        import "EvolvingCreatureNFT" from 0xf8d6e0586b0a20c7
-        import "TraitModule" from 0xf8d6e0586b0a20c7
-        import "PersonalityModuleV2" from 0xf8d6e0586b0a20c7
+        import EvolvingCreatureNFT from 0x2444e6b4d9327f09
+        import TraitModule from 0x2444e6b4d9327f09
+        import PersonalityModuleV2 from 0x2444e6b4d9327f09
 
         access(all) fun main(address: Address, creatureID: UInt64): {String: String} {
             let account = getAccount(address)

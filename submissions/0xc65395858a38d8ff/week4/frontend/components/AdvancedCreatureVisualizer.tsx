@@ -21,12 +21,24 @@ import {
   Input,
   FormControl,
   FormLabel,
-  useToast
+  useToast,
+  Spinner,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  Divider,
+  Textarea,
+  IconButton
 } from '@chakra-ui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiZap, FiHeart, FiEye, FiStar, FiMessageCircle } from 'react-icons/fi';
 import { OpenRouterService } from '../services/OpenRouterService';
 import { PersonalityService, PersonalityData } from '../services/PersonalityService';
+import * as fcl from '@onflow/fcl';
 
 // Interfaces
 interface CreatureVisualData {
@@ -336,8 +348,19 @@ export default function AdvancedCreatureVisualizer({
   const [openRouterService, setOpenRouterService] = useState<OpenRouterService | null>(null);
   const chatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastChatTimeRef = useRef<Map<number, number>>(new Map());
+  const pendingChatRequests = useRef<Set<number>>(new Set());
   const [isGeneratingMessages, setIsGeneratingMessages] = useState<boolean>(false);
-  const [generationProgress, setGenerationProgress] = useState<{current: number, total: number}>({current: 0, total: 0});
+  const [generationProgress, setGenerationProgress] = useState<{current: number, total: number} | null>(null);
+
+  // Individual creature chat modal state
+  const [selectedCreatureChat, setSelectedCreatureChat] = useState<any>(null);
+  const [isChatModalOpen, setIsChatModalOpen] = useState<boolean>(false);
+  const [chatMessages, setChatMessages] = useState<Array<{sender: 'user' | 'creature', message: string, timestamp: number}>>([]);
+  const [userMessage, setUserMessage] = useState<string>('');
+  const [isSendingMessage, setIsSendingMessage] = useState<boolean>(false);
+  const [creatureChatHistory, setCreatureChatHistory] = useState<Map<number, Array<{sender: 'user' | 'creature', message: string, timestamp: number}>>>(new Map());
+  const [currentUserAddress, setCurrentUserAddress] = useState<string | null>(null);
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
 
   // Enhanced creature data with physics - using useRef to persist between renders
   const creaturePhysicsRef = useRef<Map<number, any>>(new Map());
@@ -393,180 +416,221 @@ export default function AdvancedCreatureVisualizer({
     }
   }, [openRouterService, parsedCreatures.length]);
 
-  // Chat cache management
+  // Message cache management with intelligent reuse
   const getCachedMessages = (creatureId: number): string[] => {
-    const cached = localStorage.getItem(`creature_messages_${creatureId}`);
+    const key = `creature_messages_${creatureId}`;
+    const cached = localStorage.getItem(key);
     return cached ? JSON.parse(cached) : [];
   };
 
   const setCachedMessages = (creatureId: number, messages: string[]) => {
-    localStorage.setItem(`creature_messages_${creatureId}`, JSON.stringify(messages));
+    const key = `creature_messages_${creatureId}`;
+    // Keep only the most recent 10 messages
+    const trimmedMessages = messages.slice(-10);
+    localStorage.setItem(key, JSON.stringify(trimmedMessages));
   };
 
   const getNextMessage = (creatureId: number): string | null => {
-    const messages = getCachedMessages(creatureId);
-    console.log(`🎯 getNextMessage for creature ${creatureId}: ${messages.length} cached messages`);
+    const cached = getCachedMessages(creatureId);
+    if (cached.length === 0) return null;
+
+    // 70% chance to reuse existing message, 30% to generate new
+    const shouldReuse = Math.random() < 0.7;
     
-    if (messages.length === 0) {
-      console.log(`📭 No cached messages for creature ${creatureId}`);
+    if (shouldReuse && cached.length > 0) {
+      // Select random message from cache
+      const randomIndex = Math.floor(Math.random() * cached.length);
+      const selectedMessage = cached[randomIndex];
+      console.log(`🔄 Reusing cached message for creature ${creatureId}: "${selectedMessage}" (${randomIndex + 1}/${cached.length})`);
+      return selectedMessage;
+    } else {
+      // Generate new message (trigger background generation)
+      console.log(`🆕 Triggering new message generation for creature ${creatureId} (${cached.length} in pool)`);
+      generateBackgroundMessage(creatureId);
+      
+      // For now, return a random existing message while new one generates
+      if (cached.length > 0) {
+        const randomIndex = Math.floor(Math.random() * cached.length);
+        return cached[randomIndex];
+      }
       return null;
     }
+  };
+
+  const addMessageToPool = (creatureId: number, newMessage: string) => {
+    const cached = getCachedMessages(creatureId);
     
-    // Take the first message and remove it from cache
-    const message = messages.shift();
-    setCachedMessages(creatureId, messages);
-    
-    console.log(`📤 Consumed message for creature ${creatureId}: "${message}". Remaining: ${messages.length}`);
-    
-    // If we're running low (< 2 messages), trigger background generation
-    if (messages.length < 2) {
-      console.log(`🔔 Triggering background generation for creature ${creatureId} (${messages.length} messages remaining)`);
-      generateBackgroundMessage(creatureId);
+    // Avoid exact duplicates
+    if (!cached.includes(newMessage)) {
+      cached.push(newMessage);
+      setCachedMessages(creatureId, cached);
+      console.log(`➕ Added new message to pool for creature ${creatureId}: "${newMessage}" (${cached.length}/10)`);
+    } else {
+      console.log(`🔄 Message already exists in pool for creature ${creatureId}, skipping duplicate`);
     }
-    
-    return message || null;
   };
 
   const generateBackgroundMessage = async (creatureId: number) => {
+    if (pendingChatRequests.current.has(creatureId)) {
+      console.log(`⏳ Generation already pending for creature ${creatureId}`);
+      return;
+    }
+
     console.log(`🎬 generateBackgroundMessage called for creature ${creatureId}`);
     
-    if (isGeneratingMessages) {
-      console.log(`⏸️ Background generation blocked: already generating messages (isGeneratingMessages=${isGeneratingMessages})`);
-      return; // Avoid concurrent generation
-    }
-    
-    const creature = parsedCreatures.find(c => c.id === creatureId);
-    if (!creature) {
-      console.log(`❌ Creature ${creatureId} not found in parsedCreatures`);
-      return;
-    }
-    
-    if (!openRouterService) {
-      console.log(`❌ OpenRouter service not available`);
-      return;
-    }
-    
     try {
-      console.log(`🔄 Generating background message for creature ${creatureId}...`);
+      pendingChatRequests.current.add(creatureId);
       
-      // Get prompt from contract instead of generating in frontend
-      const personalityData = await PersonalityService.getCreaturePersonalityPrompts(
-        '0xf8d6e0586b0a20c7', // Your address  
-        creatureId
-      );
-      
-      if (!personalityData) {
-        console.error(`❌ Could not get personality data for creature ${creatureId}, falling back to local generation`);
-        // Fallback to local generation
-        const message = await generateCreatureChat(creature);
-        if (message) {
-          const cached = getCachedMessages(creatureId);
-          cached.push(message);
-          setCachedMessages(creatureId, cached);
-          console.log(`✅ Background message cached (fallback) for creature ${creatureId}: "${message}"`);
-        }
+      const creature = parsedCreatures.find(c => c.id === creatureId);
+      if (!creature) {
+        console.log(`❌ Creature ${creatureId} not found for background generation`);
         return;
       }
       
-      // Log the prompt from contract
-      console.log(`📝 [PersonalityService] Prompt for creature ${creatureId} (${personalityData.spontaneousPrompt.length} chars):`, personalityData.spontaneousPrompt);
+      console.log(`🔄 Generating background message for creature ${creatureId}...`);
       
-      const message = await openRouterService.chat(personalityData.spontaneousPrompt);
-      if (message) {
-        const cached = getCachedMessages(creatureId);
-        cached.push(message);
-        setCachedMessages(creatureId, cached);
-        console.log(`✅ Background message cached for creature ${creatureId}: "${message}"`);
-      }
-    } catch (error) {
-      console.error(`❌ Failed to generate background message for creature ${creatureId}:`, error);
-    }
-  };
-
-  // Generate initial messages for all creatures
-  const generateInitialMessages = async () => {
-    if (!openRouterService) return;
-    
-    const aliveCreatures = parsedCreatures.filter(c => c.estaViva && c.personality);
-    if (aliveCreatures.length === 0) return;
-    
-    setIsGeneratingMessages(true);
-    setGenerationProgress({current: 0, total: aliveCreatures.length});
-    
-    console.log(`🚀 Generating initial messages for ${aliveCreatures.length} creatures...`);
-    
-    for (let i = 0; i < aliveCreatures.length; i++) {
-      const creature = aliveCreatures[i];
-      
+      // Try to get personality data from contract first
+      let personalityData = null;
       try {
-        console.log(`🤖 Generating initial message for creature ${creature.id} (${i + 1}/${aliveCreatures.length})...`);
-        setGenerationProgress({current: i + 1, total: aliveCreatures.length});
-        
-        const message = await generateCreatureChat(creature);
-        
-        if (message) {
-          const cached = getCachedMessages(creature.id);
-          cached.push(message);
-          setCachedMessages(creature.id, cached);
-          console.log(`✅ Initial message cached for creature ${creature.id}: "${message}"`);
+        // Get current user address
+        const user = await fcl.currentUser.snapshot();
+        if (user.addr) {
+          personalityData = await PersonalityService.getCreaturePersonalityPrompts(user.addr, creatureId);
+        } else {
+          console.log(`❌ No user address available for creature ${creatureId}`);
         }
-        
-        // Small delay between requests to avoid rate limiting
-        if (i < aliveCreatures.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        
       } catch (error) {
-        console.error(`❌ Failed to generate initial message for creature ${creature.id}:`, error);
+        console.error(`❌ Could not get personality data for creature ${creatureId}, falling back to local generation`);
+      }
+      
+      let message: string | null = null;
+      if (personalityData && !personalityData.error) {
+        console.log(`✅ Using contract-based personality data for creature ${creatureId}`);
+        const prompt = PersonalityService.getPromptFromPersonalityData(personalityData, 'spontaneous');
+        
+        if (openRouterService) {
+          message = await openRouterService.chat(prompt);
+        }
+      } else {
+        console.log(`❌ Could not get personality data for creature ${creatureId}, falling back to local generation`);
+        
+        // Get previous messages for context
+        const previousMessages = getCachedMessages(creatureId);
+        const contextMessages = previousMessages.slice(-3); // Last 3 messages for context
+        
+        // Use local generation with context
+        const creatureWithContext = { ...creature, previousMessages: contextMessages };
+        message = await generateCreatureChat(creatureWithContext);
+      }
+      
+      if (message) {
+        addMessageToPool(creatureId, message);
+        console.log(`✅ Background message cached for creature ${creatureId}: "${message}"`);
+      } else {
+        console.log(`❌ Failed to generate background message for creature ${creatureId}`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error in generateBackgroundMessage for creature ${creatureId}:`, error);
+    } finally {
+      pendingChatRequests.current.delete(creatureId);
+    }
+  };
+
+  const generateInitialMessages = async () => {
+    if (!openRouterService || parsedCreatures.length === 0) return;
+    
+    console.log(`🎬 Generating initial message pool for ${parsedCreatures.length} creatures...`);
+    setGenerationProgress({ current: 0, total: parsedCreatures.length });
+    
+    for (let i = 0; i < parsedCreatures.length; i++) {
+      const creature = parsedCreatures[i];
+      const cached = getCachedMessages(creature.id);
+      
+      // Only generate if pool has less than 3 messages
+      if (cached.length < 3) {
+        console.log(`🔄 Generating initial messages for creature ${creature.id} (${cached.length}/10 in pool)...`);
+        
+        try {
+          // Generate 2-3 initial messages to start the pool
+          const messagesToGenerate = Math.min(3 - cached.length, 2);
+          
+          for (let j = 0; j < messagesToGenerate; j++) {
+            const previousMessages = getCachedMessages(creature.id);
+            const contextMessages = previousMessages.slice(-2);
+            const message = await generateCreatureChat(creature);
+            
+            if (message) {
+              addMessageToPool(creature.id, message);
+            }
+            
+            // Small delay between generations
+            if (j < messagesToGenerate - 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+          
+        } catch (error) {
+          console.error(`❌ Error generating initial messages for creature ${creature.id}:`, error);
+        }
+      } else {
+        console.log(`✅ Creature ${creature.id} already has sufficient messages (${cached.length}/10)`);
+      }
+      
+      setGenerationProgress({ current: i + 1, total: parsedCreatures.length });
+      
+      // Delay between creatures
+      if (i < parsedCreatures.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
     
-    setIsGeneratingMessages(false);
-    console.log(`🎉 Initial message generation complete!`);
+    setGenerationProgress(null);
+    console.log(`✅ Initial message pool generation complete`);
   };
 
-  // Chat system functions
-  const generateChatPrompt = (creature: any): string => {
+  const generateChatPrompt = (creature: any, previousMessages: string[] = []): string => {
     const personality = creature.personality;
     if (!personality) return '';
-    
-    const level = getCommunicationLevel(personality);
+
     const personalityDesc = getPersonalityDescription(personality);
     const emotionalState = getEmotionalState(personality);
+    const communicationLevel = getCommunicationLevel(personality);
     
-    let prompt = `You are a digital life form in the Primordia Genesis Protocol with these characteristics:\n\n`;
-    prompt += `PERSONALITY: ${personalityDesc}\n`;
-    prompt += `COMMUNICATION LEVEL: ${level}\n`;
-    prompt += `CURRENT MOOD: ${emotionalState}\n`;
-    prompt += `INTELLIGENCE: ${(personality.inteligencia_base * 100).toFixed(0)}%\n`;
-    prompt += `VOCABULARY: ${personality.vocabulario_size} words\n`;
-    prompt += `AGE: ${creature.edadDiasCompletos} days old, Generation ${personality.generacion}\n`;
-    prompt += `ANIMA ESSENCE: ${creature.puntosEvolucion}\n`;
-    prompt += `HEALTH: ${((creature.advanced?.nivelSalud || 1) * 100).toFixed(0)}%\n`;
-    prompt += `ENERGY: ${((creature.advanced?.nivelEnergia || 1) * 100).toFixed(0)}%\n\n`;
+    // Get current time context
+    const now = new Date();
+    const currentHour = now.getHours();
+    const timeOfDay = currentHour < 6 ? 'night' : 
+                     currentHour < 12 ? 'morning' : 
+                     currentHour < 18 ? 'afternoon' : 'evening';
     
-    // Communication level specific instructions
-    switch (level) {
-      case 'bebe':
-        prompt += `COMMUNICATION RULES:\n- Use ONLY simple sounds and baby babble\n- Examples: 'guu guu', 'mmmm', 'aaa', 'baba'\n- Maximum 2-3 syllables\n- Express emotions through sounds, not words\n`;
-        break;
-      case 'toddler':
-        prompt += `COMMUNICATION RULES:\n- Use 1-2 words maximum\n- Simple vocabulary: 'happy', 'sad', 'hungry', 'play', 'want'\n- Show basic emotions clearly\n`;
-        break;
-      case 'child':
-        prompt += `COMMUNICATION RULES:\n- Use simple 3-5 word sentences\n- Basic grammar\n- Show curiosity with simple questions\n`;
-        break;
-      case 'teen':
-        prompt += `COMMUNICATION RULES:\n- Use normal sentences but show teenage personality\n- More emotional and expressive\n- Emotional swings are normal\n`;
-        break;
-      case 'adult':
-        prompt += `COMMUNICATION RULES:\n- Communicate with full complexity\n- Express complex thoughts and emotions\n- Reference abstract concepts\n`;
-        break;
-    }
-    
-    prompt += `\nINSTRUCTION: Generate a spontaneous message based on your current emotional state and personality. Keep it brief (1-2 sentences max). This should feel natural for your communication level and current mood.`;
-    
-    return prompt;
+    const contextString = previousMessages.length > 0 
+      ? `\n\nRecent things you've said before: ${previousMessages.slice(-3).map(msg => `"${msg}"`).join(', ')}`
+      : '';
+
+    return `You are a ${creature.name}, a mystical life form from Primordia, realm of the Genesis Shapers. 
+
+PERSONALITY: ${personalityDesc}
+CURRENT EMOTIONAL STATE: ${emotionalState}
+COMMUNICATION LEVEL: ${communicationLevel}
+AGE: ${creature.edadDiasCompletos} simulated days old
+TIME: ${timeOfDay}
+ANIMA ESSENCE: ${creature.puntosEvolucion} points
+
+You exist in the primordial nebula where creation energy flows like living rivers. You can sense the Echoes of the First Forging around you.
+
+COMMUNICATION STYLE for ${communicationLevel}:
+- bebe: Single words, sounds like "goo", "bah", "happy"
+- toddler: 2-3 words, simple concepts like "me happy", "play now" 
+- child: Short sentences, curious, asks simple questions
+- teen: More complex thoughts, sometimes moody or excited
+- adult: Full sentences, philosophical, can discuss complex ideas
+
+${contextString}
+
+Generate ONE short message (under 50 characters) that you might spontaneously say right now. Be authentic to your personality and age. Avoid repeating exactly what you've said before.
+
+Response:`;
   };
 
   const getPersonalityDescription = (personality: any): string => {
@@ -2316,6 +2380,296 @@ export default function AdvancedCreatureVisualizer({
     }
   };
 
+  // === INDIVIDUAL CREATURE CHAT FUNCTIONS ===
+
+  // Open chat modal for specific creature
+  const openCreatureChat = useCallback((creature: any) => {
+    console.log(`💬 Opening chat with creature ${creature.id} (${creature.name})`);
+    console.log(`🔍 Modal state before: isChatModalOpen=${isChatModalOpen}, selectedCreatureChat=${selectedCreatureChat?.id}`);
+    
+    setSelectedCreatureChat(creature);
+    setIsChatModalOpen(true);
+    
+    // Load chat history for this creature
+    const history = creatureChatHistory.get(creature.id) || [];
+    setChatMessages(history);
+    
+    console.log(`🔍 Modal state after: setting isChatModalOpen=true, selectedCreatureChat=${creature.id}`);
+  }, [isChatModalOpen, selectedCreatureChat, creatureChatHistory]);
+
+  // Close chat modal
+  const closeChatModal = () => {
+    setIsChatModalOpen(false);
+    setSelectedCreatureChat(null);
+    setUserMessage('');
+    setChatMessages([]);
+  };
+
+  // Analyze message and determine appropriate experience type using LLM
+  const analyzeExperience = async (message: string): Promise<{
+    experienceType: string,
+    context: string,
+    emotionalImpact: string,
+    intensity: number
+  }> => {
+    if (!openRouterService) {
+      return { 
+        experienceType: 'social_interaction', 
+        context: `User said: "${message}"`,
+        emotionalImpact: 'neutral',
+        intensity: 0.5 
+      };
+    }
+
+    const analysisPrompt = `Analyze this user message to a digital creature and determine what type of experience it represents: "${message}"
+
+    Available experience types:
+    - social_interaction: Normal friendly conversation, questions, casual chat
+    - user_abandoned: Harsh insults, threats, cruel words, abandonment language
+    - user_returned: Warm greetings, compliments, expressions of care/love, positive reconnection
+    - combat_won: Challenges, competitive language (if creature could "win")
+    - combat_lost: Defeat language, submission (if creature could "lose")
+
+    Respond with EXACTLY this format (no extra text):
+    EXPERIENCE_TYPE: [one of the types above]
+    CONTEXT: [1-2 sentence description of what happened]
+    EMOTIONAL_IMPACT: [very_negative/negative/neutral/positive/very_positive]
+    INTENSITY: [0.0-1.0]
+
+    Consider:
+    - Most normal messages are "social_interaction"
+    - Only use "user_abandoned" for genuinely cruel/harsh messages (insults, threats, mean words)
+    - Only use "user_returned" for warm, loving, or appreciative messages
+    - Intensity measures how emotionally impactful this would be for a creature`;
+
+    try {
+      const response = await openRouterService.chat(analysisPrompt);
+      
+      // Parse the structured response
+      const lines = response.split('\n');
+      const experienceType = lines.find(l => l.includes('EXPERIENCE_TYPE:'))?.split(':')[1]?.trim() || 'social_interaction';
+      const context = lines.find(l => l.includes('CONTEXT:'))?.split(':')[1]?.trim() || `User said: "${message}"`;
+      const emotionalImpact = lines.find(l => l.includes('EMOTIONAL_IMPACT:'))?.split(':')[1]?.trim() || 'neutral';
+      const intensity = parseFloat(lines.find(l => l.includes('INTENSITY:'))?.split(':')[1]?.trim() || '0.5');
+
+      console.log(`🎭 Experience analysis: ${experienceType}, impact: ${emotionalImpact}, intensity: ${intensity}`);
+      console.log(`📝 Context: ${context}`);
+      
+      return { 
+        experienceType, 
+        context, 
+        emotionalImpact, 
+        intensity: Math.max(0, Math.min(1, intensity)) 
+      };
+    } catch (error) {
+      console.error('❌ Failed to analyze experience:', error);
+      return { 
+        experienceType: 'social_interaction', 
+        context: `User said: "${message}"`,
+        emotionalImpact: 'neutral',
+        intensity: 0.5 
+      };
+    }
+  };
+
+  // Update creature experience in contract based on interaction
+  const updateCreatureExperience = async (creatureId: number, experienceType: string, context: string) => {
+    try {
+      const UPDATE_EXPERIENCE = `
+        import EvolvingCreatureNFT from 0x2444e6b4d9327f09
+        import PersonalityModuleV2 from 0x2444e6b4d9327f09
+
+        transaction(creatureID: UInt64, experienceType: String, context: String) {
+            let collection: &EvolvingCreatureNFT.Collection
+            
+            prepare(signer: &Account) {
+                self.collection = signer.capabilities.borrow<&EvolvingCreatureNFT.Collection>(EvolvingCreatureNFT.CollectionStoragePath)
+                    ?? panic("Could not borrow collection reference")
+            }
+            
+            execute {
+                if let creature = self.collection.borrowEvolvingCreatureNFT(id: creatureID) {
+                    if creature.traits.containsKey("personality") {
+                        if let personalityTrait = creature.traits["personality"] as! &PersonalityModuleV2.PersonalityTrait? {
+                            personalityTrait.addExperience(experienceType, context)
+                            personalityTrait.updateUserInteraction(self.collection.owner!.address)
+                            log("Experience added: ".concat(experienceType).concat(" - ").concat(context))
+                        }
+                    }
+                }
+            }
+        }
+      `;
+
+      await fcl.mutate({
+        cadence: UPDATE_EXPERIENCE,
+        args: (arg: any, t: any) => [
+          arg(creatureId.toString(), t.UInt64),
+          arg(experienceType, t.String),
+          arg(context, t.String)
+        ],
+        proposer: fcl.currentUser.authorization,
+        payer: fcl.currentUser.authorization,
+        authorizations: [fcl.currentUser.authorization],
+        limit: 1000
+      });
+
+      console.log(`✅ Updated experience for creature ${creatureId}: ${experienceType} - ${context}`);
+    } catch (error) {
+      console.error(`❌ Failed to update creature experience:`, error);
+    }
+  };
+
+  // Send message to creature
+  const sendMessageToCreature = async () => {
+    if (!userMessage.trim() || !selectedCreatureChat || !openRouterService || isSendingMessage) return;
+
+    setIsSendingMessage(true);
+
+    try {
+      // Analyze experience type using LLM
+      const experienceAnalysis = await analyzeExperience(userMessage);
+
+      // Add user message to chat
+      const userChatMessage = {
+        sender: 'user' as const,
+        message: userMessage.trim(),
+        timestamp: Date.now()
+      };
+
+      const updatedMessages = [...chatMessages, userChatMessage];
+      setChatMessages(updatedMessages);
+
+      // Clear input immediately for better UX
+      setUserMessage('');
+
+      // Update experience in contract using LLM-determined type
+      await updateCreatureExperience(selectedCreatureChat.id, experienceAnalysis.experienceType, experienceAnalysis.context);
+
+      // Show appropriate feedback based on experience type
+      if (experienceAnalysis.experienceType === 'user_abandoned') {
+        toast({
+          title: "😢 Creature Hurt",
+          description: `${selectedCreatureChat.name} was hurt by your words. This will cause trauma and stress.`,
+          status: "warning",
+          duration: 4000,
+          isClosable: true,
+        });
+      } else if (experienceAnalysis.experienceType === 'user_returned') {
+        toast({
+          title: "😊 Creature Happy",
+          description: `${selectedCreatureChat.name} feels appreciated by your kind words!`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } else if (experienceAnalysis.emotionalImpact === 'very_positive') {
+        toast({
+          title: "🌟 Positive Interaction",
+          description: `${selectedCreatureChat.name} enjoyed that interaction!`,
+          status: "success",
+          duration: 2000,
+          isClosable: true,
+        });
+      } else if (experienceAnalysis.emotionalImpact === 'very_negative') {
+        toast({
+          title: "😟 Negative Impact",
+          description: `${selectedCreatureChat.name} didn't appreciate that...`,
+          status: "warning",
+          duration: 2000,
+          isClosable: true,
+        });
+      }
+
+      // Get creature response using contract-based personality
+      let personalityData = null;
+      try {
+        // Get current user address
+        const user = await fcl.currentUser.snapshot();
+        if (user.addr) {
+          personalityData = await PersonalityService.getCreaturePersonalityPrompts(user.addr, selectedCreatureChat.id);
+        } else {
+          console.log(`❌ No user address available for creature chat response`);
+        }
+      } catch (error) {
+        console.error('Failed to get personality data for response');
+      }
+
+      let creatureResponse = null;
+      if (personalityData && !personalityData.error) {
+        const responsePrompt = personalityData.responsePrompt.replace(
+          'How are you feeling today?',
+          userMessage.trim()
+        );
+        creatureResponse = await openRouterService.chat(responsePrompt);
+      } else {
+        // Fallback to local generation
+        const prompt = generateChatPrompt(selectedCreatureChat, [userMessage.trim()]);
+        creatureResponse = await openRouterService.chat(prompt);
+      }
+
+      if (creatureResponse) {
+        const creatureChatMessage = {
+          sender: 'creature' as const,
+          message: creatureResponse,
+          timestamp: Date.now()
+        };
+
+        const finalMessages = [...updatedMessages, creatureChatMessage];
+        setChatMessages(finalMessages);
+
+        // Update chat history
+        const newHistory = new Map(creatureChatHistory);
+        newHistory.set(selectedCreatureChat.id, finalMessages.slice(-20)); // Keep last 20 messages
+        setCreatureChatHistory(newHistory);
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to send message:', error);
+      toast({
+        title: "Chat Error",
+        description: "Failed to send message. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  // Check user connection status
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const user = await fcl.currentUser.snapshot();
+        setCurrentUserAddress(user.addr || null);
+        console.log(`👤 Current user address: ${user.addr || 'Not connected'}`);
+      } catch (error) {
+        console.error('Failed to get user address:', error);
+        setCurrentUserAddress(null);
+      }
+    };
+
+    checkUser();
+    
+    // Listen for user changes
+    const unsubscribe = fcl.currentUser.subscribe(checkUser);
+    return () => unsubscribe && unsubscribe();
+  }, []);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (chatMessagesEndRef.current) {
+      chatMessagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
+
+  // Debug modal state changes
+  useEffect(() => {
+    console.log(`🔍 Modal state changed: isOpen=${isChatModalOpen}, selectedCreature=${selectedCreatureChat?.id || 'none'}`);
+  }, [isChatModalOpen, selectedCreatureChat]);
+
   return (
     <Box 
       w="100vw" 
@@ -2447,7 +2801,7 @@ export default function AdvancedCreatureVisualizer({
             border="1px solid rgba(59, 130, 246, 0.3)"
             backdropFilter="blur(5px)"
             isLoading={isGeneratingMessages}
-            loadingText={`Generating ${generationProgress.current}/${generationProgress.total}`}
+            loadingText={`Generating ${generationProgress?.current}/${generationProgress?.total}`}
           >
             {openRouterService ? 
               (isGeneratingMessages ? 
@@ -2457,6 +2811,28 @@ export default function AdvancedCreatureVisualizer({
               '🤖 Enable Chat'
             }
           </Button>
+          
+          {/* EMERGENCY CLOSE MODAL BUTTON - DISABLED FOR TESTING */}
+          {false && isChatModalOpen && (
+            <Button
+              colorScheme="red"
+              variant="solid"
+              size="sm"
+              onClick={() => {
+                console.log('🚨 Emergency modal close');
+                setIsChatModalOpen(false);
+                setSelectedCreatureChat(null);
+                setChatMessages([]);
+                setUserMessage('');
+              }}
+              bg="rgba(255, 0, 0, 0.8)"
+              _hover={{ bg: "rgba(255, 0, 0, 1)" }}
+              border="1px solid rgba(255, 0, 0, 0.3)"
+              backdropFilter="blur(5px)"
+            >
+              🚨 Close Modal
+            </Button>
+          )}
         </HStack>
 
         {/* API Key Input Panel */}
@@ -2522,32 +2898,49 @@ export default function AdvancedCreatureVisualizer({
         </AnimatePresence>
         
         {/* Subtle Stats */}
-        <HStack 
+        <VStack 
           position="absolute" 
           top={4} 
           right={4} 
-          spacing={6} 
+          spacing={2} 
           zIndex={20}
           bg="rgba(0,0,0,0.3)"
           backdropFilter="blur(10px)"
           px={4}
           py={2}
-          borderRadius="full"
+          borderRadius="lg"
           border="1px solid rgba(138, 43, 226, 0.2)"
+          align="stretch"
         >
-          <HStack spacing={1}>
-            <Text fontSize="lg" color="purple.300" fontWeight="bold">
-              {parsedCreatures.filter(c => c.estaViva).length}
-            </Text>
-            <Text fontSize="xs" color="gray.400">forms</Text>
+          <HStack spacing={6}>
+            <HStack spacing={1}>
+              <Text fontSize="lg" color="purple.300" fontWeight="bold">
+                {parsedCreatures.filter(c => c.estaViva).length}
+              </Text>
+              <Text fontSize="xs" color="gray.400">forms</Text>
+            </HStack>
+            <HStack spacing={1}>
+              <Text fontSize="lg" color="purple.300" fontWeight="bold">
+                {parsedCreatures.reduce((sum, c) => sum + parseFloat(c.puntosEvolucion), 0).toFixed(0)}
+              </Text>
+              <Text fontSize="xs" color="gray.400">anima</Text>
+            </HStack>
           </HStack>
-          <HStack spacing={1}>
-            <Text fontSize="lg" color="purple.300" fontWeight="bold">
-              {parsedCreatures.reduce((sum, c) => sum + parseFloat(c.puntosEvolucion), 0).toFixed(0)}
-            </Text>
-            <Text fontSize="xs" color="gray.400">anima</Text>
+          
+          {/* User Connection Status */}
+          <HStack spacing={2} justify="center">
+            <Text fontSize="xs" color="gray.400">Account:</Text>
+            {currentUserAddress ? (
+              <Text fontSize="xs" color="green.300" fontWeight="bold">
+                {currentUserAddress.slice(0, 6)}...{currentUserAddress.slice(-4)}
+              </Text>
+            ) : (
+              <Text fontSize="xs" color="red.300" fontWeight="bold">
+                Not Connected
+              </Text>
+            )}
           </HStack>
-        </HStack>
+        </VStack>
         
         {/* Simplified Creature Info Panel */}
         {selectedCreature && (
@@ -2598,18 +2991,32 @@ export default function AdvancedCreatureVisualizer({
                   </SimpleGrid>
 
                   {/* Key Actions */}
-                  <Button
-                    colorScheme="pink" 
-                    variant="solid"
-                    size="sm"
-                    leftIcon={<Icon as={FiHeart} />}
-                    onClick={() => {
-                      console.log(`Mitosis for creature ${selectedCreature}`);
-                    }}
-                    w="full"
-                  >
-                    Initiate Mitosis
-                  </Button>
+                  <VStack spacing={2}>
+                    <Button
+                      colorScheme="blue" 
+                      variant="solid"
+                      size="sm"
+                      leftIcon={<Icon as={FiMessageCircle} />}
+                      onClick={() => openCreatureChat(creature)}
+                      w="full"
+                      isDisabled={!openRouterService}
+                    >
+                      💬 Chat with {creature.name}
+                    </Button>
+                    
+                    <Button
+                      colorScheme="pink" 
+                      variant="solid"
+                      size="sm"
+                      leftIcon={<Icon as={FiHeart} />}
+                      onClick={() => {
+                        console.log(`Mitosis for creature ${selectedCreature}`);
+                      }}
+                      w="full"
+                    >
+                      Initiate Mitosis
+                    </Button>
+                  </VStack>
 
                   {/* Only Non-Visual Info */}
                   {creature.advanced && (
@@ -2700,6 +3107,256 @@ export default function AdvancedCreatureVisualizer({
           </MotionBox>
         )}
       </Box>
+
+      {/* ADVANCED CREATURE CHAT MODAL - CUSTOM IMPLEMENTATION */}
+      {isChatModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={closeChatModal}
+        >
+          <div
+            style={{
+              backgroundColor: '#1a202c',
+              color: 'white',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '600px',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              border: '1px solid #805ad5',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '20px',
+              borderBottom: '1px solid #2d3748',
+              background: 'linear-gradient(135deg, #805ad5, #9f7aea)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>
+                    💬 Chat with {selectedCreatureChat?.name}
+                  </h2>
+                  <span style={{
+                    backgroundColor: '#805ad5',
+                    color: 'white',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}>
+                    Form #{selectedCreatureChat?.id}
+                  </span>
+                </div>
+                <button
+                  onClick={closeChatModal}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    padding: '5px'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              
+              {/* Personality Info */}
+              {selectedCreatureChat?.personality && (
+                <div style={{ marginTop: '10px' }}>
+                  <div style={{ display: 'flex', gap: '15px', fontSize: '12px', color: '#e2e8f0', marginBottom: '8px' }}>
+                    <span>🧠 {getCommunicationLevel(selectedCreatureChat.personality)} level</span>
+                    <span>💭 {getPersonalityDescription(selectedCreatureChat.personality)}</span>
+                    <span>😊 {getEmotionalState(selectedCreatureChat.personality)}</span>
+                  </div>
+                  
+                  {/* Communication Style Explanation */}
+                  <div style={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                    padding: '8px 12px', 
+                    borderRadius: '6px', 
+                    fontSize: '11px', 
+                    color: '#cbd5e0',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}>
+                    <strong>Communication Style:</strong> {getCommunicationExplanation(selectedCreatureChat.personality)}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Chat Messages Area */}
+            <div style={{
+              flex: 1,
+              padding: '20px',
+              overflowY: 'auto',
+              backgroundColor: '#2d3748',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              {chatMessages.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#a0aec0', padding: '40px 20px' }}>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '16px' }}>
+                    Start a conversation with {selectedCreatureChat?.name}!
+                  </p>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#718096' }}>
+                    Your words will influence their personality and emotional state.
+                  </p>
+                </div>
+              ) : (
+                                 <>
+                   {chatMessages.map((msg, index) => (
+                     <div key={index} style={{
+                       display: 'flex',
+                       justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'
+                     }}>
+                       <div style={{
+                         maxWidth: '80%',
+                         padding: '12px 16px',
+                         borderRadius: '18px',
+                         backgroundColor: msg.sender === 'user' ? '#3182ce' : '#805ad5',
+                         color: 'white',
+                         position: 'relative'
+                       }}>
+                         <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', opacity: 0.8 }}>
+                           {msg.sender === 'user' ? 'You' : selectedCreatureChat?.name}
+                         </div>
+                         <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
+                           {msg.message}
+                         </div>
+                         <div style={{ fontSize: '10px', marginTop: '4px', opacity: 0.6 }}>
+                           {new Date(msg.timestamp).toLocaleTimeString()}
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                   
+                   {/* Typing indicator when creature is responding */}
+                   {isSendingMessage && (
+                     <div style={{
+                       display: 'flex',
+                       justifyContent: 'flex-start'
+                     }}>
+                       <div style={{
+                         maxWidth: '80%',
+                         padding: '12px 16px',
+                         borderRadius: '18px',
+                         backgroundColor: '#805ad5',
+                         color: 'white',
+                         opacity: 0.8
+                       }}>
+                         <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', opacity: 0.8 }}>
+                           {selectedCreatureChat?.name}
+                         </div>
+                         <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
+                           <span style={{ 
+                             animation: 'pulse 1.5s ease-in-out infinite',
+                             display: 'inline-block'
+                           }}>
+                             ✨ thinking...
+                           </span>
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                   
+                   <div ref={chatMessagesEndRef} />
+                 </>
+               )}
+            </div>
+
+                         {/* Footer with Input */}
+             <div style={{
+               padding: '20px',
+               borderTop: '1px solid #2d3748',
+               backgroundColor: '#1a202c'
+             }}>
+               {!openRouterService ? (
+                 <div style={{ textAlign: 'center', color: '#f56565', padding: '20px' }}>
+                   <div style={{ fontSize: '24px', marginBottom: '8px' }}>🤖</div>
+                   <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
+                     AI Chat Service Required
+                   </div>
+                   <div style={{ fontSize: '12px', color: '#a0aec0' }}>
+                     Please configure your OpenRouter API key to enable creature chat
+                   </div>
+                 </div>
+               ) : (
+                 <>
+                   <div style={{ fontSize: '12px', color: '#a0aec0', marginBottom: '10px', textAlign: 'center' }}>
+                     💡 Your messages will be analyzed for sentiment and will influence the creature's personality
+                   </div>
+                   <div style={{ display: 'flex', gap: '10px' }}>
+                     <textarea
+                       placeholder={`Say something to ${selectedCreatureChat?.name}...`}
+                       value={userMessage}
+                       onChange={(e) => setUserMessage(e.target.value)}
+                       onKeyPress={(e) => {
+                         if (e.key === 'Enter' && !e.shiftKey) {
+                           e.preventDefault();
+                           sendMessageToCreature();
+                         }
+                       }}
+                       style={{
+                         flex: 1,
+                         padding: '12px',
+                         borderRadius: '8px',
+                         border: '1px solid #4a5568',
+                         backgroundColor: '#2d3748',
+                         color: 'white',
+                         resize: 'none',
+                         minHeight: '40px',
+                         maxHeight: '100px',
+                         fontSize: '14px'
+                       }}
+                       rows={2}
+                     />
+                     <button
+                       onClick={sendMessageToCreature}
+                       disabled={!userMessage.trim() || !openRouterService || isSendingMessage}
+                       style={{
+                         padding: '12px 20px',
+                         borderRadius: '8px',
+                         border: 'none',
+                         backgroundColor: (!userMessage.trim() || !openRouterService || isSendingMessage) ? '#4a5568' : '#805ad5',
+                         color: 'white',
+                         cursor: (!userMessage.trim() || !openRouterService || isSendingMessage) ? 'not-allowed' : 'pointer',
+                         fontSize: '16px',
+                         display: 'flex',
+                         alignItems: 'center',
+                         justifyContent: 'center',
+                         minWidth: '60px'
+                       }}
+                     >
+                       {isSendingMessage ? '⏳' : '📤'}
+                     </button>
+                   </div>
+                 </>
+               )}
+             </div>
+          </div>
+        </div>
+      )}
     </Box>
     );
   } 

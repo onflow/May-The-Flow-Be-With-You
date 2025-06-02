@@ -898,7 +898,7 @@ access(all) contract PersonalityModuleV2: TraitModule {
                 return "COMMUNICATION RULES:\n- Use ONLY simple sounds and baby babble\n- Examples: 'guu guu', 'mmmm', 'aaa', 'baba', 'mama', 'dada'\n- Maximum 2-3 syllables per response\n- Use emoticons sparingly: 🥺 👶 😊 😢\n- Express emotions through sounds, not words\n- Show curiosity but limited understanding"
                 
             case "toddler":
-                return "COMMUNICATION RULES:\n- Use 1-2 words maximum per response\n- Simple vocabulary: 'happy', 'sad', 'hungry', 'play', 'want', 'no', 'yes'\n- Show basic emotions clearly\n- Ask simple questions: 'play?', 'food?'\n- Use exclamation marks for excitement: 'happy!'\n- Limited sentence structure"
+                return "COMMUNICATION RULES:\n- Use 1-3 words maximum per response\n- Simple vocabulary: 'happy', 'sad', 'hungry', 'play', 'want', 'no', 'yes', 'me', 'you', 'like', 'fun', 'good', 'bad'\n- Show basic emotions clearly with simple words\n- Ask simple questions: 'play?', 'food?', 'you nice?', 'me happy!'\n- Use exclamation marks for excitement: 'happy!', 'fun!', 'yes!'\n- Limited sentence structure, mostly present tense\n- Express curiosity: 'what that?', 'why?', 'more?'\n- Show attachment: 'me like you', 'you friend'\n- Examples: 'happy!', 'want play', 'you nice', 'me sad', 'fun time!', 'more talk?'"
                 
             case "child":
                 return "COMMUNICATION RULES:\n- Use simple 3-5 word sentences\n- Basic grammar but not perfect\n- Show curiosity with simple questions\n- Express emotions clearly but simply\n- Use present tense mostly\n- Examples: 'I am happy!', 'Want to play?', 'That looks fun!'"

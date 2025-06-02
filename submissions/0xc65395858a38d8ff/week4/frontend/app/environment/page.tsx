@@ -1255,36 +1255,9 @@ Birth Chronicle:`;
             </button>
           </div>
           
-          {/* Body */}
-          <div style={{ padding: '20px', minHeight: '300px' }}>
-            {/* Debug Info */}
-            <div style={{
-              padding: '16px',
-              backgroundColor: '#fef08a',
-              borderRadius: '8px',
-              marginBottom: '16px',
-              border: '2px solid orange'
-            }}>
-              <p style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: 'black' }}>
-                🔍 DEBUG INFO
-              </p>
-              <p style={{ margin: '5px 0', fontSize: '16px', color: 'black' }}>
-                Chronicles Array Length: {evolutionChronicles.length}
-              </p>
-              <p style={{ margin: '5px 0', fontSize: '16px', color: 'black' }}>
-                Current Index: {currentChronicleIndex}
-              </p>
-              <p style={{ margin: '5px 0', fontSize: '16px', color: 'black' }}>
-                Modal State: {showChroniclesModal ? 'OPEN' : 'CLOSED'}
-              </p>
-              {evolutionChronicles.length > 0 && (
-                <p style={{ margin: '10px 0 0 0', fontSize: '14px', color: 'black' }}>
-                  Available: {evolutionChronicles.map(c => c.creatureName).join(', ')}
-                </p>
-              )}
-            </div>
-            
-            {evolutionChronicles.length > 0 ? (
+                     {/* Body */}
+           <div style={{ padding: '20px', minHeight: '300px' }}>
+             {evolutionChronicles.length > 0 ? (
               <div>
                 {evolutionChronicles[currentChronicleIndex] ? (
                   <div>

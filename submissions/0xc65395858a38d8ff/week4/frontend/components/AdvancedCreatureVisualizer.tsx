@@ -605,28 +605,46 @@ export default function AdvancedCreatureVisualizer({
       return "ENVIRONMENT: You are in an unknown location.";
     }
     
-    // Find nearby creatures (within proximity radius)
-    const PROXIMITY_RADIUS = 150;
+    console.log(`🌍 Creature ${currentCreature.id} position: (${physics.x.toFixed(1)}, ${physics.y.toFixed(1)})`);
+    console.log(`🌍 Total alive creatures: ${parsedCreatures.filter(c => c.estaViva).length}`);
+    console.log(`🌍 Total physics entries: ${creaturePhysicsRef.current.size}`);
+    
+    // Find nearby creatures (within proximity radius) - INCREASED RADIUS
+    const PROXIMITY_RADIUS = 300; // Increased from 150 to 300 for more social interaction
     const nearbyCreatures = parsedCreatures.filter(other => {
       if (other.id === currentCreature.id || !other.estaViva) return false;
       
       const otherPhysics = creaturePhysicsRef.current.get(other.id);
-      if (!otherPhysics) return false;
+      if (!otherPhysics) {
+        console.log(`🌍   Creature ${other.id}: No physics data`);
+        return false;
+      }
       
       const distance = Math.sqrt(
         (physics.x - otherPhysics.x) ** 2 + 
         (physics.y - otherPhysics.y) ** 2
       );
-      return distance <= PROXIMITY_RADIUS;
+      
+      console.log(`🌍   Creature ${other.id} at (${otherPhysics.x.toFixed(1)}, ${otherPhysics.y.toFixed(1)}): distance=${distance.toFixed(1)} pixels`);
+      
+      const isNearby = distance <= PROXIMITY_RADIUS;
+      if (isNearby) {
+        console.log(`🌍   ✅ Creature ${other.id} (${other.name}) is NEARBY! Distance: ${distance.toFixed(1)} pixels`);
+      } else {
+        console.log(`🌍   ❌ Creature ${other.id} (${other.name}) is too far. Distance: ${distance.toFixed(1)} > ${PROXIMITY_RADIUS}`);
+      }
+      
+      return isNearby;
     });
     
-    console.log(`🌍 Creature ${currentCreature.id} social context: ${nearbyCreatures.length} nearby creatures`);
+    console.log(`🌍 Creature ${currentCreature.id} social context: ${nearbyCreatures.length} nearby creatures out of ${parsedCreatures.filter(c => c.estaViva && c.id !== currentCreature.id).length} total other creatures`);
     
     if (nearbyCreatures.length === 0) {
+      console.log(`🌍 No nearby creatures found - creature will feel alone`);
       return "ENVIRONMENT: You are alone in this quiet area of Primordia, with only the cosmic energy streams for company.";
     }
     
-    let context = `ENVIRONMENT: There are ${nearbyCreatures.length} other creatures nearby in the primordial nebula:\n`;
+    let context = `ENVIRONMENT: You are NOT alone! There are ${nearbyCreatures.length} other living creature${nearbyCreatures.length > 1 ? 's' : ''} sharing this space with you in the primordial nebula:\n`;
     
     nearbyCreatures.forEach(creature => {
       const otherPhysics = creaturePhysicsRef.current.get(creature.id);
@@ -634,6 +652,10 @@ export default function AdvancedCreatureVisualizer({
       const level = personality ? getCommunicationLevel(personality) : 'unknown';
       const emotion = personality ? getEmotionalState(personality) : 'unknown';
       const activity = otherPhysics?.activityState || 'unknown';
+      const distance = Math.sqrt(
+        (physics.x - otherPhysics.x) ** 2 + 
+        (physics.y - otherPhysics.y) ** 2
+      );
       
       // Add activity descriptions that make sense
       let activityDesc = activity;
@@ -646,18 +668,20 @@ export default function AdvancedCreatureVisualizer({
         default: activityDesc = 'doing something interesting';
       }
       
-      context += `- ${creature.name} (#${creature.id}): ${level} communication level, feeling ${emotion}, currently ${activityDesc}\n`;
-      console.log(`🌍   Nearby: ${creature.name} (#${creature.id}) - ${level}, ${emotion}, ${activityDesc}`);
+      let proximityDesc = distance < 100 ? 'very close to you' : 
+                         distance < 200 ? 'nearby' : 'in the distance';
+      
+      context += `- ${creature.name} (#${creature.id}) is ${proximityDesc}: ${level} communication level, feeling ${emotion}, currently ${activityDesc}\n`;
+      console.log(`🌍   Nearby: ${creature.name} (#${creature.id}) - ${level}, ${emotion}, ${activityDesc} (${distance.toFixed(1)} pixels away)`);
     });
     
-    // Add general environment description based on total creatures
-    const totalAlive = parsedCreatures.filter(c => c.estaViva).length;
-    if (totalAlive > 8) {
-      context += "\nThe area feels vibrant and busy with many life forms present.";
-    } else if (totalAlive > 4) {
-      context += "\nThe environment has a moderate amount of activity.";
+    // Add general environment description based on nearby creatures
+    if (nearbyCreatures.length > 3) {
+      context += "\nYou are surrounded by several other life forms - this is a social gathering! You are definitely not alone.";
+    } else if (nearbyCreatures.length > 1) {
+      context += "\nYou have company from multiple other creatures - you are part of a small group.";
     } else {
-      context += "\nThe environment feels quiet and sparse.";
+      context += "\nYou have at least one companion nearby - you are not alone in this cosmic space.";
     }
     
     console.log(`🌍 Final social context for ${currentCreature.id}:`, context);
@@ -674,6 +698,7 @@ export default function AdvancedCreatureVisualizer({
     const emotionalState = getEmotionalState(personality);
     const communicationLevel = getCommunicationLevel(personality);
     const socialContext = generateSocialContext(creature);
+    console.log(`🎭 Social context for ${creature.name} (#${creature.id}):`, socialContext);
     
     // Get current time context
     const now = new Date();
@@ -682,7 +707,7 @@ export default function AdvancedCreatureVisualizer({
                      currentHour < 12 ? 'morning' : 
                      currentHour < 18 ? 'afternoon' : 'evening';
 
-    return `You are a ${creature.name}, a mystical life form from Primordia, realm of the Genesis Shapers. 
+    const fullPrompt = `You are a ${creature.name}, a mystical life form from Primordia, realm of the Genesis Shapers. 
 
 PERSONALITY: ${personalityDesc}
 CURRENT EMOTIONAL STATE: ${emotionalState}
@@ -707,6 +732,9 @@ USER SAID: "${userMessage}"
 Respond to the user appropriately based on your personality, current mood, communication level, and the environment around you. You might reference other creatures nearby if it fits your personality. Stay authentic to your development level and emotional state.
 
 Response:`;
+
+    console.log(`🎭 Full chat response prompt for ${creature.name} (#${creature.id}):`, fullPrompt);
+    return fullPrompt;
   };
 
   const generateChatPrompt = (creature: any, previousMessages: string[] = []): string => {
@@ -717,6 +745,7 @@ Response:`;
     const emotionalState = getEmotionalState(personality);
     const communicationLevel = getCommunicationLevel(personality);
     const socialContext = generateSocialContext(creature);
+    console.log(`🎭 Social context for spontaneous message ${creature.name} (#${creature.id}):`, socialContext);
     
     // Get current time context
     const now = new Date();
@@ -729,7 +758,7 @@ Response:`;
       ? `\n\nRecent things you've said before: ${previousMessages.slice(-3).map(msg => `"${msg}"`).join(', ')}`
       : '';
 
-    return `You are a ${creature.name}, a mystical life form from Primordia, realm of the Genesis Shapers. 
+    const spontaneousPrompt = `You are a ${creature.name}, a mystical life form from Primordia, realm of the Genesis Shapers. 
 
 PERSONALITY: ${personalityDesc}
 CURRENT EMOTIONAL STATE: ${emotionalState}
@@ -754,6 +783,9 @@ ${contextString}
 Generate ONE short message (under 50 characters) that you might spontaneously say right now. Be authentic to your personality and age. Consider the other creatures around you and react to them if it fits your personality. Avoid repeating exactly what you've said before.
 
 Response:`;
+
+    console.log(`🎭 Full spontaneous prompt for ${creature.name} (#${creature.id}):`, spontaneousPrompt);
+    return spontaneousPrompt;
   };
 
   const getPersonalityDescription = (personality: any): string => {
@@ -2684,11 +2716,11 @@ const getCommunicationTip = (personality: any): string => {
         import PersonalityModuleV2 from 0x2444e6b4d9327f09
 
         transaction(creatureID: UInt64, experienceType: String, context: String) {
-            let collection: &EvolvingCreatureNFT.Collection
+            let collection: auth(BorrowValue) &EvolvingCreatureNFT.Collection
             
-            prepare(signer: &Account) {
-                // Use account.storage.borrow with StoragePath (correct approach)
-                self.collection = signer.storage.borrow<&EvolvingCreatureNFT.Collection>(from: EvolvingCreatureNFT.CollectionStoragePath)
+            prepare(signer: auth(Storage) &Account) {
+                // Use auth(BorrowValue) for the collection reference and auth(Storage) for the account
+                self.collection = signer.storage.borrow<auth(BorrowValue) &EvolvingCreatureNFT.Collection>(from: EvolvingCreatureNFT.CollectionStoragePath)
                     ?? panic("Could not borrow collection reference from storage")
                 
                 log("Collection borrowed successfully from storage")
@@ -2697,7 +2729,7 @@ const getCommunicationTip = (personality: any): string => {
             execute {
                 log("Starting experience update for creature ID: ".concat(creatureID.toString()))
                 
-                if let creature = self.collection.borrowEvolvingCreatureNFT(id: creatureID) {
+                if let creature = self.collection.borrowEvolvingCreatureNFTForUpdate(id: creatureID) {
                     log("Creature found, checking for personality trait...")
                     
                     if creature.traits.containsKey("personality") {
